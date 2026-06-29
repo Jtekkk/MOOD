@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node server.mjs",
     "validate": "node tools/validate-levels.mjs",
+    "build:web": "node tools/build-web.mjs",
     "desktop": "electron electron/main.js",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win --x64",

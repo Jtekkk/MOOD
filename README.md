@@ -64,6 +64,32 @@ app; Electron is only used for packaging.
 - Or push a tag (`git tag v0.1.0 && git push --tags`) and it attaches the
   Windows `.exe`, macOS `.dmg`, and Linux `AppImage` to a **GitHub Release**.
 
+### Host it on the web (Porkbun / Netlify / GitHub Pages / any static host)
+
+MOOD is a **pure static site** — there's no backend, no build needed, just files
+served over HTTP(S). To get a clean, upload-ready folder (without the dev-only
+server/tools/electron bits):
+
+```bash
+npm run build:web      # → writes dist-web/  (zero dependencies)
+```
+
+Then upload **the contents of `dist-web/`** to your host, keeping the folder
+structure intact (`index.html` at the top, with `src/` and `assets/` beside it).
+
+**On Porkbun static hosting:** open your domain's *Static Hosting* / file
+manager, upload everything inside `dist-web/` (drag the `index.html`, `styles.css`,
+`src/` folder, and `assets/` folder into the web root, or zip the folder's
+*contents* and upload the zip), and visit your domain. It works in a subfolder
+too (e.g. `yourdomain.com/mood/`) because every path is relative.
+
+Notes:
+- It's ~28 MB, almost all of it the seven background-music MP3s in
+  `assets/music/`. Delete tracks you don't want (and the matching entries in
+  `setTracks([...])` in `src/main.js`) to shrink it.
+- Phones get the on-screen touch controls automatically; desktop gets
+  keyboard/mouse + gamepad. Serve over **HTTPS** so pointer-lock mouselook works.
+
 ## Controls
 
 | Action            | Keyboard & mouse                      | Gamepad                       |
