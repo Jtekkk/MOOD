@@ -1,5 +1,5 @@
-// audio.js — all sound is synthesized with the WebAudio API at runtime.
-// No external audio files, so the whole game stays self-contained.
+// audio.js — sound effects are synthesized with the WebAudio API at runtime;
+// background music streams from per-level MP3 tracks.
 
 export class AudioEngine {
   constructor() {
@@ -7,8 +7,11 @@ export class AudioEngine {
     this.master = null;
     this.musicGain = null;
     this.enabled = true;
-    this.musicTimer = null;
-    this._musicStep = 0;
+    // streamed background music
+    this.musicEl = null;
+    this.musicTracks = [];
+    this.curTrack = -1;
+    this.musicVol = 0.42;   // sit under the SFX
   }
 
   // Must be called from a user gesture (browsers block autoplay otherwise).
@@ -96,37 +99,48 @@ export class AudioEngine {
     }
   }
 
-  // A simple ominous driving bassline loop, E-minor-ish, à la a certain shooter.
+  // ---- background music (streamed MP3 tracks) ---------------------------
+  // Register the list of track URLs (index = level number).
+  setTracks(urls) {
+    this.musicTracks = urls || [];
+    if (!this.musicEl) {
+      const el = new Audio();
+      el.loop = true;
+      el.preload = 'auto';
+      el.volume = this.musicVol;
+      el.muted = !this.enabled;
+      this.musicEl = el;
+    }
+  }
+
+  // Play the track for a given level (wraps if there are fewer tracks).
+  playTrack(i) {
+    const el = this.musicEl, tracks = this.musicTracks;
+    if (!el || !tracks.length) return;
+    const n = tracks.length;
+    const idx = ((i % n) + n) % n;
+    if (idx === this.curTrack && !el.paused) return;   // already playing it
+    this.curTrack = idx;
+    if (!el.src || !el.src.endsWith(tracks[idx])) el.src = tracks[idx];
+    el.muted = !this.enabled;
+    try { el.currentTime = 0; } catch { /* not loaded yet */ }
+    const p = el.play();
+    if (p && p.catch) p.catch(() => {});   // autoplay may be blocked until a gesture
+  }
+
+  // Resume the current level's track (used after death/restart).
   startMusic() {
-    if (!this.ctx || !this.enabled || this.musicTimer) return;
-    const notes = [82.41, 82.41, 98.00, 82.41, 110.0, 82.41, 92.50, 87.31]; // E2 walk
-    const beat = 0.16;
-    const stepFn = () => {
-      const f = notes[this._musicStep % notes.length];
-      this._musicStep++;
-      const ctx = this.ctx;
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + beat * 0.9);
-      const filt = ctx.createBiquadFilter();
-      filt.type = 'lowpass'; filt.frequency.value = 600;
-      osc.connect(filt); filt.connect(g); g.connect(this.musicGain);
-      osc.start(); osc.stop(ctx.currentTime + beat);
-    };
-    this.musicTimer = setInterval(stepFn, beat * 1000);
+    if (this.curTrack < 0) this.playTrack(0); else this.playTrack(this.curTrack);
   }
 
   stopMusic() {
-    if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
+    if (this.musicEl) this.musicEl.pause();
   }
 
   toggleMute() {
     this.enabled = !this.enabled;
     if (this.master) this.master.gain.value = this.enabled ? 0.6 : 0;
+    if (this.musicEl) this.musicEl.muted = !this.enabled;
     return this.enabled;
   }
 }

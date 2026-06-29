@@ -5,8 +5,9 @@
 MOOD is a self-contained, dependency-free first-person shooter in the spirit of
 *Doom II: Hell on Earth*. It runs in any modern browser using a hand-written
 **software raycasting renderer** (no WebGL, no game engine, no build step).
-Every texture, sprite, sound, and level is **generated procedurally at runtime**
-— there are no Doom assets in this repo. It's an homage, not a copy.
+Every texture, sprite, sound effect, and level is **generated procedurally at
+runtime** (background music streams from bundled MP3 tracks) — there are no Doom
+assets in this repo. It's an homage, not a copy.
 
 ![MOOD title screen](docs/screens/title.png)
 ![MOOD gameplay](docs/screens/gameplay.png)
@@ -93,8 +94,10 @@ find the matching keycard.
   ![The nine moods](docs/screens/faces.png)
 - **Two hand-authored levels** with a title screen, level-complete intermission
   (with kill tally), death/respawn, and a final victory screen.
-- **Procedurally synthesized audio** (WebAudio) for every weapon, monster, door,
-  pickup, and a looping bassline — zero audio files.
+- **Procedurally synthesized sound effects** (WebAudio) for every weapon,
+  monster, door, and pickup — generated at runtime, no SFX files.
+- **Per-level background music** streamed from looping MP3 tracks (one per
+  level, in `assets/music/`); the `M` mute key silences music and SFX together.
 
 ## Project layout
 

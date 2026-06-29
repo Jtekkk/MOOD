@@ -48,9 +48,8 @@ export class Game {
   startNewGame() {
     this.player = this._freshPlayer();
     this.levelIndex = 0;
-    this.loadLevel(0);
+    this.loadLevel(0);   // also starts the level-1 track
     this.state = 'playing';
-    this.audio.startMusic();
   }
 
   loadLevel(index) {
@@ -73,6 +72,7 @@ export class Game {
     this.player.kills = 0;
     this._spawnThings(map);
     this.player.totalKills = this.entities.filter((e) => e.kind === 'enemy').length;
+    this.audio.playTrack(index);     // per-level background music
     this.message(def.name);
   }
 
@@ -734,9 +734,10 @@ export class Game {
     if ((this.input.justPressed('Enter') || this.input.justPressed('Space') || this.input.mouseJustPressed(0)) && this.intermission > 0.4) {
       if (this.tally.next) {
         this.levelIndex++;
-        this.loadLevel(this.levelIndex);
+        this.loadLevel(this.levelIndex);   // switches to the next level's track
         this.state = 'playing';
       } else {
+        this.audio.stopMusic();
         this.state = 'victory';
       }
     }
@@ -748,9 +749,8 @@ export class Game {
       // restart current level, keep nothing (fresh marine)
       const lvl = this.levelIndex;
       this.player = this._freshPlayer();
-      this.loadLevel(lvl);
+      this.loadLevel(lvl);   // restarts the level track
       this.state = 'playing';
-      this.audio.startMusic();
     }
   }
 }

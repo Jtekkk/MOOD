@@ -28,6 +28,7 @@ buildAssets();
 const renderer = new Renderer(canvas);
 const input = new Input(canvas);
 const audio = new AudioEngine();
+audio.setTracks(['assets/music/track1.mp3', 'assets/music/track2.mp3']);
 const game = new Game(renderer, input, audio);
 if (loading) loading.style.display = 'none';
 
