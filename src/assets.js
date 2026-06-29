@@ -1189,6 +1189,185 @@ function fpBfg(fire) {
   return texFrom(c, ctx);
 }
 
+// ----- BOSS: the Gumbird ---------------------------------------------------
+// Part Gumby, part Big Bird, on roller skates, wearing a dunce cap and a
+// women's polka-dot dress, juggling three balls and singing "Row, Row, Row
+// Your Boat." A genuinely cursed final encounter. Drawn in the same chunky,
+// hand-shaded style as the rest of the bestiary.
+function jball(ctx, x, y, r, c0, c1) {
+  const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.35, c0); g.addColorStop(1, c1);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+}
+function rollerSkate(ctx, x, y) {
+  ctx.fillStyle = '#f4f4f4'; ctx.fillRect(x, y, 16, 8);                  // white boot
+  ctx.fillStyle = '#d8d8d8'; ctx.fillRect(x, y + 6, 16, 2);
+  ctx.fillStyle = '#c0392b'; ctx.fillRect(x + 1, y - 5, 5, 7);           // ankle cuff
+  ctx.fillStyle = '#222'; ctx.fillRect(x - 1, y + 8, 18, 2);             // axle plate
+  ctx.fillStyle = '#f5a623';
+  for (const wx of [x + 2, x + 8, x + 13]) { ctx.beginPath(); ctx.arc(wx, y + 12, 3, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#7a4a10';
+  for (const wx of [x + 2, x + 8, x + 13]) { ctx.beginPath(); ctx.arc(wx, y + 12, 1, 0, 7); ctx.fill(); }
+}
+function gumbirdJuggle(ctx, cx, wk) {
+  const balls = wk
+    ? [[cx - 16, 18], [cx, 6], [cx + 16, 22]]
+    : [[cx - 14, 24], [cx + 2, 4], [cx + 18, 14]];
+  jball(ctx, balls[0][0], balls[0][1], 5, '#ff4d4d', '#a01010');
+  jball(ctx, balls[1][0], balls[1][1], 5, '#4d9bff', '#10408a');
+  jball(ctx, balls[2][0], balls[2][1], 5, '#ffd54d', '#a07a10');
+}
+function gumbirdDress(ctx, cx, front) {
+  ctx.fillStyle = front ? '#e8559e' : '#d8458e';
+  ctx.beginPath(); ctx.moveTo(cx - 9, 58); ctx.lineTo(cx + 9, 58);
+  ctx.lineTo(cx + 22, 92); ctx.lineTo(cx - 22, 92); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(cx - 22, 88, 44, 4);   // hem shadow
+  ctx.fillStyle = '#ffd0e8';                                              // polka dots
+  const dots = front ? [[-14, 72], [2, 68], [12, 80], [-6, 84], [16, 90], [-18, 88], [0, 80]]
+                     : [[-12, 74], [6, 70], [14, 84], [-4, 86], [-16, 90]];
+  for (const [dx, dy] of dots) { ctx.beginPath(); ctx.arc(cx + dx, dy, 2.4, 0, 7); ctx.fill(); }
+}
+function gumbirdCap(ctx, cx, apexX) {
+  ctx.fillStyle = '#ffe9b0';
+  ctx.beginPath(); ctx.moveTo(apexX, 0); ctx.lineTo(cx - 13, 26); ctx.lineTo(cx + 13, 26); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  ctx.beginPath(); ctx.moveTo(apexX, 0); ctx.lineTo(cx + 13, 26); ctx.lineTo(cx + 4, 26); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#d13b3b'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - 7, 14); ctx.lineTo(cx + 7, 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 4, 8); ctx.lineTo(cx + 4, 8); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(apexX, 1, 3, 0, 7); ctx.fill();   // pom-pom
+}
+function gumbird(frame) {
+  const { c, ctx } = makeCanvas(72, 112);
+  const cx = 36;
+  const wk = frame === 'walk1';
+  const attack = frame === 'attack';
+  const legSwing = wk ? 5 : -5;
+
+  // legs (green Gumby) + roller skates
+  ctx.fillStyle = '#3fae54';
+  ctx.fillRect(cx - 12 + legSwing, 86, 8, 14);
+  ctx.fillRect(cx + 4 - legSwing, 86, 8, 14);
+  rollerSkate(ctx, cx - 16 + legSwing, 100);
+  rollerSkate(ctx, cx + 1 - legSwing, 100);
+
+  gumbirdDress(ctx, cx, true);
+  ctx.fillStyle = '#fff'; ctx.fillRect(cx - 9, 56, 18, 4);                 // collar
+
+  // torso peeking above the dress
+  ctx.fillStyle = '#3fae54'; ctx.fillRect(cx - 9, 46, 18, 14);
+  ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.fillRect(cx + 4, 46, 5, 14);
+
+  // arms raised to juggle (one cocked back to hurl when attacking)
+  ctx.fillStyle = '#3fae54';
+  if (attack) {
+    ctx.fillRect(cx - 18, 44, 8, 6); ctx.fillRect(cx - 23, 37, 7, 9);
+    ctx.fillRect(cx + 10, 50, 8, 6);
+  } else {
+    ctx.fillRect(cx - 18, 48 - (wk ? 4 : 0), 8, 6); ctx.fillRect(cx - 20, 40, 6, 10);
+    ctx.fillRect(cx + 10, 48 - (wk ? 0 : 4), 8, 6); ctx.fillRect(cx + 14, 40, 6, 10);
+  }
+
+  // head: Big Bird — yellow feathered dome with tufts
+  ctx.fillStyle = '#ffd21e';
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(cx + i * 6, 26); ctx.lineTo(cx + i * 6 - 3, 16); ctx.lineTo(cx + i * 6 + 3, 22); ctx.fill(); }
+  const hg = ctx.createRadialGradient(cx - 4, 30, 3, cx, 36, 17);
+  hg.addColorStop(0, '#ffe24a'); hg.addColorStop(1, '#f5b800');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(cx, 36, 16, 15, 0, 0, 7); ctx.fill();
+
+  // big googly eyes + blue eyeshadow
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(cx - 6, 32, 5, 6, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 6, 32, 5, 6, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.arc(cx - 5, 33, 2.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 7, 33, 2.2, 0, 7); ctx.fill();
+  ctx.fillStyle = '#7ec8ff'; ctx.fillRect(cx - 11, 27, 8, 2); ctx.fillRect(cx + 3, 27, 8, 2);
+
+  // open beak — always singing
+  ctx.fillStyle = '#ff8c1a';
+  ctx.beginPath(); ctx.moveTo(cx - 7, 42); ctx.lineTo(cx + 7, 42); ctx.lineTo(cx, 47); ctx.fill();
+  ctx.fillStyle = '#e06a00';
+  ctx.beginPath(); ctx.moveTo(cx - 6, 48); ctx.lineTo(cx + 6, 48); ctx.lineTo(cx, 44); ctx.fill();
+  ctx.fillStyle = '#7a1010'; ctx.beginPath(); ctx.ellipse(cx, 46, 3, 1.6, 0, 0, 7); ctx.fill();
+
+  gumbirdCap(ctx, cx, cx);
+  gumbirdJuggle(ctx, cx, wk);
+  return texFrom(c, ctx);
+}
+function gumbirdSide(frame) {
+  const { c, ctx } = makeCanvas(72, 112);
+  const cx = 34;
+  const wk = frame === 'walk1';
+  const sw = wk ? 6 : -2;
+
+  ctx.fillStyle = '#3fae54';
+  ctx.fillRect(cx - 4 + sw, 86, 8, 14);
+  ctx.fillRect(cx - 2 - sw, 86, 8, 14);
+  rollerSkate(ctx, cx - 8 + sw, 100);
+  rollerSkate(ctx, cx - 6 - sw, 100);
+
+  gumbirdDress(ctx, cx, true);
+  ctx.fillStyle = '#3fae54'; ctx.fillRect(cx - 8, 46, 16, 14);
+  ctx.fillRect(cx + 6, 44, 12, 5); ctx.fillRect(cx + 14, 38, 6, 10);       // forward juggling arm
+
+  const hg = ctx.createRadialGradient(cx, 32, 3, cx + 2, 36, 16);
+  hg.addColorStop(0, '#ffe24a'); hg.addColorStop(1, '#f5b800');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(cx + 2, 36, 15, 15, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(cx + 8, 32, 4, 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(cx + 10, 33, 2, 0, 7); ctx.fill();
+  ctx.fillStyle = '#7ec8ff'; ctx.fillRect(cx + 4, 27, 8, 2);
+  ctx.fillStyle = '#ff8c1a'; ctx.beginPath(); ctx.moveTo(cx + 14, 36); ctx.lineTo(cx + 28, 33); ctx.lineTo(cx + 16, 41); ctx.fill();
+  ctx.fillStyle = '#e06a00'; ctx.beginPath(); ctx.moveTo(cx + 14, 41); ctx.lineTo(cx + 27, 43); ctx.lineTo(cx + 16, 44); ctx.fill();
+
+  gumbirdCap(ctx, cx, cx + 2);
+  const balls = wk ? [[cx - 10, 20], [cx + 6, 6], [cx + 20, 18]] : [[cx - 6, 24], [cx + 10, 8], [cx + 22, 20]];
+  jball(ctx, balls[0][0], balls[0][1], 5, '#ff4d4d', '#a01010');
+  jball(ctx, balls[1][0], balls[1][1], 5, '#4d9bff', '#10408a');
+  jball(ctx, balls[2][0], balls[2][1], 5, '#ffd54d', '#a07a10');
+  return texFrom(c, ctx);
+}
+function gumbirdBack(frame) {
+  const { c, ctx } = makeCanvas(72, 112);
+  const cx = 36;
+  const wk = frame === 'walk1';
+  const legSwing = wk ? 5 : -5;
+
+  ctx.fillStyle = '#3fae54';
+  ctx.fillRect(cx - 12 + legSwing, 86, 8, 14);
+  ctx.fillRect(cx + 4 - legSwing, 86, 8, 14);
+  rollerSkate(ctx, cx - 16 + legSwing, 100);
+  rollerSkate(ctx, cx + 1 - legSwing, 100);
+
+  gumbirdDress(ctx, cx, false);
+  // a bow on the back of the dress
+  ctx.fillStyle = '#ff9ad0'; ctx.fillRect(cx - 4, 60, 8, 5);
+  ctx.beginPath(); ctx.moveTo(cx - 4, 62); ctx.lineTo(cx - 12, 58); ctx.lineTo(cx - 12, 67); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 4, 62); ctx.lineTo(cx + 12, 58); ctx.lineTo(cx + 12, 67); ctx.fill();
+
+  ctx.fillStyle = '#3fae54'; ctx.fillRect(cx - 9, 46, 18, 14);
+  ctx.fillRect(cx - 18, 46, 8, 6); ctx.fillRect(cx + 10, 46, 8, 6);        // arms
+
+  ctx.fillStyle = '#ffd21e';
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(cx + i * 6, 26); ctx.lineTo(cx + i * 6 - 3, 16); ctx.lineTo(cx + i * 6 + 3, 22); ctx.fill(); }
+  const hg = ctx.createRadialGradient(cx, 30, 3, cx, 36, 16);
+  hg.addColorStop(0, '#f5c81e'); hg.addColorStop(1, '#e0a800');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(cx, 36, 15, 15, 0, 0, 7); ctx.fill();
+
+  gumbirdCap(ctx, cx, cx);
+  gumbirdJuggle(ctx, cx, wk);
+  return texFrom(c, ctx);
+}
+function jugball() {
+  const { c, ctx } = makeCanvas(22, 22);
+  const g = ctx.createRadialGradient(8, 8, 1, 11, 11, 11);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ff5db0'); g.addColorStop(1, '#a01060');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(11, 11, 10, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(2, 11 + i * 4); ctx.quadraticCurveTo(11, 8 + i * 4, 20, 11 + i * 4); ctx.stroke(); }
+  return texFrom(c, ctx);
+}
+
 // ----- HUD: the marine's face (status-bar mug) ----------------------------
 // A tribute to the Nicolas Cage "Today I'm feeling..." chart. Each mood is a
 // distinct expression wired to gameplay events (see game.js _updateFace).
@@ -1664,6 +1843,19 @@ export function buildAssets() {
   }
   SPR.baronball = baronBall();
   SPR.bfgball = bfgBall();
+
+  // the Gumbird (final boss) — full directional set + thrown juggling ball
+  SPR.gumbird_walk0 = gumbird('walk0'); SPR.gumbird_walk1 = gumbird('walk1');
+  SPR.gumbird_attack = gumbird('attack'); SPR.gumbird_pain = gumbird('walk0');
+  for (let i = 0; i < 4; i++) SPR['gumbird_die' + i] = humanoidDeath(72, 112, i, '#3fae54', '#2a7d3c', '#ffd21e', true);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`gumbird_front_${f}`] = SPR[`gumbird_${f}`];
+    SPR[`gumbird_sideR_${f}`] = gumbirdSide(f);
+    SPR[`gumbird_sideL_${f}`] = mirrorTex(SPR[`gumbird_sideR_${f}`]);
+    SPR[`gumbird_back_${f}`] = gumbirdBack(f);
+  }
+  SPR.jugball = jugball();
+
   SPR.pickup_bfg = weaponPickup('bfg');
   SPR.fp_bfg = fpBfg(false); SPR.fp_bfg_fire = fpBfg(true);
 
@@ -1683,7 +1875,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

@@ -24,6 +24,15 @@ const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
 
+// The Gumbird's repertoire — "Row, Row, Row Your Boat", lyric + melody (C maj).
+const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.0, C5 = 523.25;
+const GUMBIRD_SONG = [
+  { text: '♪ Row, row, row your boat,', notes: [C4, C4, C4, D4, E4] },
+  { text: '♪ gently down the stream,', notes: [E4, D4, E4, F4, G4] },
+  { text: '♪ merrily, merrily, merrily, merrily,', notes: [C5, C5, C5, G4, G4, G4, E4, E4, E4, C4, C4, C4] },
+  { text: '♪ life is but a dream!', notes: [G4, F4, E4, D4, C4] },
+];
+
 export class Game {
   constructor(renderer, input, audio) {
     this.renderer = renderer;
@@ -592,6 +601,12 @@ export class Game {
       e.state = 'dying'; e.stateTime = 0; e.alive = false;
       this._spawnParticles(e.x, e.y, (e.vOffset || 0) + 0.5, 14, { speed: 3.5, up: 3, life: 0.7, colors: BLOOD });
       this.audio.play('monster_death');
+      if (e.def.boss) {
+        this.message('THE GUMBIRD TAKES A FINAL BOW.');
+        this.audio.singLine([C4, G4, C5], 0.5);
+        this._spawnParticles(e.x, e.y, 0.9, 40, { speed: 5, up: 4.5, life: 1.0, colors: DEBRIS });
+        this.addShake(0.85);
+      }
       const p = this.player;
       p.kills++;
       if (source === 'player') {
@@ -670,6 +685,8 @@ export class Game {
       return;
     }
 
+    if (e.def.boss) this._updateGumbirdSong(e, dt);
+
     if (e.flash > 0) e.flash -= dt;
     // physics: ride out any knockback impulse, then decay it
     if (e.kx || e.ky) {
@@ -741,6 +758,21 @@ export class Game {
       this._moveEnemy(e, Math.cos(perp) * ss, Math.sin(perp) * ss);
     }
     e.sprite = enemyFrame(e);
+  }
+
+  // The Gumbird belts out "Row, Row, Row Your Boat" once roused, one line at a
+  // time, with the melody synthesized under each lyric.
+  _updateGumbirdSong(e, dt) {
+    if (e.state === 'idle') return;
+    if (!e._introduced) { e._introduced = true; this.message('THE GUMBIRD ROLLS IN, JUGGLING!'); }
+    e.singTimer = (e.singTimer || 0) - dt;
+    if (e.singTimer <= 0) {
+      e.singLine = ((e.singLine == null ? -1 : e.singLine) + 1) % GUMBIRD_SONG.length;
+      const line = GUMBIRD_SONG[e.singLine];
+      this.message(line.text);
+      const dur = this.audio.singLine(line.notes);
+      e.singTimer = (dur || line.notes.length * 0.32) + 0.7;   // line length + a breath
+    }
   }
 
   _enemyAttack(e) {

@@ -102,6 +102,34 @@ export class AudioEngine {
     }
   }
 
+  // Sing a phrase: a sequence of note frequencies played as warm, slightly
+  // wobbly triangle tones. Used by the Gumbird boss to belt out its tune.
+  // Returns the total duration so callers can time the next line.
+  singLine(notes, noteDur = 0.32) {
+    if (!this.ctx || !this.enabled || !notes || !notes.length) return 0;
+    const ctx = this.ctx, t0 = this._now();
+    notes.forEach((f, i) => {
+      const t = t0 + i * noteDur;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      const vib = ctx.createOscillator();   // gentle vibrato on the pitch
+      const vibg = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, t);
+      vib.type = 'sine'; vib.frequency.setValueAtTime(5.5, t);
+      vibg.gain.setValueAtTime(f * 0.012, t);
+      vib.connect(vibg); vibg.connect(osc.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.24, t + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.12, t + noteDur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 0.97);
+      osc.connect(g); g.connect(this.master);
+      osc.start(t); osc.stop(t + noteDur);
+      vib.start(t); vib.stop(t + noteDur);
+    });
+    return notes.length * noteDur;
+  }
+
   // ---- background music (streamed MP3 tracks) ---------------------------
   // Register the list of track URLs (index = level number).
   setTracks(urls) {

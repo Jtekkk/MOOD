@@ -39,9 +39,15 @@ export const ENEMY_TYPES = {
     attack: 'projectile', proj: 'baronball', projSpeed: 8, range: 16, dmg: [12, 28], cooldown: 1.5,
     painChance: 0.12,
   },
+  gumbird: {
+    name: 'THE GUMBIRD', prefix: 'gumbird', boss: true,
+    hp: 1000, speed: 2.4, radius: 0.5, spriteH: 1.8, mass: 3.8,
+    attack: 'projectile', proj: 'jugball', projSpeed: 7, range: 15, dmg: [10, 24], cooldown: 1.2,
+    painChance: 0.08, sightChance: 1,
+  },
 };
 
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

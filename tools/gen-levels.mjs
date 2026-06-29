@@ -46,7 +46,7 @@ const CONFIGS = [
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 8: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, weapons: ['6', '5', '7'], barrels: 8,
+    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, boss: 'G', weapons: ['6', '5', '7'], barrels: 8,
     items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 
@@ -151,6 +151,14 @@ function genLevel(cfg, seed) {
   const keyRoomIdx = 1 + irnd(rng, Math.max(1, rooms.length - 2));
   const kr = rooms[keyRoomIdx]; const kcx = kr.x + irnd(rng, kr.w), kcy = kr.y + irnd(rng, kr.h);
   t[kcy][kcx] = KEY[cfg.key].key; occupied.add(`${kcx},${kcy}`);
+
+  // the final boss waits in the heart of the exit room (last level only)
+  if (cfg.boss) {
+    const br = rooms[rooms.length - 1];
+    const bx = br.x + (br.w >> 1), by = br.y + (br.h >> 1);
+    if (g[by][bx] === '.' && !occupied.has(`${bx},${by}`)) { t[by][bx] = cfg.boss; occupied.add(`${bx},${by}`); }
+    else place(cfg.boss);
+  }
 
   const scatter = (ch, n) => { for (let i = 0; i < n; i++) place(ch); };
   for (const [ch, n] of Object.entries(cfg.enemies)) scatter(ch, n);
