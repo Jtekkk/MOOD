@@ -92,8 +92,11 @@ find the matching keycard.
   panic, complete with a wire cage and a swarm, when you're nearly dead.
 
   ![The nine moods](docs/screens/faces.png)
-- **Two hand-authored levels** with a title screen, level-complete intermission
-  (with kill tally), death/respawn, and a final victory screen.
+- **Eight levels** — two hand-authored (Entryway, Underhalls) plus six
+  procedurally generated (`tools/gen-levels.mjs`): rooms-and-corridors layouts,
+  each with its own surface theme, a key-gated exit, and a rising
+  enemy/difficulty curve. A title screen, level-complete intermission (with kill
+  tally), death/respawn, and a final victory screen tie them together.
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
 - **Per-level background music** streamed from looping MP3 tracks (one per
@@ -137,6 +140,16 @@ npm run validate     # node tools/validate-levels.mjs
 
 It enforces a solid border, uniform row widths, a player start, and that the
 exit switch is actually reachable.
+
+Levels 3-8 live in `src/data/levels.gen.js`, produced by the procedural
+generator. Re-roll them (or tweak the per-level themes/difficulty in its
+`CONFIGS`) with:
+
+```bash
+node tools/gen-levels.mjs   # builds + self-validates, then writes levels.gen.js
+```
+
+The generated grids are plain text and can be hand-edited like any other level.
 
 ## Development checks
 

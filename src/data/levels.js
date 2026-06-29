@@ -1,5 +1,8 @@
 // levels.js — text-based level definitions + a parser.
 //
+// Levels 1-2 are hand-authored below; levels 3-8 are procedurally generated
+// (see tools/gen-levels.mjs) and imported from levels.gen.js.
+//
 // Two parallel ASCII grids per level:
 //   `walls`  — geometry. Each char is a 1x1 map cell.
 //   `things` — entities placed at the centre of the matching cell.
@@ -134,7 +137,9 @@ const E1M2 = {
   ],
 };
 
-export const LEVELS = [E1M1, E1M2];
+import { GEN_LEVELS } from './levels.gen.js';
+
+export const LEVELS = [E1M1, E1M2, ...GEN_LEVELS];
 
 // Parse a level definition into a runtime map object.
 export function parseLevel(def) {
