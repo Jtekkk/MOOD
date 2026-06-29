@@ -2,6 +2,7 @@
 // (classic 320x200 chunky look) which is then scaled up to the display canvas.
 
 import { TEX } from './assets.js';
+import { enemyRenderSprite } from './data/enemies.js';
 
 export const RENDER_W = 320;
 export const RENDER_H = 200;
@@ -190,7 +191,8 @@ export class Renderer {
       const tX = invDet * (dirY * relX - dirX * relY);
       const tY = invDet * (-planeY * relX + planeX * relY); // depth
       if (tY <= 0.05) continue;
-      const sprite = e.sprite;
+      const sprite = e.kind === 'enemy' ? enemyRenderSprite(e, p.x, p.y) : e.sprite;
+      if (!sprite) continue;
       const worldH = e.spriteH || 1.0;
       const lineH = RENDER_H / tY;
       const drawH = (lineH * worldH) | 0;

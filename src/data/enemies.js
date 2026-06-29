@@ -1,5 +1,6 @@
 // enemies.js — monster definitions and sprite-frame selection.
 import { SPR } from '../assets.js';
+import { normalizeAngle } from '../math.js';
 
 export const ENEMY_TYPES = {
   zombie: {
@@ -30,7 +31,8 @@ export const ENEMY_TYPES = {
 
 export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco' };
 
-// Pick the sprite for an enemy's current animation state.
+// Pick the sprite for an enemy's current animation state (front view only;
+// used as a fallback / for the AI's e.sprite).
 export function enemyFrame(e) {
   const pre = e.def.prefix;
   if (e.state === 'dead') return SPR[pre + '_die3'];
@@ -40,7 +42,26 @@ export function enemyFrame(e) {
   }
   if (e.state === 'pain') return SPR[pre + '_pain'];
   if (e.state === 'attack') return SPR[pre + '_attack'];
-  // walking / idle: alternate the two walk frames
   const f = (Math.floor(e.walkTime * 4) % 2) === 0 ? '_walk0' : '_walk1';
   return SPR[pre + f];
+}
+
+// Render-time sprite: like enemyFrame, but while walking it picks a
+// front / side / back rotation based on the enemy's facing vs. the viewer.
+// Attack/pain/death always show the front view (as in the original).
+export function enemyRenderSprite(e, px, py) {
+  const pre = e.def.prefix;
+  if (e.state === 'dead') return SPR[pre + '_die3'];
+  if (e.state === 'dying') return SPR[pre + '_die' + Math.min(3, Math.floor(e.stateTime / 0.12))];
+  if (e.state === 'pain') return SPR[pre + '_pain'] || SPR[pre + '_walk0'];
+  if (e.state === 'attack') return SPR[pre + '_attack'];
+  const frame = (Math.floor(e.walkTime * 4) % 2) === 0 ? 'walk0' : 'walk1';
+  const toViewer = Math.atan2(py - e.y, px - e.x);
+  const rel = normalizeAngle(e.angle - toViewer);   // 0 = facing viewer (front)
+  const a = Math.abs(rel);
+  let view;
+  if (a < Math.PI / 4) view = 'front';
+  else if (a > 3 * Math.PI / 4) view = 'back';
+  else view = rel > 0 ? 'sideL' : 'sideR';
+  return SPR[`${pre}_${view}_${frame}`] || SPR[`${pre}_walk0`];
 }

@@ -48,6 +48,14 @@ function outlineTex(tex, color = 0xff080808) {
   return { w, h, pixels: out };
 }
 
+// Flip a texture horizontally (a right-facing side view → left-facing).
+function mirrorTex(tex) {
+  const { w, h, pixels } = tex;
+  const out = new Uint32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) out[y * w + (w - 1 - x)] = pixels[y * w + x];
+  return { w, h, pixels: out };
+}
+
 // ----- wall / flat textures (64x64, tileable-ish, opaque) -----------------
 
 function noiseOverlay(ctx, w, h, rng, amt, alpha = 0.12) {
@@ -451,6 +459,137 @@ function genericDie(stage, body, dark) {
     for (let i = 0; i < 10; i++) ctx.fillRect(8 + i * 5, 50 + (i % 3) * 3, 3, 3);
     ctx.fillStyle = '#c43a3a'; ctx.fillRect(20, 52, 5, 4); ctx.fillRect(38, 51, 5, 4);
   }
+  return texFrom(c, ctx);
+}
+
+// ----- enemy side/back rotations (front is the main draw fn above) ---------
+// All "side" views face RIGHT; the renderer mirrors them for the left side.
+
+function zombieSide(frame) {
+  const { c, ctx } = makeCanvas(56, 68);
+  const sw = frame === 'walk1' ? 5 : -5;
+  ctx.fillStyle = '#2f3b24'; ctx.fillRect(26 + sw, 46, 7, 16); ctx.fillRect(26 - sw, 46, 7, 16);
+  ctx.fillStyle = '#171c10'; ctx.fillRect(26 + sw, 60, 11, 4); ctx.fillRect(26 - sw, 60, 11, 4);
+  const tg = ctx.createLinearGradient(0, 26, 0, 48); tg.addColorStop(0, '#566a39'); tg.addColorStop(1, '#374527');
+  ctx.fillStyle = tg; ctx.fillRect(22, 26, 14, 22);
+  ctx.fillStyle = '#2c3620'; ctx.fillRect(22, 26, 14, 4);
+  ctx.fillStyle = '#445428'; ctx.fillRect(34, 30, 12, 5);          // arm fwd
+  ctx.fillStyle = '#222'; ctx.fillRect(45, 29, 6, 7);              // pistol
+  const hg = ctx.createRadialGradient(28, 14, 2, 30, 18, 11); hg.addColorStop(0, '#aab797'); hg.addColorStop(1, '#6f7c58');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(30, 18, 9, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#241c14'; ctx.fillRect(22, 8, 12, 6); ctx.fillRect(22, 8, 4, 9);
+  ctx.fillStyle = '#6f7c58'; ctx.beginPath(); ctx.moveTo(38, 16); ctx.lineTo(42, 19); ctx.lineTo(38, 21); ctx.fill();
+  ctx.fillStyle = '#171c10'; ctx.fillRect(32, 16, 3, 4); ctx.fillStyle = '#cad860'; ctx.fillRect(32, 17, 2, 2);
+  return texFrom(c, ctx);
+}
+function zombieBack(frame) {
+  const { c, ctx } = makeCanvas(56, 68);
+  const sw = frame === 'walk1' ? 4 : 0;
+  ctx.fillStyle = '#2f3b24'; ctx.fillRect(22 - sw, 46, 7, 16); ctx.fillRect(29 + sw, 46, 7, 16);
+  ctx.fillStyle = '#171c10'; ctx.fillRect(20 - sw, 60, 10, 4); ctx.fillRect(29 + sw, 60, 10, 4);
+  const tg = ctx.createLinearGradient(18, 0, 40, 0); tg.addColorStop(0, '#3c4a29'); tg.addColorStop(0.5, '#4a5a30'); tg.addColorStop(1, '#3c4a29');
+  ctx.fillStyle = tg; ctx.fillRect(18, 26, 22, 22);
+  ctx.fillStyle = '#2c3620'; ctx.fillRect(18, 26, 22, 4);
+  ctx.fillStyle = '#3a2e1a'; ctx.fillRect(22, 30, 12, 12);          // backpack
+  ctx.fillStyle = '#445428'; ctx.fillRect(14, 28, 5, 16); ctx.fillRect(39, 28, 5, 16);
+  ctx.fillStyle = '#241c14'; ctx.beginPath(); ctx.ellipse(29, 17, 9, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1c160f'; ctx.fillRect(24, 10, 10, 4);
+  return texFrom(c, ctx);
+}
+
+function impSide(frame) {
+  const { c, ctx } = makeCanvas(56, 66);
+  const sw = frame === 'walk1' ? 5 : -5;
+  ctx.fillStyle = '#5a3219'; ctx.fillRect(26 + sw, 44, 8, 14); ctx.fillRect(26 - sw, 44, 8, 14);
+  ctx.fillStyle = '#3a200f'; ctx.fillRect(26 + sw, 56, 12, 5); ctx.fillRect(26 - sw, 56, 12, 5);
+  const bg = ctx.createRadialGradient(24, 26, 3, 28, 33, 18); bg.addColorStop(0, '#ad632f'); bg.addColorStop(1, '#6c391b');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(27, 33, 12, 16, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#cabd95';
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(17, 26 + i * 5); ctx.lineTo(10, 24 + i * 5); ctx.lineTo(17, 30 + i * 5); ctx.fill(); }
+  ctx.fillStyle = '#8a4a26'; ctx.fillRect(34, 30, 10, 5); ctx.fillStyle = '#5a3219'; ctx.fillRect(42, 30, 6, 6);
+  const hg = ctx.createRadialGradient(26, 12, 2, 30, 16, 11); hg.addColorStop(0, '#ad632f'); hg.addColorStop(1, '#6c391b');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(30, 16, 10, 9, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e3d5ab';
+  ctx.beginPath(); ctx.moveTo(34, 9); ctx.lineTo(40, 1); ctx.lineTo(30, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(24, 9); ctx.lineTo(19, 2); ctx.lineTo(28, 7); ctx.fill();
+  ctx.fillStyle = '#6c391b'; ctx.beginPath(); ctx.moveTo(38, 15); ctx.lineTo(43, 18); ctx.lineTo(38, 21); ctx.fill();
+  ctx.fillStyle = '#1a0c04'; ctx.fillRect(31, 14, 4, 4); ctx.fillStyle = '#ffd23a'; ctx.fillRect(32, 15, 2, 2);
+  return texFrom(c, ctx);
+}
+function impBack(frame) {
+  const { c, ctx } = makeCanvas(56, 66);
+  const sw = frame === 'walk1' ? 4 : 0;
+  ctx.fillStyle = '#5a3219'; ctx.fillRect(20 - sw, 44, 8, 14); ctx.fillRect(30 + sw, 44, 8, 14);
+  ctx.fillStyle = '#3a200f'; ctx.fillRect(17 - sw, 56, 12, 5); ctx.fillRect(29 + sw, 56, 12, 5);
+  const bg = ctx.createRadialGradient(28, 26, 3, 28, 33, 19); bg.addColorStop(0, '#9a5728'); bg.addColorStop(1, '#5e3217');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(28, 33, 14, 16, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e3d5ab';
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(24, 24 + i * 5); ctx.lineTo(28, 18 + i * 5); ctx.lineTo(32, 24 + i * 5); ctx.fill(); }
+  ctx.fillStyle = '#7a3f20'; ctx.fillRect(12, 28, 6, 16); ctx.fillRect(38, 28, 6, 16);
+  ctx.beginPath(); ctx.ellipse(28, 16, 10, 9, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e3d5ab';
+  ctx.beginPath(); ctx.moveTo(20, 9); ctx.lineTo(15, 0); ctx.lineTo(24, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(36, 9); ctx.lineTo(41, 0); ctx.lineTo(32, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+
+function demonSide(frame) {
+  const { c, ctx } = makeCanvas(64, 54);
+  const sw = frame === 'walk1' ? 4 : -4;
+  ctx.fillStyle = '#9a4f5e'; ctx.fillRect(28 + sw, 40, 9, 12); ctx.fillRect(28 - sw, 40, 9, 12);
+  const bg = ctx.createRadialGradient(30, 18, 4, 34, 28, 26); bg.addColorStop(0, '#e79bb0'); bg.addColorStop(1, '#a85368');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(34, 28, 22, 17, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(22, 22, 10, 9, 0, 0, 7); ctx.fill();
+  const hg = ctx.createRadialGradient(44, 16, 2, 48, 22, 16); hg.addColorStop(0, '#eaa6ba'); hg.addColorStop(1, '#bf6076');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(48, 22, 15, 13, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#5a1424'; ctx.beginPath(); ctx.ellipse(56, 25, 9, 7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f4ecd8';
+  for (let x = 50; x < 62; x += 4) { ctx.beginPath(); ctx.moveTo(x, 19); ctx.lineTo(x + 2, 25); ctx.lineTo(x + 4, 19); ctx.fill(); }
+  ctx.fillStyle = '#fff'; ctx.fillRect(44, 12, 6, 5); ctx.fillStyle = '#c00'; ctx.fillRect(46, 13, 3, 3);
+  ctx.fillStyle = '#efe6cf'; ctx.beginPath(); ctx.moveTo(40, 10); ctx.lineTo(46, 1); ctx.lineTo(36, 8); ctx.fill();
+  return texFrom(c, ctx);
+}
+function demonBack(frame) {
+  const { c, ctx } = makeCanvas(64, 54);
+  const sw = frame === 'walk1' ? 4 : 0;
+  ctx.fillStyle = '#9a4f5e'; ctx.fillRect(14, 40, 9, 12); ctx.fillRect(43, 40, 9, 12);
+  ctx.fillRect(24 + sw, 42, 8, 10); ctx.fillRect(34 - sw, 42, 8, 10);
+  const bg = ctx.createRadialGradient(32, 16, 4, 32, 28, 28); bg.addColorStop(0, '#d98ba0'); bg.addColorStop(1, '#9a4a5e');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(32, 26, 26, 18, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(20, 16, 24, 2); ctx.fillRect(24, 22, 16, 2);
+  ctx.fillStyle = '#bf6076'; ctx.beginPath(); ctx.ellipse(32, 16, 16, 11, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#efe6cf';
+  ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(11, 0); ctx.lineTo(23, 6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(46, 8); ctx.lineTo(53, 0); ctx.lineTo(41, 6); ctx.fill();
+  return texFrom(c, ctx);
+}
+
+function cacoSide(frame) {
+  const { c, ctx } = makeCanvas(60, 60);
+  const g = ctx.createRadialGradient(24, 22, 4, 30, 30, 30); g.addColorStop(0, '#d8615c'); g.addColorStop(0.6, '#aa3636'); g.addColorStop(1, '#6e1818');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(30, 30, 27, 0, 7); ctx.fill();
+  ctx.fillStyle = '#8a2222';
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; ctx.beginPath(); ctx.arc(30 + Math.cos(a) * 27, 30 + Math.sin(a) * 27, 2.4, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#e6dcc0';
+  ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(13, -1); ctx.lineTo(23, 6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(42, 8); ctx.lineTo(47, -1); ctx.lineTo(37, 6); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(42, 24, 8, 7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1a4f8a'; ctx.beginPath(); ctx.arc(45, 24, 4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(43, 22, 1.4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2a0808'; ctx.beginPath(); ctx.ellipse(40, 42, 9, 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f4ecd8'; for (let x = 34; x < 47; x += 4) { ctx.beginPath(); ctx.moveTo(x, 39); ctx.lineTo(x + 2, 42); ctx.lineTo(x + 4, 39); ctx.fill(); }
+  return texFrom(c, ctx);
+}
+function cacoBack(frame) {
+  const { c, ctx } = makeCanvas(60, 60);
+  const g = ctx.createRadialGradient(24, 22, 4, 30, 30, 30); g.addColorStop(0, '#c25450'); g.addColorStop(0.6, '#9a3030'); g.addColorStop(1, '#5e1414');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(30, 30, 27, 0, 7); ctx.fill();
+  ctx.fillStyle = '#7a1f1f';
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; ctx.beginPath(); ctx.arc(30 + Math.cos(a) * 27, 30 + Math.sin(a) * 27, 2.6, 0, 7); ctx.fill(); }
+  ctx.strokeStyle = 'rgba(50,8,8,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(30, 6); ctx.lineTo(30, 52); ctx.stroke();
+  ctx.fillStyle = '#e6dcc0';
+  ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(13, -1); ctx.lineTo(23, 6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(42, 8); ctx.lineTo(47, -1); ctx.lineTo(37, 6); ctx.fill();
   return texFrom(c, ctx);
 }
 
@@ -1173,6 +1312,18 @@ export function buildAssets() {
   SPR.caco_attack = caco('attack');
   SPR.caco_pain = caco('walk0');
   for (let i = 0; i < 4; i++) SPR['caco_die' + i] = cacoDie(i);
+
+  // directional walk rotations (front / side / back; side mirrored for L+R)
+  const sideFns = { zombie: zombieSide, imp: impSide, demon: demonSide, caco: cacoSide };
+  const backFns = { zombie: zombieBack, imp: impBack, demon: demonBack, caco: cacoBack };
+  for (const pre of ['zombie', 'imp', 'demon', 'caco']) {
+    for (const f of ['walk0', 'walk1']) {
+      SPR[`${pre}_front_${f}`] = SPR[`${pre}_${f}`];
+      SPR[`${pre}_sideR_${f}`] = sideFns[pre](f);
+      SPR[`${pre}_sideL_${f}`] = mirrorTex(SPR[`${pre}_sideR_${f}`]);
+      SPR[`${pre}_back_${f}`] = backFns[pre](f);
+    }
+  }
 
   // projectiles
   SPR.fireball = fireball();
