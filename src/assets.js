@@ -761,6 +761,7 @@ function weaponPickup(kind) {
   else if (kind === 'sshotgun') { ctx.fillRect(4, 8, 30, 4); ctx.fillRect(4, 13, 30, 4); ctx.fillStyle = '#7a5a2a'; ctx.fillRect(4, 8, 8, 9); }
   else if (kind === 'chaingun') { ctx.fillRect(6, 8, 26, 9); ctx.fillStyle = '#555'; for (let i = 0; i < 5; i++) ctx.fillRect(28, 8 + i * 2, 8, 1); }
   else if (kind === 'rocket') { ctx.fillRect(4, 9, 30, 6); ctx.fillStyle = '#a00'; ctx.fillRect(30, 9, 6, 6); }
+  else if (kind === 'plasma') { ctx.fillRect(6, 8, 28, 9); ctx.fillStyle = '#4ac8ff'; ctx.fillRect(10, 10, 18, 2); ctx.fillRect(10, 14, 18, 2); }
   return texFrom(c, ctx);
 }
 
@@ -903,6 +904,81 @@ function fpRocket(fire) {
   ctx.fillStyle = '#11180f'; ctx.beginPath(); ctx.ellipse(cx, 22, 14, 5, 0, 0, 7); ctx.fill(); // muzzle ring
   ctx.fillStyle = '#0c130a'; ctx.beginPath(); ctx.ellipse(cx, 22, 9, 3, 0, 0, 7); ctx.fill();
   if (fire) muzzleFlash(ctx, cx, 16, 26);
+  return texFrom(c, ctx);
+}
+
+function fpPlasma(fire) {
+  const { c, ctx } = makeCanvas(200, 130);
+  const cx = 100, r = fire ? 5 : 0;
+  glove(ctx, cx - 22, 90 + r, 26, 38); glove(ctx, cx + 2, 92 + r, 22, 34);
+  metalGradH(ctx, cx - 16, 56 + r, 32, 40, '#3a4450', '#26303a', '#161c24'); // body
+  ctx.fillStyle = '#1a3a5a'; ctx.fillRect(cx - 12, 60 + r, 24, 4); ctx.fillRect(cx - 12, 76 + r, 24, 4);
+  ctx.fillStyle = '#4ac8ff'; ctx.fillRect(cx - 10, 61 + r, 20, 2); ctx.fillRect(cx - 10, 77 + r, 20, 2); // energy coils
+  metalGradH(ctx, cx - 8, 22 + r, 16, 38, '#4a545e', '#2e3640', '#1a2028'); // barrel up
+  ctx.fillStyle = '#0a1822'; ctx.beginPath(); ctx.ellipse(cx, 24 + r, 7, 4, 0, 0, 7); ctx.fill();
+  const g = ctx.createRadialGradient(cx, 24 + r, 1, cx, 24 + r, 8);
+  g.addColorStop(0, '#dffaff'); g.addColorStop(0.5, '#4ac8ff'); g.addColorStop(1, 'rgba(40,120,255,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, 24 + r, 8, 0, 7); ctx.fill();
+  if (fire) muzzleFlash(ctx, cx, 18 + r, 22, false);   // cold/blue flash
+  return texFrom(c, ctx);
+}
+
+// small + large energy cell pickups
+function cellSprite() {
+  const { c, ctx } = makeCanvas(18, 16);
+  shadowEllipse(ctx, 9, 14, 6, 2);
+  ctx.fillStyle = '#243040'; ctx.fillRect(4, 4, 10, 9);
+  const g = ctx.createLinearGradient(4, 4, 4, 13); g.addColorStop(0, '#7fe0ff'); g.addColorStop(1, '#1c6aa0');
+  ctx.fillStyle = g; ctx.fillRect(5, 5, 8, 7);
+  ctx.fillStyle = '#cffaff'; ctx.fillRect(5, 5, 8, 2);
+  ctx.fillStyle = '#102030'; ctx.fillRect(8, 2, 2, 2);
+  return texFrom(c, ctx);
+}
+function cellPackSprite() {
+  const { c, ctx } = makeCanvas(28, 22);
+  shadowEllipse(ctx, 14, 20, 10, 2);
+  ctx.fillStyle = '#1c2733'; ctx.fillRect(3, 5, 22, 14);
+  for (let i = 0; i < 3; i++) {
+    const g = ctx.createLinearGradient(0, 6, 0, 18); g.addColorStop(0, '#7fe0ff'); g.addColorStop(1, '#1c6aa0');
+    ctx.fillStyle = g; ctx.fillRect(5 + i * 7, 7, 5, 10);
+    ctx.fillStyle = '#cffaff'; ctx.fillRect(5 + i * 7, 7, 5, 2);
+  }
+  return texFrom(c, ctx);
+}
+
+// ----- enemy: lost soul (flaming skull, fast melee charger) ----------------
+function lostsoul(frame) {
+  const { c, ctx } = makeCanvas(44, 48);
+  const t = frame === 'walk1' ? 1 : 0;
+  const attack = frame === 'attack';
+  // flame halo
+  const halo = ctx.createRadialGradient(22, 24, 3, 22, 24, attack ? 23 : 19);
+  halo.addColorStop(0, 'rgba(255,240,180,0.0)');
+  halo.addColorStop(0.55, 'rgba(255,150,30,0.6)');
+  halo.addColorStop(1, 'rgba(200,40,0,0)');
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(22, 24, attack ? 23 : 19, 0, 7); ctx.fill();
+  // flame tongues
+  ctx.fillStyle = 'rgba(255,170,40,0.85)';
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + t * 0.5; const rr = 15 + (i % 2 ? 5 : 0);
+    ctx.beginPath();
+    ctx.moveTo(22 + Math.cos(a) * 9, 22 + Math.sin(a) * 9);
+    ctx.lineTo(22 + Math.cos(a) * rr, 22 + Math.sin(a) * rr - 5);
+    ctx.lineTo(22 + Math.cos(a + 0.4) * 9, 22 + Math.sin(a + 0.4) * 9);
+    ctx.fill();
+  }
+  // skull
+  ctx.fillStyle = '#e8e4d8'; ctx.beginPath(); ctx.ellipse(22, 21, 11, 12, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#d3ccba'; ctx.fillRect(15, 28, 14, 7);
+  // eye sockets (glowing)
+  ctx.fillStyle = '#1a0e06'; ctx.beginPath(); ctx.ellipse(17, 20, 3, 4, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(27, 20, 3, 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = attack ? '#ffe24a' : '#ff7a1e';
+  ctx.fillRect(15, 18, 4, 4); ctx.fillRect(25, 18, 4, 4);
+  // nose + teeth
+  ctx.fillStyle = '#2a1c10'; ctx.beginPath(); ctx.moveTo(22, 23); ctx.lineTo(24, 27); ctx.lineTo(20, 27); ctx.fill();
+  ctx.fillStyle = '#fff';
+  for (let x = 15; x < 30; x += 3) ctx.fillRect(x, attack ? 30 : 32, 2, attack ? 5 : 3);
+  if (attack) { ctx.fillStyle = '#3a1010'; ctx.fillRect(15, 30, 14, 4); ctx.fillStyle = '#fff'; for (let x = 15; x < 30; x += 3) { ctx.fillRect(x, 28, 2, 3); ctx.fillRect(x, 35, 2, 2); } }
   return texFrom(c, ctx);
 }
 
@@ -1352,6 +1428,16 @@ export function buildAssets() {
   SPR.pickup_sshotgun = weaponPickup('sshotgun');
   SPR.pickup_chaingun = weaponPickup('chaingun');
   SPR.pickup_rocket = weaponPickup('rocket');
+  SPR.pickup_plasma = weaponPickup('plasma');
+  SPR.cell = cellSprite();
+  SPR.cellpack = cellPackSprite();
+
+  // lost soul (flaming skull) — front view used for all directions
+  SPR.lostsoul_walk0 = lostsoul('walk0');
+  SPR.lostsoul_walk1 = lostsoul('walk1');
+  SPR.lostsoul_attack = lostsoul('attack');
+  SPR.lostsoul_pain = lostsoul('walk0');
+  for (let i = 0; i < 4; i++) SPR['lostsoul_die' + i] = genericDie(i, '#d8d2c4', '#7a3020');
 
   // status-bar faces (5 damage states x the Nic Cage moods)
   for (let s = 0; s < 5; s++) for (const m of FACE_MOODS) SPR[`face_${s}_${m}`] = makeFace(s, m);
@@ -1364,11 +1450,12 @@ export function buildAssets() {
   SPR.fp_super = fpSuper(false); SPR.fp_super_fire = fpSuper(true);
   SPR.fp_chaingun = fpChaingun(false); SPR.fp_chaingun_fire = fpChaingun(true);
   SPR.fp_rocket = fpRocket(false); SPR.fp_rocket_fire = fpRocket(true);
+  SPR.fp_plasma = fpPlasma(false); SPR.fp_plasma_fire = fpPlasma(true);
 
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
-    if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket') continue;
+    if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul')) continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

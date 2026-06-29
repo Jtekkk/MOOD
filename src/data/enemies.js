@@ -27,9 +27,15 @@ export const ENEMY_TYPES = {
     attack: 'projectile', proj: 'plasma', projSpeed: 6, range: 14, dmg: [8, 18], cooldown: 1.7,
     painChance: 0.3,
   },
+  lostsoul: {
+    name: 'LOST SOUL', prefix: 'lostsoul',
+    hp: 30, speed: 4.3, radius: 0.30, spriteH: 0.85, vOffset: 0.55, float: true, fullbright: true, mass: 0.8,
+    attack: 'melee', range: 1.0, dmg: [3, 9], cooldown: 0.7,
+    painChance: 0.2,
+  },
 };
 
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

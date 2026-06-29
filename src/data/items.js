@@ -38,6 +38,12 @@ export const ITEMS = {
     apply: (g) => giveKey(g, 'blue', 'Picked up a blue keycard.') },
   Y: { sprite: 'keyYellow', spriteH: 0.5, sound: 'pickup',
     apply: (g) => giveKey(g, 'yellow', 'Picked up a yellow keycard.') },
+  e: { sprite: 'cell', spriteH: 0.3, sound: 'pickup',
+    apply: (g) => addAmmo(g, 'cells', 20, 'Picked up an energy cell.') },
+  E: { sprite: 'cellpack', spriteH: 0.4, sound: 'pickup',
+    apply: (g) => addAmmo(g, 'cells', 100, 'Picked up an energy cell pack.') },
+  6: { sprite: 'pickup_plasma', spriteH: 0.45, sound: 'weapon',
+    apply: (g) => giveWeapon(g, 6, 'cells', 40, 'You got the plasma rifle!') },
 };
 
 function addHealth(g, amt, cap, msg) {
@@ -50,7 +56,7 @@ function setArmor(g, amt, msg) {
   g.player.armor = amt; g.message(msg); return true;
 }
 function addAmmo(g, type, amt, msg) {
-  const max = { bullets: 200, shells: 50, rockets: 50 }[type];
+  const max = { bullets: 200, shells: 50, rockets: 50, cells: 300 }[type];
   if (g.player.ammo[type] >= max) return false;
   g.player.ammo[type] = Math.min(max, g.player.ammo[type] + amt);
   g.message(msg); return true;
@@ -58,7 +64,7 @@ function addAmmo(g, type, amt, msg) {
 function giveWeapon(g, idx, ammoType, amt, msg) {
   const had = g.player.owned[idx];
   g.player.owned[idx] = true;
-  if (ammoType) g.player.ammo[ammoType] = Math.min({ bullets: 200, shells: 50, rockets: 50 }[ammoType], g.player.ammo[ammoType] + amt);
+  if (ammoType) g.player.ammo[ammoType] = Math.min({ bullets: 200, shells: 50, rockets: 50, cells: 300 }[ammoType], g.player.ammo[ammoType] + amt);
   if (!had) g.player.weapon = idx;     // auto-switch to a newly found weapon
   g.message(msg); return true;
 }

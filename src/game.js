@@ -64,9 +64,9 @@ export class Game {
       x: 1.5, y: 1.5, angle: 0, pitch: 0,
       vx: 0, vy: 0, kx: 0, ky: 0,    // momentum + knockback velocities
       health: 100, armor: 0,
-      owned: [true, true, false, false, false, false],
+      owned: [true, true, false, false, false, false, false],
       weapon: 1, pendingWeapon: 1, raiseT: 0,
-      ammo: { bullets: 50, shells: 0, rockets: 0 },
+      ammo: { bullets: 50, shells: 0, rockets: 0, cells: 0 },
       keys: { red: false, blue: false, yellow: false },
       fireCD: 0, weaponFlash: 0, recoil: 0,
       bobPhase: 0, bobAmt: 0,
@@ -107,6 +107,9 @@ export class Game {
     this.player.kills = 0;
     this._spawnThings(map);
     this.player.totalKills = this.entities.filter((e) => e.kind === 'enemy').length;
+    this.levelStartT = this.timer;
+    this.totalItems = this.entities.filter((e) => e.kind === 'item').length;
+    this.itemsTaken = 0;
     this.audio.playTrack(index);     // per-level background music
     this.message(def.name);
   }
@@ -120,6 +123,7 @@ export class Game {
         this.entities.push({
           kind: 'enemy', type, def, x, y, angle: 0,
           hp: def.hp, radius: def.radius, spriteH: def.spriteH, vOffset: def.vOffset || 0,
+          fullbright: def.fullbright || false,
           mass: def.mass || 1, kx: 0, ky: 0, target: 'player',
           state: 'idle', stateTime: 0, walkTime: 0, cooldownTimer: 0,
           attackTime: 0, didAttack: false, alive: true, sprite: SPR[def.prefix + '_walk0'],
@@ -770,6 +774,7 @@ export class Game {
     if (dist(e.x, e.y, this.player.x, this.player.y) < 0.55) {
       if (e.def.apply(this)) {
         e.alive = false; e._remove = true;
+        this.itemsTaken = (this.itemsTaken || 0) + 1;
         this.player.pickupFlash = 0.5;
         this.audio.play(e.def.sound || 'pickup');
       }
@@ -782,6 +787,8 @@ export class Game {
     this.tally = {
       level: LEVELS[this.levelIndex].name,
       kills: this.player.kills, total: this.player.totalKills,
+      items: this.itemsTaken || 0, totalItems: this.totalItems || 0,
+      time: Math.max(0, this.timer - (this.levelStartT || 0)),
       next: this.levelIndex + 1 < LEVELS.length,
     };
     this.state = 'intermission';

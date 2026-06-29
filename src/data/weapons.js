@@ -30,6 +30,11 @@ export const WEAPONS = [
     fp: 'fp_rocket', fpFire: 'fp_rocket_fire', cooldown: 0.9, sound: 'rocket',
     kind: 'projectile', proj: 'rocket', projSpeed: 9, splash: 2.2, dmg: [90, 130],
   },
+  {
+    name: 'PLASMA RIFLE', key: 'Digit7', ammo: 'cells', useAmmo: 1,
+    fp: 'fp_plasma', fpFire: 'fp_plasma_fire', cooldown: 0.09, sound: 'plasma',
+    kind: 'projectile', proj: 'plasma', projSpeed: 13, splash: 0, dmg: [9, 20],
+  },
 ];
 
-export const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50 };
+export const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };

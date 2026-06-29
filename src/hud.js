@@ -212,13 +212,14 @@ export function drawStatusBar(ctx, game) {
 
   // ammo type counts: "LABEL  cur/max"
   ctx.font = '6px monospace'; ctx.textBaseline = 'top';
-  const types = [['BULL', 'bullets'], ['SHEL', 'shells'], ['RCKT', 'rockets']];
-  let ay = BAR_Y + 4;
+  const types = [['BULL', 'bullets'], ['SHEL', 'shells'], ['RCKT', 'rockets'], ['CELL', 'cells']];
+  let ay = BAR_Y + 2;
   for (const [lab, t] of types) {
-    ctx.textAlign = 'left'; ctx.fillStyle = '#8a8a78'; ctx.fillText(lab, 250, ay);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#cfcf30';
+    const cur = w.ammo === t;
+    ctx.textAlign = 'left'; ctx.fillStyle = cur ? '#ffd040' : '#8a8a78'; ctx.fillText(lab, 250, ay);
+    ctx.textAlign = 'right'; ctx.fillStyle = cur ? '#ffe060' : '#cfcf30';
     ctx.fillText(`${p.ammo[t]}/${AMMO_MAX[t]}`, 318, ay);
-    ay += 9;
+    ay += 7;
   }
 }
 
@@ -270,7 +271,7 @@ export function drawTitle(ctx, t) {
   ctx.fillText('CLICK or PRESS ENTER to descend', RENDER_W / 2, 120);
 
   ctx.font = '7px monospace'; ctx.fillStyle = '#998';
-  ctx.fillText('WASD move   MOUSE look   CLICK fire   1-6 weapons', RENDER_W / 2, 150);
+  ctx.fillText('WASD move   MOUSE look   CLICK fire   1-7 weapons', RENDER_W / 2, 150);
   ctx.fillText('E/SPACE use   SHIFT run   TAB map   M mute', RENDER_W / 2, 162);
   ctx.fillText('Reach the EXIT switch. Kill everything that moves.', RENDER_W / 2, 178);
 }
@@ -304,13 +305,24 @@ export function drawIntermission(ctx, game) {
   ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#cfcf40';
   ctx.fillText('LEVEL COMPLETE', RENDER_W / 2, 36);
   ctx.font = '9px monospace'; ctx.fillStyle = '#bbb';
-  ctx.fillText(tally.level, RENDER_W / 2, 60);
-  const pct = tally.total ? Math.round((tally.kills / tally.total) * 100) : 100;
-  ctx.font = '11px monospace'; ctx.fillStyle = '#d83030';
-  ctx.fillText(`KILLS   ${tally.kills} / ${tally.total}   (${pct}%)`, RENDER_W / 2, 92);
-  ctx.font = '8px monospace';
+  ctx.fillText(tally.level, RENDER_W / 2, 56);
+  const kpct = tally.total ? Math.round((tally.kills / tally.total) * 100) : 100;
+  const ipct = tally.totalItems ? Math.round((tally.items / tally.totalItems) * 100) : 100;
+  const secs = Math.floor(tally.time || 0);
+  const tstr = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+  ctx.textAlign = 'left'; ctx.font = '10px monospace';
+  const lx = RENDER_W / 2 - 56;
+  ctx.fillStyle = '#d83030'; ctx.fillText('KILLS', lx, 80);
+  ctx.fillStyle = '#3a9adf'; ctx.fillText('ITEMS', lx, 96);
+  ctx.fillStyle = '#cfcf40'; ctx.fillText('TIME', lx, 112);
+  ctx.textAlign = 'right'; const rx = RENDER_W / 2 + 60;
+  ctx.fillStyle = '#eaeaea';
+  ctx.fillText(`${tally.kills} / ${tally.total}   ${kpct}%`, rx, 80);
+  ctx.fillText(`${tally.items} / ${tally.totalItems}   ${ipct}%`, rx, 96);
+  ctx.fillText(tstr, rx, 112);
+  ctx.textAlign = 'center'; ctx.font = '8px monospace';
   ctx.fillStyle = (Math.sin(game.timer * 4) > 0) ? '#ffd040' : '#998';
-  ctx.fillText(tally.next ? 'press ENTER for the next level' : 'press ENTER', RENDER_W / 2, 130);
+  ctx.fillText(tally.next ? 'press ENTER for the next level' : 'press ENTER', RENDER_W / 2, 138);
 }
 
 export function drawVictory(ctx, t) {

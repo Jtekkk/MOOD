@@ -78,6 +78,7 @@ export class AudioEngine {
       case 'shotgun':  this._noise(0.28, { freq: 1500, gain: 0.8, decay: 0.7 }); this._tone(160, 0.12, { type: 'sawtooth', gain: 0.25, slideTo: 50 }); break;
       case 'supershotgun': this._noise(0.42, { freq: 1100, gain: 0.95, decay: 0.6 }); this._tone(120, 0.18, { type: 'sawtooth', gain: 0.3, slideTo: 40 }); break;
       case 'chaingun': this._noise(0.07, { freq: 3000, gain: 0.45, decay: 1.6 }); break;
+      case 'plasma':   this._tone(900, 0.09, { type: 'square', gain: 0.22, slideTo: 280 }); this._noise(0.06, { freq: 3200, gain: 0.18, decay: 1.5 }); break;
       case 'rocket':   this._noise(0.4, { freq: 700, gain: 0.5, decay: 0.5 }); this._tone(220, 0.3, { type: 'sawtooth', gain: 0.2, slideTo: 60 }); break;
       case 'explosion':this._noise(0.6, { freq: 500, gain: 0.95, q: 0.5, decay: 0.4 }); this._tone(80, 0.4, { type: 'sawtooth', gain: 0.4, slideTo: 25 }); break;
       case 'punch':    this._noise(0.1, { freq: 800, gain: 0.4, decay: 1.0 }); break;

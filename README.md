@@ -36,7 +36,7 @@ Then open **http://localhost:8080** and click the screen.
 | Fire              | Left mouse / `Ctrl`                   |
 | Use door / switch | `E` / `Space` / `F`                   |
 | Run               | `Shift`                               |
-| Select weapon     | `1`–`6` (`Q` cycles)                  |
+| Select weapon     | `1`–`7` (`Q` cycles)                  |
 | Automap           | `Tab`                                 |
 | Pause             | `Esc`                                 |
 | Mute              | `M`                                   |
@@ -62,11 +62,13 @@ find the matching keycard.
 - **Wolfenstein-style sliding doors** computed as a mid-cell plane intersection
   during the DDA — they slide, block sight/bullets when closed, and re-open if
   something is standing in the doorway.
-- **Six weapons:** fist, pistol, shotgun, super shotgun, chaingun, rocket
-  launcher — hitscan with pellet spread, plus splash-damage projectiles.
-- **Four enemy types** with a real AI state machine (idle → chase → attack →
-  pain → death): the Former Human (hitscan), Imp (fireballs), Demon (melee
-  charger), and Cacodemon (floating plasma lobber).
+- **Seven weapons:** fist, pistol, shotgun, super shotgun, chaingun, rocket
+  launcher, and plasma rifle — hitscan with pellet spread, plus splash-damage
+  and rapid energy projectiles, across four ammo types.
+- **Five enemy types** with a real AI state machine (idle → chase → attack →
+  pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
+  charger), Cacodemon (floating plasma lobber), and Lost Soul (fast flaming-
+  skull charger). Ranged monsters strafe to dodge and kite you.
 - **Physics & feel:** momentum-based movement (acceleration, friction, and
   velocity bleed-off when you hit a wall) and **knockback** — bullets nudge,
   fireballs shove, rockets and barrels launch both monsters and the player.
@@ -95,8 +97,9 @@ find the matching keycard.
 - **Eight levels** — two hand-authored (Entryway, Underhalls) plus six
   procedurally generated (`tools/gen-levels.mjs`): rooms-and-corridors layouts,
   each with its own surface theme, a key-gated exit, and a rising
-  enemy/difficulty curve. A title screen, level-complete intermission (with kill
-  tally), death/respawn, and a final victory screen tie them together.
+  enemy/difficulty curve. A title screen, level-complete intermission (kills /
+  items / time tally), death/respawn, and a final victory screen tie them
+  together.
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
 - **Per-level background music** streamed from looping MP3 tracks (one per
