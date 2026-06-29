@@ -29,18 +29,20 @@ Then open **http://localhost:8080** and click the screen.
 
 ## Controls
 
-| Action            | Keys                                  |
-| ----------------- | ------------------------------------- |
-| Move              | `W` `A` `S` `D` / arrow keys          |
-| Look              | Mouse (click to capture) / `←` `→`    |
-| Fire              | Left mouse / `Ctrl`                   |
-| Use door / switch | `E` / `Space` / `F`                   |
-| Run               | `Shift`                               |
-| Select weapon     | `1`–`8` (`Q` cycles)                  |
-| Automap           | `Tab`                                 |
-| Options           | `O` (from title or pause)             |
-| Pause             | `Esc`                                 |
-| Mute              | `M`                                   |
+| Action            | Keyboard & mouse                      | Gamepad                       |
+| ----------------- | ------------------------------------- | ----------------------------- |
+| Move              | `W` `A` `S` `D` / arrow keys          | Left stick / d-pad            |
+| Look              | Mouse (click to capture) / `←` `→`    | Right stick                   |
+| Fire              | Left mouse / `Ctrl`                   | Right trigger / `A`           |
+| Use door / switch | `E` / `Space` / `F`                   | `X` / `B`                     |
+| Run               | `Shift`                               | Push left stick fully         |
+| Select weapon     | `1`–`8` (`Q` cycles)                  | Shoulders cycle               |
+| Pause             | `Esc`                                 | `Start`                       |
+| Automap           | `Tab`                                 | —                             |
+| Options           | `O` (from title or pause)             | —                             |
+| Mute              | `M`                                   | `Y`                           |
+
+A gamepad (Xbox/standard mapping) is detected automatically when connected.
 
 **Goal:** clear the level and reach the **EXIT** switch. Some doors are locked —
 find the matching keycard.
@@ -72,6 +74,17 @@ find the matching keycard.
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
   charger), and the Baron of Hell (600-HP green-fireball boss). Ranged monsters
   strafe to dodge and kite you, and each has a distinct death animation.
+- **The Gumbird** — a 1000-HP final boss guarding LEVEL 8's exit: part Gumby,
+  part Big Bird, on roller skates, in a dunce cap and a polka-dot dress,
+  juggling three balls and belting out "Row, Row, Row Your Boat" line by line
+  (with a synthesized melody) while pelting you with juggling balls.
+- **Gamepad support:** any standard-mapping controller is detected on connect —
+  sticks to move and look, triggers to fire, shoulders to swap weapons, and
+  full menu/pause navigation.
+- **Environmental terrain:** wadeable **water** — ponds and streams that ripple,
+  slow you down, and kick up splashes — and **outdoor sections** open to a dusk
+  **sky** instead of a ceiling. (The renderer is a flat-floor raycaster, so
+  these are surface features, not true multi-height geometry.)
 - **Physics & feel:** momentum-based movement (acceleration, friction, and
   velocity bleed-off when you hit a wall) and **knockback** — bullets nudge,
   fireballs shove, rockets and barrels launch both monsters and the player.

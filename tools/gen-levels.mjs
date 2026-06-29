@@ -26,27 +26,27 @@ const KEY = { red: { key: 'R', door: 'r' }, blue: { key: 'U', door: 'b' }, yello
 const CONFIGS = [
   { name: 'LEVEL 3: REFINERY', w: 34, h: 24, rooms: 8, key: 'red',
     theme: { primary: '#', accents: ['C', 'L', 'M', 'P'] }, floor: 'floor', ceil: 'ceil', sky: '#20242c',
-    enemies: { z: 6, i: 5, d: 2, c: 0 }, weapons: ['2'], barrels: 4,
+    enemies: { z: 6, i: 5, d: 2, c: 0 }, water: { ponds: 1, streams: 1 }, weapons: ['2'], barrels: 4,
     items: { h: 4, H: 2, p: 3, a: 1, l: 3, L: 2, s: 3, S: 1 } },
   { name: 'LEVEL 4: FOUNDRY', w: 36, h: 24, rooms: 9, key: 'blue',
     theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
-    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, weapons: ['4'], barrels: 5,
+    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5,
     items: { h: 4, H: 2, p: 3, a: 1, A: 1, l: 2, L: 3, s: 2, S: 2 } },
   { name: 'LEVEL 5: THE WOUND', w: 36, h: 26, rooms: 9, key: 'yellow',
     theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
-    enemies: { z: 3, i: 6, d: 4, c: 2, f: 3 }, weapons: ['3'], barrels: 4,
+    enemies: { z: 3, i: 6, d: 4, c: 2, f: 3 }, outdoor: 1, weapons: ['3'], barrels: 4,
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, g: 1, s: 3, S: 2, r: 1, e: 2 } },
   { name: 'LEVEL 6: RUSTWORKS', w: 38, h: 26, rooms: 10, key: 'red',
     theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
-    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, weapons: ['5'], barrels: 6,
+    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6,
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 2, e: 2 } },
   { name: 'LEVEL 7: CRYPTWORKS', w: 38, h: 28, rooms: 11, key: 'blue',
     theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
-    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4, B: 1 }, weapons: ['6'], barrels: 5,
+    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4, B: 1 }, outdoor: 1, weapons: ['6'], barrels: 5,
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 8: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, boss: 'G', weapons: ['6', '5', '7'], barrels: 8,
+    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, boss: 'G', outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8,
     items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 
@@ -131,6 +131,41 @@ function genLevel(cfg, seed) {
   const [dx, dy] = pinches[Math.floor(pinches.length / 2)];
   g[dy][dx] = KEY[cfg.key].door;
 
+  // ----- terrain: water ponds/streams + open-sky outdoor rooms -----
+  // A parallel grid: '.' none, '~' water (walkable), '^' open sky, 'O' both.
+  const tr = Array.from({ length: H }, () => Array(W).fill('.'));
+  const setTerr = (x, y, ch) => {
+    if (x <= 0 || y <= 0 || x >= W - 1 || y >= H - 1) return;
+    if (g[y][x] !== '.') return;                 // terrain only on open floor
+    if (x === sx && y === sy) return;            // never under the player start
+    const cur = tr[y][x];
+    if ((cur === '^' && ch === '~') || (cur === '~' && ch === '^')) tr[y][x] = 'O';
+    else tr[y][x] = ch;
+  };
+  if (cfg.outdoor) {
+    const cand = rooms.slice(1, rooms.length - 1);   // not the start or exit room
+    for (let n = 0; n < (cfg.outdoor | 0) && cand.length; n++) {
+      const r = cand.splice(irnd(rng, cand.length), 1)[0];
+      for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) setTerr(x, y, '^');
+    }
+  }
+  if (cfg.water) {
+    const cand = rooms.slice(1);                      // ponds anywhere but the start room
+    for (let n = 0; n < (cfg.water.ponds | 0) && cand.length; n++) {
+      const r = cand.splice(irnd(rng, cand.length), 1)[0];
+      const [cxp, cyp] = center(r);
+      const rxp = Math.max(1, (r.w >> 1) - 1), ryp = Math.max(1, (r.h >> 1) - 1);
+      for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) {
+        const ddx = (x - cxp) / rxp, ddy = (y - cyp) / ryp;
+        if (ddx * ddx + ddy * ddy <= 1) setTerr(x, y, '~');
+      }
+    }
+    for (let n = 0; n < (cfg.water.streams | 0) && corridors.length; n++) {
+      const corr = corridors[irnd(rng, corridors.length)];
+      for (const [x, y] of corr) setTerr(x, y, '~');
+    }
+  }
+
   // ----- things -----
   t[sy][sx] = '@';
   const occupied = new Set([`${sx},${sy}`]);
@@ -169,6 +204,7 @@ function genLevel(cfg, seed) {
   return {
     name: cfg.name, floor: cfg.floor, ceil: cfg.ceil, sky: cfg.sky, startAngle: 0,
     walls: g.map((row) => row.join('')), things: t.map((row) => row.join('')),
+    terrain: tr.map((row) => row.join('')),
   };
 }
 
@@ -227,7 +263,7 @@ let src = `// AUTO-GENERATED by tools/gen-levels.mjs — do not edit by hand; re
 // 6 procedurally built, fully-validated levels (3..8).
 export const GEN_LEVELS = [\n`;
 for (const lv of levels) {
-  src += `  {\n    name: '${lv.name}',\n    floor: '${lv.floor}', ceil: '${lv.ceil}', skyTint: '${lv.sky}',\n    startAngle: ${lv.startAngle},\n    walls: [\n${esc(lv.walls)},\n    ],\n    things: [\n${esc(lv.things)},\n    ],\n  },\n`;
+  src += `  {\n    name: '${lv.name}',\n    floor: '${lv.floor}', ceil: '${lv.ceil}', skyTint: '${lv.sky}',\n    startAngle: ${lv.startAngle},\n    walls: [\n${esc(lv.walls)},\n    ],\n    things: [\n${esc(lv.things)},\n    ],\n    terrain: [\n${esc(lv.terrain)},\n    ],\n  },\n`;
 }
 src += `];\n`;
 writeFileSync(new URL('../src/data/levels.gen.js', import.meta.url), src);

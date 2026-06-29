@@ -52,10 +52,28 @@ export class Renderer {
     const planeX = -dirY * PLANE, planeY = dirX * PLANE;
     const horizon = ((HALF_H + p.pitch) + (sh > 0 ? (Math.random() - 0.5) * sh * 13 : 0)) | 0;
     this._fog = hexToPacked(game.map.skyTint || '#15171c');
+    this._time = game.timer || 0;
+    this._buildSky(horizon);
     this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
     this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
     this._sprites(game, p, dirX, dirY, planeX, planeY, horizon);
     this._particles(game, p, dirX, dirY, planeX, planeY, horizon);
+  }
+
+  // Precompute a per-row sky gradient (used by open-air ceiling cells).
+  _buildSky(horizon) {
+    if (!this._sky || this._sky.length !== RENDER_H) this._sky = new Uint32Array(RENDER_H);
+    const sky = this._sky;
+    // dusk gradient: lighter at the horizon, deeper blue overhead
+    const topR = 30, topG = 44, topB = 78;
+    const horR = 120, horG = 134, horB = 158;
+    for (let y = 0; y < RENDER_H; y++) {
+      const t = horizon > 0 ? Math.max(0, Math.min(1, y / horizon)) : 0; // 0 top .. 1 horizon
+      const r = (topR + (horR - topR) * t) | 0;
+      const g = (topG + (horG - topG) * t) | 0;
+      const b = (topB + (horB - topB) * t) | 0;
+      sky[y] = (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+    }
   }
 
   // ---- floor + ceiling (per-row casting) ---------------------------------
@@ -63,11 +81,19 @@ export class Renderer {
     const map = game.map;
     const floorTex = TEX[map.floor] || TEX.floor;
     const ceilTex = TEX[map.ceil] || TEX.ceil;
-    const fp = floorTex.pixels, cp = ceilTex.pixels;
-    const fw = floorTex.w, ch = ceilTex.w;
+    const waterTex = TEX.water || floorTex;
+    const fp = floorTex.pixels, cp = ceilTex.pixels, wp = waterTex.pixels;
+    const fw = floorTex.w, ch = ceilTex.w, ww = waterTex.w;
     const rayDirX0 = dirX - planeX, rayDirY0 = dirY - planeY;
     const rayDirX1 = dirX + planeX, rayDirY1 = dirY + planeY;
     const buf = this.buf;
+    const W = map.W, Hh = map.H;
+    const fType = map.floorType, cType = map.ceilType;
+    const hasTerrain = map.hasTerrain;
+    const sky = this._sky;
+    const t = this._time;
+    // animated ripple offsets for water (whole-texel shimmer)
+    const rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
 
     for (let y = 0; y < RENDER_H; y++) {
       const isFloor = y > horizon;
@@ -84,11 +110,26 @@ export class Renderer {
       const tex = isFloor ? fp : cp;
       const tw = isFloor ? fw : ch;
       for (let x = 0; x < RENDER_W; x++) {
-        let tx = (fx - Math.floor(fx)) * tw | 0;
-        let ty = (fy - Math.floor(fy)) * tw | 0;
-        if (tx < 0) tx += tw; if (ty < 0) ty += tw;
-        const c = tex[(ty * tw + tx) | 0];
-        buf[rowOff + x] = shadeFog(c, light, fog, ft);
+        const cx = Math.floor(fx), cy = Math.floor(fy);
+        let terr = 0;
+        if (hasTerrain && cx >= 0 && cy >= 0 && cx < W && cy < Hh) {
+          terr = isFloor ? (fType && fType[cy * W + cx]) : (cType && cType[cy * W + cx]);
+        }
+        if (!isFloor && terr) {
+          // open sky overhead — no fog, straight gradient
+          buf[rowOff + x] = sky[y];
+        } else if (isFloor && terr) {
+          // water — sample the rippling water texture
+          let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0;
+          let ty = (fy + roy - Math.floor(fy + roy)) * ww | 0;
+          if (tx < 0) tx += ww; if (ty < 0) ty += ww;
+          buf[rowOff + x] = shadeFog(wp[(ty * ww + tx) | 0], light, fog, ft);
+        } else {
+          let tx = (fx - Math.floor(fx)) * tw | 0;
+          let ty = (fy - Math.floor(fy)) * tw | 0;
+          if (tx < 0) tx += tw; if (ty < 0) ty += tw;
+          buf[rowOff + x] = shadeFog(tex[(ty * tw + tx) | 0], light, fog, ft);
+        }
         fx += stepX; fy += stepY;
       }
     }

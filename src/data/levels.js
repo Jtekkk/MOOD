@@ -22,6 +22,10 @@
 //   '2' shotgun  '3' super shotgun  '4' chaingun  '5' rocket launcher
 //   'R' red key  'U' blue key  'Y' yellow key
 //   'o' explosive barrel
+//
+// Optional third grid `terrain` (same dimensions) decorates the floor/ceiling:
+//   '.' nothing   '~' water (walkable, slows you, splashes)
+//   '^' open sky overhead (outdoor section)   'O' outdoor pond (water + sky)
 
 export const WALL_TEX = {
   '#': 'tech', 'B': 'brick', 'M': 'metal', 'S': 'stone', 'A': 'marble',
@@ -150,9 +154,24 @@ export function parseLevel(def) {
     rows.map((r) => (r.length < W ? r + fill.repeat(W - r.length) : r.slice(0, W)));
   const wallRows = pad(def.walls, '#');
   const thingRows = pad(def.things || [], '.');
+  const terrainRows = def.terrain ? pad(def.terrain, '.') : null;
 
   const cells = new Int8Array(W * H);   // 0 empty, >0 = wall kind index
   const cellChar = new Array(W * H).fill(' ');
+  // optional per-cell terrain: floor type (0 normal, 1 water) + open-sky ceiling
+  const floorType = new Uint8Array(W * H);
+  const ceilType = new Uint8Array(W * H);
+  let hasTerrain = false;
+  if (terrainRows) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const tc = terrainRows[y][x];
+        const i = y * W + x;
+        if (tc === '~' || tc === 'O') { floorType[i] = 1; hasTerrain = true; }   // water (~ pond/stream, O outdoor pond)
+        if (tc === '^' || tc === 'O') { ceilType[i] = 1; hasTerrain = true; }    // open sky overhead
+      }
+    }
+  }
   const doors = [];
   let start = null;
 
@@ -198,7 +217,7 @@ export function parseLevel(def) {
   }
 
   return {
-    name: def.name, W, H, cells, cellChar, doors, things,
+    name: def.name, W, H, cells, cellChar, doors, things, floorType, ceilType, hasTerrain,
     floor: def.floor, ceil: def.ceil, skyTint: def.skyTint || '#1a1d24',
     start: start || { x: 1.5, y: 1.5 }, startAngle: def.startAngle || 0,
   };

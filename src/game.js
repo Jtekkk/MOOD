@@ -21,6 +21,7 @@ function loadSettings() {
 const BLOOD = [rgba(150, 22, 22), rgba(110, 14, 14), rgba(90, 6, 6), rgba(180, 40, 40)];
 const SPARKS = [rgba(255, 224, 130), rgba(255, 170, 50), rgba(220, 220, 230)];
 const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(60, 50, 45)];
+const WATER = [rgba(150, 220, 255), rgba(90, 170, 220), rgba(210, 240, 255), rgba(120, 195, 235)];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
 
@@ -223,7 +224,9 @@ export class Game {
     if (inp.down('KeyD')) strafe += 1;
     if (inp.down('KeyA')) strafe -= 1;
     const run = inp.down('ShiftLeft') || inp.down('ShiftRight') ? 1.7 : 1.0;
-    const speed = 3.1 * run;
+    const ft = this.map.floorType;
+    const inWater = !!(ft && ft[Math.floor(p.y) * this.map.W + Math.floor(p.x)] === 1);
+    const speed = 3.1 * run * (inWater ? 0.55 : 1.0);   // wading slows you down
     const dirX = Math.cos(p.angle), dirY = Math.sin(p.angle);
     const desVX = (dirX * fwd - dirY * strafe) * speed;
     const desVY = (dirY * fwd + dirX * strafe) * speed;
@@ -247,6 +250,15 @@ export class Game {
     } else {
       p.bobAmt = Math.max(0, p.bobAmt - dt * 4);
       p.idleMoveT += dt;
+    }
+    // wading kicks up splashes
+    if (inWater && movingFast) {
+      p.splashT = (p.splashT || 0) - dt;
+      if (p.splashT <= 0) {
+        p.splashT = 0.17;
+        this._spawnParticles(p.x, p.y, 0.04, 5, { speed: 1.8, up: 2.3, life: 0.42, colors: WATER });
+        this.audio.play('splash');
+      }
     }
 
     // --- weapon select ---

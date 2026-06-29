@@ -1700,6 +1700,31 @@ function lavaFloor(seed) {
   return texFrom(c, ctx);
 }
 
+function waterFloor(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, '#1d5f93'); g.addColorStop(1, '#0c3252');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+  // soft caustic blobs
+  for (let i = 0; i < 26; i++) {
+    const x = rng() * 64, y = rng() * 64, r = 4 + rng() * 12;
+    const o = ctx.createRadialGradient(x, y, 1, x, y, r);
+    o.addColorStop(0, 'rgba(150,220,255,0.30)'); o.addColorStop(1, 'rgba(150,220,255,0)');
+    ctx.fillStyle = o; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  }
+  // ripple lines
+  ctx.strokeStyle = 'rgba(180,235,255,0.22)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 11; i++) {
+    const yy = i * 6 + rng() * 3;
+    ctx.beginPath();
+    for (let x = 0; x <= 64; x += 6) ctx.lineTo(x, yy + Math.sin(x * 0.22 + i) * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(220,245,255,0.20)'; for (let i = 0; i < 40; i++) ctx.fillRect((rng() * 64) | 0, (rng() * 64) | 0, 1, 1);
+  noiseOverlay(ctx, 64, 64, rng, 18, 0.1);
+  return texFrom(c, ctx);
+}
+
 function tileFloor(seed) {
   const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
   for (let gy = 0; gy < 4; gy++) for (let gx = 0; gx < 4; gx++) {
@@ -1749,6 +1774,7 @@ export function buildAssets() {
   TEX.grate = grateFloor(43);
   TEX.lava = lavaFloor(44);
   TEX.tile = tileFloor(45);
+  TEX.water = waterFloor(46);
 
   // enemies
   SPR.zombie_walk0 = zombie('walk0');

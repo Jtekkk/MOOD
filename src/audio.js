@@ -98,6 +98,7 @@ export class AudioEngine {
       case 'oof':      this._tone(180, 0.12, { type: 'square', gain: 0.3, slideTo: 110 }); break;
       case 'menu':     this._tone(440, 0.05, { gain: 0.2 }); break;
       case 'levelend': this._tone(523, 0.15, { type: 'square', gain: 0.3 }); this._tone(659, 0.15, { type: 'square', gain: 0.3 }); this._tone(784, 0.3, { type: 'square', gain: 0.3 }); break;
+      case 'splash':   this._noise(0.16, { freq: 1700, gain: 0.16, q: 1, decay: 1.2 }); break;
       default: break;
     }
   }
