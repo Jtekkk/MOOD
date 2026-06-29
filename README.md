@@ -50,10 +50,19 @@ npm run dist:mac             # build a macOS .dmg
 npm run dist:linux           # build a Linux AppImage
 ```
 
-Installers land in `dist-electron/` (e.g. `MOOD-0.1.0-x64.exe`). **Build each
-target on that OS** — producing a Windows `.exe` is most reliable *on Windows*
-(cross-building from Linux/macOS needs Wine and is finicky). The game itself
-stays a zero-dependency browser app; Electron is only used for packaging.
+Installers land in `dist-electron/` (e.g. `MOOD Setup 0.1.0.exe` plus a portable
+`MOOD 0.1.0.exe`). **Build each target on that OS** — producing a Windows `.exe`
+is most reliable *on Windows*. The game itself stays a zero-dependency browser
+app; Electron is only used for packaging.
+
+**Don't have a Windows PC?** A GitHub Actions workflow
+(`.github/workflows/build-desktop.yml`) builds the `.exe` for you on GitHub's
+**Windows runner** — no local toolchain needed:
+
+- It runs automatically on every push to the dev branch; grab the `MOOD-windows`
+  artifact from the **Actions** tab of the run.
+- Or push a tag (`git tag v0.1.0 && git push --tags`) and it attaches the
+  Windows `.exe`, macOS `.dmg`, and Linux `AppImage` to a **GitHub Release**.
 
 ## Controls
 

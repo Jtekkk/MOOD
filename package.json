@@ -31,8 +31,7 @@
       "assets/**/*"
     ],
     "win": {
-      "target": ["nsis", "portable"],
-      "artifactName": "MOOD-${version}-${arch}.${ext}"
+      "target": ["nsis", "portable"]
     },
     "nsis": {
       "oneClick": false,

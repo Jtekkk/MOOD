@@ -1,0 +1,84 @@
+name: Build desktop apps
+
+# Builds the Electron desktop bundles on each OS's native runner — so the
+# Windows runner produces a real .exe (installer + portable). Artifacts are
+# uploaded to the run; pushing a v* tag also publishes them to a Release.
+on:
+  workflow_dispatch:        # manual "Run workflow" button (once on the default branch)
+  push:
+    branches: ['claude/gifted-maxwell-dkwhic']   # build on every push to this branch
+    tags: ['v*']                                  # …and on release tags
+  # Tip: to stop building on every commit, delete the `branches:` line above and
+  # use the manual trigger / tags instead.
+
+permissions:
+  contents: write           # needed for the release job (uses the built-in token)
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win --x64
+            artifact: MOOD-windows
+          - os: macos-latest
+            args: --mac
+            artifact: MOOD-macos
+          - os: ubuntu-latest
+            args: --linux
+            artifact: MOOD-linux
+    runs-on: ${{ matrix.os }}
+    # Don't let a macOS/Linux hiccup block the Windows .exe or the release.
+    continue-on-error: ${{ matrix.os != 'windows-latest' }}
+    env:
+      CSC_IDENTITY_AUTODISCOVERY: false   # don't try to code-sign (no certs in CI)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Sanity-check the game (levels + headless gameplay)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run validate
+
+      - name: Build desktop bundle
+        run: npx --no-install electron-builder ${{ matrix.args }} --publish never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          if-no-files-found: ignore
+          path: |
+            dist-electron/*.exe
+            dist-electron/*.dmg
+            dist-electron/*.AppImage
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            artifacts/**/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "MOOD ${GITHUB_REF_NAME}" \
+            --notes "Automated desktop builds (Windows .exe, macOS .dmg, Linux AppImage)."
