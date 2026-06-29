@@ -64,7 +64,7 @@ export class Game {
       x: 1.5, y: 1.5, angle: 0, pitch: 0,
       vx: 0, vy: 0, kx: 0, ky: 0,    // momentum + knockback velocities
       health: 100, armor: 0,
-      owned: [true, true, false, false, false, false, false],
+      owned: [true, true, false, false, false, false, false, false],
       weapon: 1, pendingWeapon: 1, raiseT: 0,
       ammo: { bullets: 50, shells: 0, rockets: 0, cells: 0 },
       keys: { red: false, blue: false, yellow: false },
@@ -405,7 +405,8 @@ export class Game {
       }
     }
     if (w.name !== 'FIST') this._alertNearby(p.x, p.y, 6);  // the noise draws monsters
-    if (w.name === 'SUPER SHOTGUN' || w.name === 'ROCKET LAUNCHER') this.addShake(0.28);
+    if (w.name === 'BFG 9000') this.addShake(0.5);
+    else if (w.name === 'SUPER SHOTGUN' || w.name === 'ROCKET LAUNCHER') this.addShake(0.28);
     else if (w.name === 'SHOTGUN' || w.name === 'CHAINGUN') this.addShake(0.1);
   }
 
@@ -446,7 +447,7 @@ export class Game {
       kind: 'proj', x: x + dx * 0.4, y: y + dy * 0.4,
       vx: dx * w.projSpeed, vy: dy * w.projSpeed,
       dmg: Array.isArray(w.dmg) ? irnd(w.dmg[0], w.dmg[1]) : w.dmg,
-      splash: w.splash || 0, owner, sprite, spriteH: 0.4, vOffset: 0.45,
+      splash: w.splash || 0, owner, sprite, spriteH: w.projH || 0.4, vOffset: 0.45,
       fullbright: true, alive: true, life: 6,
     });
   }

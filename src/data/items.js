@@ -44,6 +44,8 @@ export const ITEMS = {
     apply: (g) => addAmmo(g, 'cells', 100, 'Picked up an energy cell pack.') },
   6: { sprite: 'pickup_plasma', spriteH: 0.45, sound: 'weapon',
     apply: (g) => giveWeapon(g, 6, 'cells', 40, 'You got the plasma rifle!') },
+  7: { sprite: 'pickup_bfg', spriteH: 0.5, sound: 'weapon',
+    apply: (g) => giveWeapon(g, 7, 'cells', 80, 'You got the BFG 9000!') },
 };
 
 function addHealth(g, amt, cap, msg) {

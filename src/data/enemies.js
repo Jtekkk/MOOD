@@ -33,9 +33,15 @@ export const ENEMY_TYPES = {
     attack: 'melee', range: 1.0, dmg: [3, 9], cooldown: 0.7,
     painChance: 0.2,
   },
+  baron: {
+    name: 'BARON OF HELL', prefix: 'baron',
+    hp: 600, speed: 1.7, radius: 0.45, spriteH: 1.5, mass: 3.6,
+    attack: 'projectile', proj: 'baronball', projSpeed: 8, range: 16, dmg: [12, 28], cooldown: 1.5,
+    painChance: 0.12,
+  },
 };
 
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

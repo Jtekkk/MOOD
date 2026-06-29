@@ -271,7 +271,7 @@ export function drawTitle(ctx, t) {
   ctx.fillText('CLICK or PRESS ENTER to descend', RENDER_W / 2, 120);
 
   ctx.font = '7px monospace'; ctx.fillStyle = '#998';
-  ctx.fillText('WASD move   MOUSE look   CLICK fire   1-7 weapons', RENDER_W / 2, 150);
+  ctx.fillText('WASD move   MOUSE look   CLICK fire   1-8 weapons', RENDER_W / 2, 150);
   ctx.fillText('E/SPACE use   SHIFT run   TAB map   M mute', RENDER_W / 2, 162);
   ctx.fillText('Reach the EXIT switch. Kill everything that moves.', RENDER_W / 2, 178);
 }

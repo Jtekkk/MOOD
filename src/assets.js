@@ -836,6 +836,7 @@ function weaponPickup(kind) {
   else if (kind === 'chaingun') { ctx.fillRect(6, 8, 26, 9); ctx.fillStyle = '#555'; for (let i = 0; i < 5; i++) ctx.fillRect(28, 8 + i * 2, 8, 1); }
   else if (kind === 'rocket') { ctx.fillRect(4, 9, 30, 6); ctx.fillStyle = '#a00'; ctx.fillRect(30, 9, 6, 6); }
   else if (kind === 'plasma') { ctx.fillRect(6, 8, 28, 9); ctx.fillStyle = '#4ac8ff'; ctx.fillRect(10, 10, 18, 2); ctx.fillRect(10, 14, 18, 2); }
+  else if (kind === 'bfg') { ctx.fillStyle = '#2c3a30'; ctx.fillRect(4, 7, 32, 11); ctx.fillStyle = '#6cff5a'; ctx.fillRect(14, 10, 12, 5); }
   return texFrom(c, ctx);
 }
 
@@ -1087,6 +1088,104 @@ function lostsoulBack(frame) {
   ctx.fillStyle = '#ded8ca'; ctx.beginPath(); ctx.ellipse(22, 23, 11, 12, 0, 0, 7); ctx.fill();
   ctx.strokeStyle = 'rgba(120,108,88,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(22, 12); ctx.lineTo(22, 34); ctx.stroke();
   ctx.fillStyle = '#cfc8b6'; ctx.fillRect(16, 30, 12, 5);
+  return texFrom(c, ctx);
+}
+
+// ----- enemy: baron of hell (big tanky green-fireball boss) ----------------
+function baron(frame) {
+  const { c, ctx } = makeCanvas(60, 80);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 5 : 0;
+  ctx.fillStyle = '#6b4a30'; ctx.fillRect(18 - sw, 56, 9, 18); ctx.fillRect(33 + sw, 56, 9, 18);
+  ctx.fillStyle = '#2a1c12'; ctx.fillRect(16 - sw, 72, 12, 5); ctx.fillRect(33 + sw, 72, 12, 5); // hooves
+  const bg = ctx.createRadialGradient(24, 30, 4, 30, 40, 28); bg.addColorStop(0, '#c79ca0'); bg.addColorStop(1, '#7d5a60');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(30, 40, 18, 22, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, 28); ctx.lineTo(30, 56); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(20, 44, 20, 1); ctx.fillRect(22, 50, 16, 1);
+  ctx.fillStyle = '#b58f93'; ctx.beginPath(); ctx.ellipse(14, 30, 7, 8, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(46, 30, 7, 8, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#a8848a';
+  if (attack) {
+    ctx.fillRect(44, 26, 14, 7);
+    const g = ctx.createRadialGradient(58, 28, 1, 58, 28, 11); g.addColorStop(0, '#dfffe0'); g.addColorStop(0.4, '#6cff5a'); g.addColorStop(0.8, '#1a9a20'); g.addColorStop(1, 'rgba(0,120,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(58, 28, 11, 0, 7); ctx.fill();
+    ctx.fillStyle = '#a8848a'; ctx.fillRect(8, 30, 6, 20);
+  } else {
+    ctx.fillRect(8, 30, 6, 22); ctx.fillRect(46, 30, 6, 22);
+    ctx.fillStyle = '#6b4a30'; ctx.fillRect(7, 48, 8, 6); ctx.fillRect(45, 48, 8, 6);
+  }
+  ctx.fillStyle = '#b58f93'; ctx.beginPath(); ctx.ellipse(30, 16, 11, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e6dcc0';
+  ctx.beginPath(); ctx.moveTo(21, 10); ctx.lineTo(12, -1); ctx.lineTo(18, 3); ctx.lineTo(24, 8); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(39, 10); ctx.lineTo(48, -1); ctx.lineTo(42, 3); ctx.lineTo(36, 8); ctx.fill();
+  ctx.fillStyle = '#0a1a0a'; ctx.fillRect(24, 14, 5, 4); ctx.fillRect(31, 14, 5, 4);
+  ctx.fillStyle = '#6cff5a'; ctx.fillRect(25, 15, 3, 2); ctx.fillRect(32, 15, 3, 2);
+  ctx.fillStyle = '#2a1010'; ctx.fillRect(25, 21, 10, 3);
+  ctx.fillStyle = '#d8c8a0'; for (let x = 25; x < 35; x += 3) ctx.fillRect(x, 21, 1, 3);
+  return texFrom(c, ctx);
+}
+function baronSide(frame) {
+  const { c, ctx } = makeCanvas(60, 80);
+  const sw = frame === 'walk1' ? 5 : -5;
+  ctx.fillStyle = '#6b4a30'; ctx.fillRect(28 + sw, 56, 9, 18); ctx.fillRect(28 - sw, 56, 9, 18);
+  ctx.fillStyle = '#2a1c12'; ctx.fillRect(26 + sw, 72, 12, 5); ctx.fillRect(26 - sw, 72, 12, 5);
+  const bg = ctx.createRadialGradient(26, 30, 4, 32, 40, 26); bg.addColorStop(0, '#c79ca0'); bg.addColorStop(1, '#7d5a60');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(30, 40, 15, 22, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#a8848a'; ctx.fillRect(40, 32, 14, 7); ctx.fillStyle = '#6b4a30'; ctx.fillRect(52, 34, 7, 7);
+  ctx.fillStyle = '#b58f93'; ctx.beginPath(); ctx.ellipse(32, 16, 11, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#a8848a'; ctx.beginPath(); ctx.moveTo(40, 14); ctx.lineTo(46, 18); ctx.lineTo(40, 22); ctx.fill();
+  ctx.fillStyle = '#e6dcc0'; ctx.beginPath(); ctx.moveTo(28, 8); ctx.lineTo(20, -1); ctx.lineTo(30, 5); ctx.fill();
+  ctx.fillStyle = '#0a1a0a'; ctx.fillRect(33, 13, 4, 4); ctx.fillStyle = '#6cff5a'; ctx.fillRect(34, 14, 2, 2);
+  ctx.fillStyle = '#2a1010'; ctx.fillRect(34, 21, 8, 3); ctx.fillStyle = '#d8c8a0'; for (let x = 34; x < 42; x += 3) ctx.fillRect(x, 21, 1, 3);
+  return texFrom(c, ctx);
+}
+function baronBack(frame) {
+  const { c, ctx } = makeCanvas(60, 80);
+  const sw = frame === 'walk1' ? 5 : 0;
+  ctx.fillStyle = '#6b4a30'; ctx.fillRect(18 - sw, 56, 9, 18); ctx.fillRect(33 + sw, 56, 9, 18);
+  ctx.fillStyle = '#2a1c12'; ctx.fillRect(16 - sw, 72, 12, 5); ctx.fillRect(33 + sw, 72, 12, 5);
+  const bg = ctx.createRadialGradient(24, 30, 4, 30, 40, 28); bg.addColorStop(0, '#b88f94'); bg.addColorStop(1, '#6f5056');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(30, 40, 18, 22, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, 26); ctx.lineTo(30, 56); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(18, 34, 24, 2); ctx.fillRect(20, 42, 20, 2);
+  ctx.fillStyle = '#a8848a'; ctx.fillRect(8, 30, 6, 22); ctx.fillRect(46, 30, 6, 22);
+  ctx.fillStyle = '#a8848a'; ctx.beginPath(); ctx.ellipse(30, 16, 11, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e6dcc0'; ctx.beginPath(); ctx.moveTo(21, 10); ctx.lineTo(12, -1); ctx.lineTo(20, 4); ctx.fill(); ctx.beginPath(); ctx.moveTo(39, 10); ctx.lineTo(48, -1); ctx.lineTo(40, 4); ctx.fill();
+  return texFrom(c, ctx);
+}
+function baronBall() {
+  const { c, ctx } = makeCanvas(26, 26);
+  const g = ctx.createRadialGradient(13, 13, 1, 13, 13, 13);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#9cff8c'); g.addColorStop(0.8, '#1aa01a'); g.addColorStop(1, 'rgba(0,120,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(13, 13, 13, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+function bfgBall() {
+  const { c, ctx } = makeCanvas(48, 48);
+  const g = ctx.createRadialGradient(24, 24, 2, 24, 24, 24);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#bdffae'); g.addColorStop(0.7, '#3ad03a'); g.addColorStop(1, 'rgba(0,140,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(24, 24, 24, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(220,255,200,0.8)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 7; i++) { const a = i / 7 * 7; ctx.beginPath(); ctx.moveTo(24, 24); ctx.lineTo(24 + Math.cos(a) * 21, 24 + Math.sin(a) * 21); ctx.stroke(); }
+  return texFrom(c, ctx);
+}
+function fpBfg(fire) {
+  const { c, ctx } = makeCanvas(200, 130);
+  const cx = 100, r = fire ? 6 : 0;
+  glove(ctx, cx - 26, 92 + r, 28, 36); glove(ctx, cx + 4, 94 + r, 24, 32);
+  metalGradH(ctx, cx - 24, 52 + r, 48, 46, '#2c3a30', '#1c2a20', '#0e1812');   // body
+  const core = ctx.createRadialGradient(cx, 70 + r, 2, cx, 70 + r, 16);
+  core.addColorStop(0, '#dfffe0'); core.addColorStop(0.5, '#6cff5a'); core.addColorStop(1, 'rgba(20,120,20,0)');
+  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, 70 + r, 16, 0, 7); ctx.fill();
+  metalGradH(ctx, cx - 16, 24 + r, 8, 36, '#3a4a40', '#26342c', '#16221a');     // prongs
+  metalGradH(ctx, cx + 8, 24 + r, 8, 36, '#3a4a40', '#26342c', '#16221a');
+  const ap = ctx.createRadialGradient(cx, 30 + r, 1, cx, 30 + r, 12);
+  ap.addColorStop(0, '#dfffe0'); ap.addColorStop(0.5, '#6cff5a'); ap.addColorStop(1, 'rgba(0,120,0,0)');
+  ctx.fillStyle = ap; ctx.beginPath(); ctx.arc(cx, 30 + r, 12, 0, 7); ctx.fill();
+  if (fire) {
+    const f = ctx.createRadialGradient(cx, 24 + r, 1, cx, 24 + r, 28);
+    f.addColorStop(0, '#fff'); f.addColorStop(0.4, '#9cff8c'); f.addColorStop(1, 'rgba(20,160,20,0)');
+    ctx.fillStyle = f; ctx.beginPath(); ctx.arc(cx, 24 + r, 28, 0, 7); ctx.fill();
+  }
   return texFrom(c, ctx);
 }
 
@@ -1553,6 +1652,21 @@ export function buildAssets() {
     SPR[`lostsoul_back_${f}`] = lostsoulBack(f);
   }
 
+  // baron of hell (big boss) — full directional set + green fireball
+  SPR.baron_walk0 = baron('walk0'); SPR.baron_walk1 = baron('walk1');
+  SPR.baron_attack = baron('attack'); SPR.baron_pain = baron('walk0');
+  for (let i = 0; i < 4; i++) SPR['baron_die' + i] = humanoidDeath(60, 80, i, '#c79ca0', '#7d5a60', '#b58f93', true);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`baron_front_${f}`] = SPR[`baron_${f}`];
+    SPR[`baron_sideR_${f}`] = baronSide(f);
+    SPR[`baron_sideL_${f}`] = mirrorTex(SPR[`baron_sideR_${f}`]);
+    SPR[`baron_back_${f}`] = baronBack(f);
+  }
+  SPR.baronball = baronBall();
+  SPR.bfgball = bfgBall();
+  SPR.pickup_bfg = weaponPickup('bfg');
+  SPR.fp_bfg = fpBfg(false); SPR.fp_bfg_fire = fpBfg(true);
+
   // status-bar faces (5 damage states x the Nic Cage moods)
   for (let s = 0; s < 5; s++) for (const m of FACE_MOODS) SPR[`face_${s}_${m}`] = makeFace(s, m);
   SPR.face_dead = makeFace(0, 'dead');
@@ -1569,7 +1683,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

@@ -36,7 +36,7 @@ Then open **http://localhost:8080** and click the screen.
 | Fire              | Left mouse / `Ctrl`                   |
 | Use door / switch | `E` / `Space` / `F`                   |
 | Run               | `Shift`                               |
-| Select weapon     | `1`–`7` (`Q` cycles)                  |
+| Select weapon     | `1`–`8` (`Q` cycles)                  |
 | Automap           | `Tab`                                 |
 | Pause             | `Esc`                                 |
 | Mute              | `M`                                   |
@@ -62,13 +62,15 @@ find the matching keycard.
 - **Wolfenstein-style sliding doors** computed as a mid-cell plane intersection
   during the DDA — they slide, block sight/bullets when closed, and re-open if
   something is standing in the doorway.
-- **Seven weapons:** fist, pistol, shotgun, super shotgun, chaingun, rocket
-  launcher, and plasma rifle — hitscan with pellet spread, plus splash-damage
-  and rapid energy projectiles, across four ammo types.
-- **Five enemy types** with a real AI state machine (idle → chase → attack →
+- **Eight weapons:** fist, pistol, shotgun, super shotgun, chaingun, rocket
+  launcher, plasma rifle, and the BFG 9000 — hitscan with pellet spread, plus
+  splash-damage, rapid-energy, and a screen-shaking BFG blast, across four
+  ammo types.
+- **Six enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
-  charger), Cacodemon (floating plasma lobber), and Lost Soul (fast flaming-
-  skull charger). Ranged monsters strafe to dodge and kite you.
+  charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
+  charger), and the Baron of Hell (600-HP green-fireball boss). Ranged monsters
+  strafe to dodge and kite you, and each has a distinct death animation.
 - **Physics & feel:** momentum-based movement (acceleration, friction, and
   velocity bleed-off when you hit a wall) and **knockback** — bullets nudge,
   fireballs shove, rockets and barrels launch both monsters and the player.

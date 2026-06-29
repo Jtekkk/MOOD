@@ -42,12 +42,12 @@ const CONFIGS = [
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 2, e: 2 } },
   { name: 'LEVEL 7: CRYPTWORKS', w: 38, h: 28, rooms: 11, key: 'blue',
     theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
-    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4 }, weapons: ['6'], barrels: 5,
+    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4, B: 1 }, weapons: ['6'], barrels: 5,
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 8: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5 }, weapons: ['6', '5'], barrels: 8,
-    items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 2 } },
+    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, weapons: ['6', '5', '7'], barrels: 8,
+    items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 
 function carve(g, a, b, rng) {

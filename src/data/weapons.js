@@ -35,6 +35,11 @@ export const WEAPONS = [
     fp: 'fp_plasma', fpFire: 'fp_plasma_fire', cooldown: 0.09, sound: 'plasma',
     kind: 'projectile', proj: 'plasma', projSpeed: 13, splash: 0, dmg: [9, 20],
   },
+  {
+    name: 'BFG 9000', key: 'Digit8', ammo: 'cells', useAmmo: 40,
+    fp: 'fp_bfg', fpFire: 'fp_bfg_fire', cooldown: 0.9, sound: 'bfg',
+    kind: 'projectile', proj: 'bfgball', projSpeed: 8, projH: 0.95, splash: 4.5, dmg: [380, 540],
+  },
 ];
 
 export const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };
