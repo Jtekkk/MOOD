@@ -1,0 +1,11 @@
+{
+  "name": "mood",
+  "version": "0.1.0",
+  "description": "MOOD — a reverse-engineered knockoff of Doom II. A browser raycasting FPS, zero dependencies.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.mjs",
+    "validate": "node tools/validate-levels.mjs"
+  }
+}

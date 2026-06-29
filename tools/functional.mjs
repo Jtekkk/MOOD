@@ -1,0 +1,136 @@
+// White-box functional test: drives the Game's internals headlessly and
+// asserts on outcomes the screenshots can't show.
+import { spawn } from 'node:child_process';
+import { chromium } from 'playwright-core';
+
+const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const PORT = 8097;
+const srv = spawn('node', ['server.mjs'], { env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+await new Promise((r) => setTimeout(r, 700));
+
+const errors = [];
+let browser;
+try {
+  browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox', '--use-gl=swiftshader'] });
+  const page = await browser.newPage();
+  page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
+  await page.waitForFunction('window.__MOOD && window.__MOOD.game', null, { timeout: 8000 });
+
+  const results = await page.evaluate(() => {
+    const out = {};
+    const { game } = window.__MOOD;
+    const step = (n, dt = 0.05) => { for (let i = 0; i < n; i++) game.update(dt); };
+
+    game.startNewGame();
+    out.state0 = game.state;
+    out.kills0 = game.player.kills;
+
+    // 1) kill an enemy
+    const enemy = game.entities.find((e) => e.kind === 'enemy');
+    game._damageEnemy(enemy, 9999, 'player');
+    out.enemyDying = enemy.state === 'dying' || enemy.state === 'dead';
+    out.killsAfter = game.player.kills;
+    step(15); // let death animation finish
+    out.enemyDead = enemy.state === 'dead';
+
+    // 2) barrel explodes and is removed
+    const barrel = game.entities.find((e) => e.kind === 'barrel');
+    const before = game.entities.length;
+    game._damageBarrel(barrel, 100);
+    game.entities = game.entities.filter((e) => !e._remove);
+    out.barrelGone = !game.entities.includes(barrel);
+    out.effectSpawned = game.entities.some((e) => e.kind === 'effect');
+
+    // 3) pickup: drop player on an ammo box of bullets via a clip item
+    const clip = game.entities.find((e) => e.kind === 'item' && e.ch === 'l');
+    const bulletsBefore = game.player.ammo.bullets;
+    game.player.x = clip.x; game.player.y = clip.y;
+    step(2);
+    out.clipPicked = !game.entities.includes(clip);
+    out.bulletsGained = game.player.ammo.bullets > bulletsBefore;
+
+    // 4) door: stand east of the armory door (7,15) facing west and use it
+    game.player.x = 8.5; game.player.y = 15.5; game.player.angle = Math.PI;
+    const armory = game.map.doors.find((d) => d.x === 7 && d.y === 15);
+    game._useAction();
+    out.doorOpening = armory && armory.state === 'opening';
+    step(40); // ~2s, plenty to fully open
+    out.doorOpen = armory.open > 0.9;
+
+    // 5) locked exit door: needs red key
+    const exitDoor = game.map.doors.find((d) => d.lock === 'red');
+    game.player.x = exitDoor.x + 1.5; game.player.y = exitDoor.y + 0.5; game.player.angle = Math.PI;
+    game.player.keys.red = false;
+    game._useAction();
+    out.lockedStaysClosed = exitDoor.state === 'closed';
+    game.player.keys.red = true;
+    game._useAction();
+    out.unlockedOpens = exitDoor.state === 'opening';
+
+    // 5b) rays are blocked by a CLOSED door, pass through an OPEN one
+    const dr = game.map.doors.find((d) => d.x === 7 && d.y === 15);
+    const target = { kind: 'enemy', x: 6.5, y: 15.5, radius: 0.3, hp: 1000, alive: true,
+      state: 'chase', def: { painChance: 0 } };
+    game.entities.push(target);
+    game.player.x = 8.5; game.player.y = 15.5; game.player.angle = Math.PI;
+    dr.open = 0;                                  // closed
+    const hpBeforeClosed = target.hp;
+    game._hitscan(game.player.x, game.player.y, Math.PI, 50, 6, 'player');
+    out.rayBlockedByClosedDoor = target.hp === hpBeforeClosed;
+    dr.open = 1;                                  // open
+    game._hitscan(game.player.x, game.player.y, Math.PI, 50, 6, 'player');
+    out.rayThroughOpenDoor = target.hp < hpBeforeClosed;
+    target._remove = true; game.entities = game.entities.filter((e) => !e._remove);
+
+    // 6) exit → intermission → next level
+    game._exitLevel();
+    out.intermission = game.state === 'intermission';
+    game.intermission = 1; window.__MOOD.input.pressed.add('Enter');
+    game.update(0.05);
+    out.level2 = game.state === 'playing' && /LEVEL 2/.test(game.map.name);
+
+    // 7) death → respawn
+    game.player.health = 0;
+    game.update(0.05);
+    out.died = game.state === 'dead';
+    game.player.deathTime = 1; window.__MOOD.input.pressed.add('KeyR');
+    game.update(0.05);
+    out.respawned = game.state === 'playing' && game.player.health === 100;
+
+    return out;
+  });
+
+  console.log('RESULTS', JSON.stringify(results, null, 2));
+  const checks = {
+    'game started': results.state0 === 'playing',
+    'enemy dies': results.enemyDying,
+    'kill counted': results.killsAfter === results.kills0 + 1,
+    'enemy reaches dead': results.enemyDead,
+    'barrel removed': results.barrelGone,
+    'explosion effect': results.effectSpawned,
+    'clip picked up': results.clipPicked,
+    'bullets gained': results.bulletsGained,
+    'door opens on use': results.doorOpening,
+    'door fully opens': results.doorOpen,
+    'locked door blocks': results.lockedStaysClosed,
+    'key unlocks door': results.unlockedOpens,
+    'closed door blocks bullets': results.rayBlockedByClosedDoor,
+    'open door lets bullets through': results.rayThroughOpenDoor,
+    'exit → intermission': results.intermission,
+    'advance to level 2': results.level2,
+    'player can die': results.died,
+    'respawn works': results.respawned,
+  };
+  let pass = 0, fail = 0;
+  for (const [k, v] of Object.entries(checks)) { console.log((v ? '  ✓ ' : '  ✗ ') + k); v ? pass++ : (fail++, errors.push('CHECK FAILED: ' + k)); }
+  console.log(`\n${pass}/${pass + fail} checks passed`);
+} catch (e) {
+  errors.push('HARNESS: ' + e.message + '\n' + e.stack);
+} finally {
+  if (browser) await browser.close();
+  srv.kill('SIGTERM');
+}
+for (const e of errors) console.log(e);
+console.log(errors.length ? `FAILED (${errors.length})` : 'ALL FUNCTIONAL CHECKS PASSED');
+process.exit(errors.length ? 1 : 0);
