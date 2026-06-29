@@ -83,6 +83,28 @@ try {
     out.rayThroughOpenDoor = target.hp < hpBeforeClosed;
     target._remove = true; game.entities = game.entities.filter((e) => !e._remove);
 
+    // 5c) infighting — a monster hit by another monster retaliates against it
+    const mkEnemy = (x, y) => ({ kind: 'enemy', alive: true, state: 'chase', def: { painChance: 0 }, x, y, radius: 0.3, hp: 100, mass: 1, target: 'player', cooldownTimer: 0 });
+    const atk = mkEnemy(5, 5), vic = mkEnemy(6, 5);
+    game.entities.push(atk, vic);
+    game._damageEnemy(vic, 5, atk);
+    out.infight = vic.target === atk && vic.hp === 95;
+    atk._remove = true; vic._remove = true; game.entities = game.entities.filter((e) => !e._remove);
+
+    // 5d) knockback shoves the player (impulse + blast)
+    game.player.kx = 0; game.player.ky = 0;
+    game._applyKnock(game.player, 1, 0, 5);
+    out.knockImpulse = game.player.kx > 0.1;
+    game.player.kx = 0; game.player.ky = 0; game.player.x = 10.5; game.player.y = 10.5;
+    game._explode(11.2, 10.5, 2.2, 60, 'player');
+    out.knockFromBlast = Math.abs(game.player.kx) > 0.1 || Math.abs(game.player.ky) > 0.1;
+
+    // 5e) momentum — releasing input decelerates rather than instantly stopping
+    game.player.vx = 3; game.player.vy = 0; game.player.kx = 0; game.player.ky = 0;
+    window.__MOOD.input.keys.clear();
+    game.update(0.05);
+    out.momentum = game.player.vx > 0.1 && game.player.vx < 3;
+
     // 6) exit → intermission → next level
     game._exitLevel();
     out.intermission = game.state === 'intermission';
@@ -117,6 +139,10 @@ try {
     'key unlocks door': results.unlockedOpens,
     'closed door blocks bullets': results.rayBlockedByClosedDoor,
     'open door lets bullets through': results.rayThroughOpenDoor,
+    'infighting (retaliate vs attacker)': results.infight,
+    'knockback impulse': results.knockImpulse,
+    'knockback from blast': results.knockFromBlast,
+    'movement momentum': results.momentum,
     'exit → intermission': results.intermission,
     'advance to level 2': results.level2,
     'player can die': results.died,

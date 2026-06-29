@@ -28,6 +28,7 @@ export class Game {
   _freshPlayer() {
     return {
       x: 1.5, y: 1.5, angle: 0, pitch: 0,
+      vx: 0, vy: 0, kx: 0, ky: 0,    // momentum + knockback velocities
       health: 100, armor: 0,
       owned: [true, true, false, false, false, false],
       weapon: 1, pendingWeapon: 1, raiseT: 0,
@@ -83,6 +84,7 @@ export class Game {
         this.entities.push({
           kind: 'enemy', type, def, x, y, angle: 0,
           hp: def.hp, radius: def.radius, spriteH: def.spriteH, vOffset: def.vOffset || 0,
+          mass: def.mass || 1, kx: 0, ky: 0, target: 'player',
           state: 'idle', stateTime: 0, walkTime: 0, cooldownTimer: 0,
           attackTime: 0, didAttack: false, alive: true, sprite: SPR[def.prefix + '_walk0'],
         });
@@ -123,7 +125,7 @@ export class Game {
     if (inp.down('ArrowRight')) p.angle += turnSpeed * dt;
     p.angle = normalizeAngle(p.angle);
 
-    // --- movement ---
+    // --- movement (velocity with acceleration + friction → momentum) ---
     let fwd = 0, strafe = 0;
     if (inp.down('KeyW') || inp.down('ArrowUp')) fwd += 1;
     if (inp.down('KeyS') || inp.down('ArrowDown')) fwd -= 1;
@@ -132,10 +134,22 @@ export class Game {
     const run = inp.down('ShiftLeft') || inp.down('ShiftRight') ? 1.7 : 1.0;
     const speed = 3.1 * run;
     const dirX = Math.cos(p.angle), dirY = Math.sin(p.angle);
-    let mvx = (dirX * fwd - dirY * strafe) * speed * dt;
-    let mvy = (dirY * fwd + dirX * strafe) * speed * dt;
-    if (mvx || mvy) {
-      this._movePlayer(mvx, mvy);
+    const desVX = (dirX * fwd - dirY * strafe) * speed;
+    const desVY = (dirY * fwd + dirX * strafe) * speed;
+    const accel = Math.min(1, (fwd || strafe ? 11 : 9) * dt);   // brisk to start, smooth to stop
+    p.vx += (desVX - p.vx) * accel;
+    p.vy += (desVY - p.vy) * accel;
+    // knockback decays separately and adds on top
+    const kd = Math.max(0, 1 - 9 * dt);
+    const mvx = (p.vx + p.kx) * dt, mvy = (p.vy + p.ky) * dt;
+    const ox = p.x, oy = p.y;
+    if (Math.abs(mvx) > 1e-4 || Math.abs(mvy) > 1e-4) this._movePlayer(mvx, mvy);
+    // hit a wall on an axis → bleed off that velocity so we stop solidly
+    if (Math.abs(mvx) > 1e-4 && Math.abs(p.x - ox) < Math.abs(mvx) * 0.5) { p.vx *= 0.2; p.kx *= 0.4; }
+    if (Math.abs(mvy) > 1e-4 && Math.abs(p.y - oy) < Math.abs(mvy) * 0.5) { p.vy *= 0.2; p.ky *= 0.4; }
+    p.kx *= kd; p.ky *= kd;
+    const movingFast = Math.hypot(p.vx, p.vy) > 0.4;
+    if (movingFast) {
       p.bobPhase += dt * 10 * run;
       p.bobAmt = Math.min(1, p.bobAmt + dt * 4);
       p.idleMoveT = 0;
@@ -296,6 +310,33 @@ export class Game {
     }
   }
 
+  // Add a decaying knockback impulse to a player/enemy (heavier = less push).
+  _applyKnock(obj, dx, dy, force) {
+    const len = Math.hypot(dx, dy) || 1;
+    const mass = obj.mass || 1;
+    obj.kx += (dx / len) * force / mass;
+    obj.ky += (dy / len) * force / mass;
+    const k = Math.hypot(obj.kx, obj.ky), max = 8;
+    if (k > max) { obj.kx *= max / k; obj.ky *= max / k; }
+  }
+
+  // Wake idle monsters within earshot (gunfire / a comrade spotting the player).
+  _alertNearby(x, y, radius) {
+    for (const e of this.entities) {
+      if (e.kind === 'enemy' && e.alive && e.state === 'idle' && dist(x, y, e.x, e.y) < radius) {
+        e.state = 'chase'; e.target = 'player';
+      }
+    }
+  }
+
+  // Where an enemy is currently trying to attack (its target, or the player).
+  _targetPos(e) {
+    const t = e.target;
+    if (t && t !== 'player' && t.alive && t.state !== 'dead' && t.state !== 'dying') return { x: t.x, y: t.y, ent: t };
+    e.target = 'player';
+    return { x: this.player.x, y: this.player.y, ent: null };
+  }
+
   _fire() {
     const p = this.player, w = WEAPONS[p.weapon];
     if (w.ammo && p.ammo[w.ammo] < w.useAmmo) {
@@ -321,32 +362,35 @@ export class Game {
         this._hitscan(p.x, p.y, a, irnd(w.dmg[0], w.dmg[1]), w.range, 'player');
       }
     }
+    if (w.name !== 'FIST') this._alertNearby(p.x, p.y, 6);  // the noise draws monsters
   }
 
-  // March a ray; damage the first enemy/barrel hit before a wall.
-  _hitscan(ox, oy, angle, dmg, range, owner) {
+  // March a ray; damage the first thing hit before a wall. `source` is
+  // 'player' or the firing enemy; an enemy's shot can hit the player AND other
+  // monsters (friendly fire → infighting), but never the shooter itself.
+  _hitscan(ox, oy, angle, dmg, range, source) {
     const dx = Math.cos(angle), dy = Math.sin(angle);
     const step = 0.04;
     let x = ox, y = oy;
+    const isPlayer = source === 'player';
+    const knock = Math.min(2 + dmg * 0.12, 4);
     for (let t = 0; t < range; t += step) {
       x += dx * step; y += dy * step;
       if (this._rayBlocked(Math.floor(x), Math.floor(y))) return; // hit wall/closed door
       for (const e of this.entities) {
+        if (e === source) continue;
         if (e.kind === 'enemy' && e.alive && e.state !== 'dead' && e.state !== 'dying') {
           if ((x - e.x) ** 2 + (y - e.y) ** 2 < e.radius * e.radius) {
-            this._damageEnemy(e, dmg, owner); this._spawnPuff(x, y); return;
+            this._applyKnock(e, dx, dy, knock);
+            this._damageEnemy(e, dmg, source); this._spawnPuff(x, y); return;
           }
         } else if (e.kind === 'barrel' && e.alive) {
-          if ((x - e.x) ** 2 + (y - e.y) ** 2 < e.radius * e.radius) {
-            this._damageBarrel(e, dmg); return;
-          }
+          if ((x - e.x) ** 2 + (y - e.y) ** 2 < e.radius * e.radius) { this._damageBarrel(e, dmg, source); return; }
         }
       }
-      // hit the player? (used by enemy hitscan)
-      if (owner === 'enemy') {
-        if ((x - this.player.x) ** 2 + (y - this.player.y) ** 2 < PLAYER_R * PLAYER_R) {
-          this._damagePlayer(dmg); return;
-        }
+      if (!isPlayer && (x - this.player.x) ** 2 + (y - this.player.y) ** 2 < PLAYER_R * PLAYER_R) {
+        this._applyKnock(this.player, dx, dy, knock * 0.7);
+        this._damagePlayer(dmg); return;
       }
     }
   }
@@ -367,20 +411,19 @@ export class Game {
     const steps = 3;
     const sx = pr.vx * dt / steps, sy = pr.vy * dt / steps;
     pr.life -= dt;
+    const fromPlayer = pr.owner === 'player';
     for (let i = 0; i < steps; i++) {
       pr.x += sx; pr.y += sy;
       if (this._rayBlocked(Math.floor(pr.x), Math.floor(pr.y))) { this._projectileHit(pr, null); return; }
-      // target collision
-      if (pr.owner === 'player') {
-        for (const e of this.entities) {
-          if ((e.kind === 'enemy' && e.alive && e.state !== 'dead' && e.state !== 'dying') || (e.kind === 'barrel' && e.alive)) {
-            const rr = e.radius + 0.15;
-            if ((pr.x - e.x) ** 2 + (pr.y - e.y) ** 2 < rr * rr) { this._projectileHit(pr, e); return; }
-          }
+      // hit any monster/barrel except the one that fired it
+      for (const e of this.entities) {
+        if (e === pr.owner) continue;
+        if ((e.kind === 'enemy' && e.alive && e.state !== 'dead' && e.state !== 'dying') || (e.kind === 'barrel' && e.alive)) {
+          const rr = e.radius + 0.15;
+          if ((pr.x - e.x) ** 2 + (pr.y - e.y) ** 2 < rr * rr) { this._projectileHit(pr, e); return; }
         }
-      } else {
-        if ((pr.x - this.player.x) ** 2 + (pr.y - this.player.y) ** 2 < (PLAYER_R + 0.15) ** 2) { this._projectileHit(pr, 'player'); return; }
       }
+      if (!fromPlayer && (pr.x - this.player.x) ** 2 + (pr.y - this.player.y) ** 2 < (PLAYER_R + 0.15) ** 2) { this._projectileHit(pr, 'player'); return; }
     }
     if (pr.life <= 0) pr._remove = true;
   }
@@ -390,27 +433,35 @@ export class Game {
     if (pr.splash > 0) {
       this._explode(pr.x, pr.y, pr.splash, pr.dmg, pr.owner);
     } else {
-      if (target === 'player') this._damagePlayer(pr.dmg);
-      else if (target && target.kind === 'enemy') this._damageEnemy(target, pr.dmg, pr.owner);
-      else if (target && target.kind === 'barrel') this._damageBarrel(target, pr.dmg);
+      if (target === 'player') { this._applyKnock(this.player, pr.vx, pr.vy, 3); this._damagePlayer(pr.dmg); }
+      else if (target && target.kind === 'enemy') { this._applyKnock(target, pr.vx, pr.vy, 4); this._damageEnemy(target, pr.dmg, pr.owner); }
+      else if (target && target.kind === 'barrel') this._damageBarrel(target, pr.dmg, pr.owner);
       this._spawnEffect(pr.x, pr.y, 0.5);
     }
   }
 
-  _explode(x, y, radius, dmg, owner) {
+  _explode(x, y, radius, dmg, source) {
     this.audio.play('explosion');
     this._spawnEffect(x, y, radius * 0.6);
     for (const e of this.entities) {
       if (e.kind === 'enemy' && e.alive && e.state !== 'dead' && e.state !== 'dying') {
         const d = dist(x, y, e.x, e.y);
-        if (d < radius + e.radius) this._damageEnemy(e, Math.round(dmg * (1 - d / (radius + e.radius))), owner);
+        if (d < radius + e.radius) {
+          const f = 1 - d / (radius + e.radius);
+          this._applyKnock(e, e.x - x, e.y - y, 9 * f);
+          this._damageEnemy(e, Math.round(dmg * f), source);
+        }
       } else if (e.kind === 'barrel' && e.alive) {
         const d = dist(x, y, e.x, e.y);
-        if (d < radius + e.radius) this._damageBarrel(e, dmg);
+        if (d < radius + e.radius) this._damageBarrel(e, dmg, source);
       }
     }
     const dp = dist(x, y, this.player.x, this.player.y);
-    if (dp < radius + PLAYER_R) this._damagePlayer(Math.round(dmg * (1 - dp / (radius + PLAYER_R))));
+    if (dp < radius + PLAYER_R) {
+      const f = 1 - dp / (radius + PLAYER_R);
+      this._applyKnock(this.player, this.player.x - x, this.player.y - y, 7 * f);
+      this._damagePlayer(Math.round(dmg * f));
+    }
   }
 
   _spawnEffect(x, y, sh) {
@@ -426,24 +477,30 @@ export class Game {
     if (e.time >= e.dur) e._remove = true;
   }
 
-  _damageBarrel(b, dmg) {
+  _damageBarrel(b, dmg, source = 'player') {
     b.hp -= dmg;
     if (b.hp <= 0 && b.alive) {
       b.alive = false; b._remove = true;
-      this._explode(b.x, b.y, 2.2, 80, 'player');
+      this._explode(b.x, b.y, 2.2, 80, source);
     }
   }
 
-  _damageEnemy(e, dmg, owner) {
+  _damageEnemy(e, dmg, source) {
     if (!e.alive || e.state === 'dead' || e.state === 'dying') return;
     e.hp -= dmg;
-    if (e.state === 'idle') { e.state = 'chase'; this.audio.play('monster_sight'); }
+    const wasIdle = e.state === 'idle';
+    // retaliate against whoever hurt us — a monster hit by another monster
+    // turns on it (infighting); a player hit re-aims it at the player.
+    if (source && source !== 'player' && source.kind === 'enemy' && source !== e) e.target = source;
+    else if (source === 'player') e.target = 'player';
+    if (wasIdle) { this.audio.play('monster_sight'); this._alertNearby(e.x, e.y, 5); }
+
     if (e.hp <= 0) {
       e.state = 'dying'; e.stateTime = 0; e.alive = false;
       this.audio.play('monster_death');
       const p = this.player;
       p.kills++;
-      if (owner === 'player') {
+      if (source === 'player') {
         p.killStreak = (this.timer - p.lastKillStamp < 2.5) ? p.killStreak + 1 : 1;
         p.lastKillStamp = this.timer;
         p.faceMood = p.killStreak >= 3 ? 'angry' : 'excited';
@@ -451,10 +508,8 @@ export class Game {
       }
       return;
     }
-    if (Math.random() < e.def.painChance) {
-      e.state = 'pain'; e.stateTime = 0;
-      this.audio.play('pain');
-    }
+    if (e.state === 'idle') e.state = 'chase';
+    if (Math.random() < e.def.painChance) { e.state = 'pain'; e.stateTime = 0; this.audio.play('pain'); }
   }
 
   _damagePlayer(dmg) {
@@ -519,9 +574,19 @@ export class Game {
       return;
     }
 
-    const p = this.player;
-    const d = dist(e.x, e.y, p.x, p.y);
-    const see = this._lineOfSight(e.x, e.y, p.x, p.y);
+    // physics: ride out any knockback impulse, then decay it
+    if (e.kx || e.ky) {
+      this._moveEnemy(e, e.kx * dt, e.ky * dt);
+      const kd = Math.max(0, 1 - 10 * dt);
+      e.kx *= kd; e.ky *= kd;
+      if (Math.abs(e.kx) < 0.01) e.kx = 0;
+      if (Math.abs(e.ky) < 0.01) e.ky = 0;
+    }
+
+    const tp = this._targetPos(e);
+    const tx = tp.x, ty = tp.y;
+    const d = dist(e.x, e.y, tx, ty);
+    const see = this._lineOfSight(e.x, e.y, tx, ty);
 
     if (e.state === 'pain') {
       e.stateTime += dt;
@@ -531,7 +596,7 @@ export class Game {
     }
 
     if (e.state === 'idle') {
-      if (see && d < 16) { e.state = 'chase'; this.audio.play('monster_sight'); }
+      if (see && d < 16) { e.state = 'chase'; this.audio.play('monster_sight'); this._alertNearby(e.x, e.y, 5); }
       e.sprite = enemyFrame(e);
       return;
     }
@@ -549,39 +614,52 @@ export class Game {
       return;
     }
 
-    // chase
+    // chase the current target (player by default, or an enemy if infighting)
     e.walkTime += dt;
     const inRange = d <= e.def.range;
     if (see && inRange && e.cooldownTimer <= 0) {
       e.state = 'attack'; e.attackTime = 0; e.didAttack = false;
-      e.angle = Math.atan2(p.y - e.y, p.x - e.x);
+      e.angle = Math.atan2(ty - e.y, tx - e.x);
       this.audio.play('monster_attack');
       e.sprite = enemyFrame(e);
       return;
     }
-    // move toward the player (melee wants to close, ranged keeps mid distance)
     const wantClose = e.def.attack === 'melee' || d > e.def.range * 0.8;
     if (wantClose && (see || d < 18)) {
-      const ang = Math.atan2(p.y - e.y, p.x - e.x);
+      const ang = Math.atan2(ty - e.y, tx - e.x);
       e.angle = ang;
       const sp = e.def.speed * dt;
+      this._enemyOpenDoors(e, ang);
       this._moveEnemy(e, Math.cos(ang) * sp, Math.sin(ang) * sp);
     }
     e.sprite = enemyFrame(e);
   }
 
   _enemyAttack(e) {
-    const p = this.player;
-    const ang = Math.atan2(p.y - e.y, p.x - e.x);
+    const tp = this._targetPos(e);
+    const ang = Math.atan2(tp.y - e.y, tp.x - e.x);
+    const dmg = irnd(e.def.dmg[0], e.def.dmg[1]);
     if (e.def.attack === 'melee') {
-      if (dist(e.x, e.y, p.x, p.y) <= e.def.range + 0.2) this._damagePlayer(irnd(e.def.dmg[0], e.def.dmg[1]));
+      if (dist(e.x, e.y, tp.x, tp.y) <= e.def.range + 0.2) {
+        if (tp.ent) { this._applyKnock(tp.ent, tp.x - e.x, tp.y - e.y, 3); this._damageEnemy(tp.ent, dmg, e); }
+        else { this._applyKnock(this.player, this.player.x - e.x, this.player.y - e.y, 3); this._damagePlayer(dmg); }
+      }
     } else if (e.def.attack === 'hitscan') {
-      const a = ang + rnd(-0.06, 0.06);
-      this._hitscan(e.x, e.y, a, irnd(e.def.dmg[0], e.def.dmg[1]), e.def.range + 2, 'enemy');
+      this._hitscan(e.x, e.y, ang + rnd(-0.06, 0.06), dmg, e.def.range + 2, e);
     } else {
       this._spawnProjectile(e.x, e.y, ang, {
         proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
-      }, 'enemy');
+      }, e);
+    }
+  }
+
+  // Monsters shove unlocked doors open to pursue their target.
+  _enemyOpenDoors(e, ang) {
+    const ax = e.x + Math.cos(ang) * (e.radius + 0.4);
+    const ay = e.y + Math.sin(ang) * (e.radius + 0.4);
+    const door = this.map.doorMap[Math.floor(ay) * this.map.W + Math.floor(ax)];
+    if (door && !door.lock && (door.state === 'closed' || door.state === 'closing')) {
+      door.state = 'opening'; this.audio.play('door');
     }
   }
 

@@ -65,6 +65,13 @@ find the matching keycard.
 - **Four enemy types** with a real AI state machine (idle → chase → attack →
   pain → death): the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), and Cacodemon (floating plasma lobber).
+- **Physics & feel:** momentum-based movement (acceleration, friction, and
+  velocity bleed-off when you hit a wall) and **knockback** — bullets nudge,
+  fireballs shove, rockets and barrels launch both monsters and the player.
+- **Emergent behaviors:** **infighting** (a monster caught in another's
+  crossfire turns on it — `target` retargeting), **alerting** (gunfire and a
+  monster spotting you rouse nearby sleepers), and monsters that **shove
+  unlocked doors open** to chase you through.
 - **Pickups:** stimpacks, medikits, health/armor bonuses, MegaArmor, MegaSphere,
   ammo of every type, weapons, and three colored keycards.
 - **Explosive barrels** with chain-reaction splash damage.
