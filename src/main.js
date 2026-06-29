@@ -28,7 +28,15 @@ buildAssets();
 const renderer = new Renderer(canvas);
 const input = new Input(canvas);
 const audio = new AudioEngine();
-audio.setTracks(['assets/music/track1.mp3', 'assets/music/track2.mp3']);
+audio.setTracks([
+  'assets/music/track1.mp3',            // L1
+  'assets/music/track2.mp3',            // L2
+  'assets/music/the_last_witch.mp3',    // L3
+  'assets/music/gangsta_chiptune.mp3',  // L4
+  'assets/music/waltz_kazoon_panic.mp3',// L5
+  'assets/music/glitch_grid_1.mp3',     // L6
+  'assets/music/glitch_grid_2.mp3',     // L7  (L8 wraps to track1)
+]);
 const game = new Game(renderer, input, audio);
 if (loading) loading.style.display = 'none';
 

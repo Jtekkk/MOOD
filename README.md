@@ -102,8 +102,9 @@ find the matching keycard.
   together.
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
-- **Per-level background music** streamed from looping MP3 tracks (one per
-  level, in `assets/music/`); the `M` mute key silences music and SFX together.
+- **Per-level background music** — seven looping MP3 tracks in `assets/music/`,
+  one per level (level 8 wraps to the first); the `M` mute key silences music
+  and SFX together.
 
 ## Project layout
 
