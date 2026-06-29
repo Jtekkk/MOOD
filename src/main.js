@@ -100,6 +100,19 @@ function frame(now) {
   last = now;
   if (dt > 0.05) dt = 0.05;          // clamp big stalls
 
+  input.pollGamepad();
+  // Gamepad Start: pause/resume from gameplay, or back out of menus, mirroring Esc.
+  if (input.padStartEdge) {
+    if (game.state === 'playing') { game.state = 'paused'; input.exitLock(); }
+    else if (game.state === 'paused') { game.state = 'playing'; input.requestLock(); }
+  }
+  // Gamepad confirm (A → synthetic Enter) starts / advances the front-end flow.
+  if (input.hasGamepad && input.justPressed('Enter')) {
+    if (game.state === 'title') { ensureAudio(); startGame(); }
+    else if (game.state === 'paused') { game.state = 'playing'; input.requestLock(); }
+    else if (game.state === 'victory') { game.state = 'title'; }
+  }
+
   game.update(dt);
   // global menu keys not handled inside Game
   if (game.state === 'title' && input.justPressed('Enter')) startGame();
