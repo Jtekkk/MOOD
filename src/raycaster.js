@@ -259,14 +259,9 @@ function hexToPacked(hex) {
   return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
 }
 
-function wallTexName(ch) {
-  switch (ch) {
-    case '#': return 'tech';
-    case 'B': return 'brick';
-    case 'M': return 'metal';
-    case 'S': return 'stone';
-    case 'A': return 'marble';
-    case '+': return 'exit';
-    default: return 'tech';
-  }
-}
+const WALL_TEX_BY_CHAR = {
+  '#': 'tech', 'B': 'brick', 'M': 'metal', 'S': 'stone', 'A': 'marble', '+': 'exit',
+  'C': 'console', 'H': 'hazard', 'V': 'vine', 'P': 'pipe', 'W': 'wood', 'K': 'flesh',
+  'T': 'circuit', 'L': 'lightpanel', 'Z': 'rust', 'X': 'gothic', 'Q': 'crystal', 'N': 'slime',
+};
+function wallTexName(ch) { return WALL_TEX_BY_CHAR[ch] || 'tech'; }

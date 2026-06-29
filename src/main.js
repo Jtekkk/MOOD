@@ -1,5 +1,5 @@
 // main.js — bootstrap, input wiring, fixed-timestep-ish loop, render dispatch.
-import { buildAssets, SPR, FACE_MOODS } from './assets.js';
+import { buildAssets, SPR, TEX, FACE_MOODS } from './assets.js';
 import { Renderer, RENDER_W, RENDER_H } from './raycaster.js';
 import { Input } from './input.js';
 import { AudioEngine } from './audio.js';
@@ -99,4 +99,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // expose for debugging / headless screenshot harness
-window.__MOOD = { game, renderer, input, audio, SPR, FACE_MOODS };
+window.__MOOD = { game, renderer, input, audio, SPR, TEX, FACE_MOODS };

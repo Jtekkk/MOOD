@@ -635,6 +635,14 @@ function metalGrad(ctx, x, y, w, h, c0, c1, c2) {
   ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
 }
 
+// horizontal (across-the-width) gradient — cylindrical shading for a
+// barrel that points up/away from the viewer.
+function metalGradH(ctx, x, y, w, h, c0, c1, c2) {
+  const g = ctx.createLinearGradient(x, y, x + w, y);
+  g.addColorStop(0, c0); g.addColorStop(0.42, c1); g.addColorStop(1, c2);
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+}
+
 // a gloved hand block with finger seams + a top highlight
 function glove(ctx, x, y, w, h) {
   metalGrad(ctx, x, y, w, h, '#9c7848', '#7a5a34', '#46341c');
@@ -663,125 +671,99 @@ function muzzleFlash(ctx, cx, cy, r, warm = true) {
   ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, r * 0.3, 0, 7); ctx.fill();
 }
 
+// All weapons are drawn from BEHIND: barrel points UP/away, muzzle at the top,
+// hands/grip at the bottom. Canvas 200x130, weapon centred on x=100.
+
 function fpFist(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const ox = fire ? -34 : 0, oy = fire ? -36 : 0;
-  const x = 112 + ox, y = 58 + oy;
-  // armored forearm sleeve
-  metalGrad(ctx, x, y + 30, 52, 72, '#3f5a3a', '#2c4129', '#18261a');
-  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(x, y + 46, 52, 2); ctx.fillRect(x, y + 66, 52, 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x, y + 30, 52, 2);
-  // wrist
-  glove(ctx, x + 2, y + 14, 48, 20);
-  // fist mass
-  ctx.fillStyle = '#6f5230'; ctx.beginPath(); ctx.ellipse(x + 26, y + 8, 28, 22, 0, 0, 7); ctx.fill();
-  // knuckle row
-  metalGrad(ctx, x - 2, y - 8, 56, 22, '#a67c48', '#7a5a34', '#4a3318');
-  ctx.fillStyle = 'rgba(0,0,0,0.42)';
-  for (let i = 0; i < 4; i++) ctx.fillRect(x + 1 + i * 13, y - 8, 1, 22);
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(x + 7 + i * 13, y - 4, 4, 0, 7); ctx.fill(); }
-  // thumb
-  ctx.fillStyle = '#6a4d2c'; ctx.beginPath(); ctx.ellipse(x + 49, y + 10, 8, 12, 0.35, 0, 7); ctx.fill();
+  const cx = 100, oy = fire ? -30 : 0;
+  // forearm rising from the bottom
+  metalGrad(ctx, cx - 16, 72 + oy, 32, 58, '#3f5a3a', '#2c4129', '#18261a');
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(cx - 16, 72 + oy, 3, 58);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(cx + 13, 72 + oy, 3, 58);
+  // wrist glove
+  glove(ctx, cx - 18, 56 + oy, 36, 20);
+  // fist mass (knuckles toward the top, punching away)
+  ctx.fillStyle = '#6f5230'; ctx.beginPath(); ctx.ellipse(cx, 48 + oy, 22, 18, 0, 0, 7); ctx.fill();
+  metalGradH(ctx, cx - 20, 32 + oy, 40, 18, '#a67c48', '#7a5a34', '#4a3318');
+  ctx.fillStyle = 'rgba(0,0,0,0.42)'; for (let i = 0; i < 4; i++) ctx.fillRect(cx - 18 + i * 10, 32 + oy, 1, 18);
+  ctx.fillStyle = 'rgba(255,255,255,0.2)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(cx - 13 + i * 10, 36 + oy, 3, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#6a4d2c'; ctx.beginPath(); ctx.ellipse(cx + 20, 50 + oy, 8, 11, 0.3, 0, 7); ctx.fill(); // thumb
   return texFrom(c, ctx);
 }
 
 function fpPistol(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const recoil = fire ? -7 : 0;
-  const bx = 96, by = 46 + recoil;
-  // grip
-  metalGrad(ctx, bx, by + 16, 22, 58, '#3a3e44', '#2a2d33', '#191b1f');
-  // trigger guard
-  ctx.strokeStyle = '#2a2d33'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(bx + 8, by + 30, 9, 0.1, 3.1); ctx.stroke();
-  // hand on grip
-  glove(ctx, bx - 7, by + 40, 38, 42);
-  ctx.fillStyle = '#15171a'; ctx.fillRect(bx - 7, by + 53, 38, 3);
-  // slide / body
-  metalGrad(ctx, bx - 4, by, 54, 18, '#737b85', '#454b53', '#23272c');
-  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(bx - 4, by, 54, 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bx - 4, by + 16, 54, 2);
-  // ejection port + barrel
-  ctx.fillStyle = '#1a1c20'; ctx.fillRect(bx + 28, by + 4, 8, 5);
-  ctx.fillStyle = '#15171a'; ctx.fillRect(bx + 40, by + 5, 14, 8);
-  // sights
-  ctx.fillStyle = '#111'; ctx.fillRect(bx - 2, by - 3, 4, 3); ctx.fillRect(bx + 44, by - 3, 4, 3);
-  if (fire) muzzleFlash(ctx, bx + 58, by + 9, 22);
+  const cx = 100, r = fire ? 6 : 0;
+  glove(ctx, cx - 18, 92 + r, 36, 38);                                   // hand on grip
+  metalGradH(ctx, cx - 12, 54 + r, 24, 44, '#737b85', '#454b53', '#23272c'); // slide/body
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(cx - 12, 96 + r, 24, 2);
+  ctx.fillStyle = '#111'; ctx.fillRect(cx - 5, 52 + r, 10, 3);           // rear sight
+  metalGradH(ctx, cx - 6, 26 + r, 12, 30, '#6a727c', '#3c424a', '#23272c'); // barrel up
+  ctx.fillStyle = '#15171a'; ctx.beginPath(); ctx.ellipse(cx, 26 + r, 6, 3, 0, 0, 7); ctx.fill(); // muzzle
+  ctx.fillStyle = '#0a0c0e'; ctx.beginPath(); ctx.ellipse(cx, 26 + r, 3, 1.4, 0, 0, 7); ctx.fill();
+  if (fire) muzzleFlash(ctx, cx, 20 + r, 22);
   return texFrom(c, ctx);
 }
 
 function fpShotgun(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const recoil = fire ? -8 : 0;
-  const y = 54 + recoil;
-  metalGrad(ctx, 40, y, 132, 12, '#6a727c', '#3c424a', '#23272c');   // barrel
-  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(40, y, 132, 2);
-  ctx.fillStyle = '#15171a'; ctx.fillRect(166, y + 1, 12, 10);        // muzzle
-  metalGrad(ctx, 40, y + 12, 112, 6, '#4a505a', '#2e333a', '#191b1f'); // mag tube
-  metalGrad(ctx, 70, y + 16, 48, 18, '#a4702f', '#714a22', '#46300f'); // wood pump
-  ctx.fillStyle = 'rgba(0,0,0,0.35)'; for (let i = 0; i < 7; i++) ctx.fillRect(73 + i * 6, y + 16, 1, 18);
-  ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(70, y + 16, 48, 2);
-  metalGrad(ctx, 118, y + 8, 42, 26, '#4a505a', '#33383f', '#1c1f24'); // receiver
-  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(126, y + 18, 26, 4);
-  glove(ctx, 78, y + 30, 32, 32);   // front hand on pump
-  glove(ctx, 128, y + 28, 30, 36);  // rear hand on receiver
-  if (fire) muzzleFlash(ctx, 178, y + 6, 30);
+  const cx = 100, r = fire ? 8 : 0;
+  glove(ctx, cx - 22, 86 + r, 26, 36); glove(ctx, cx + 2, 90 + r, 24, 34); // hands on pump
+  metalGradH(ctx, cx - 16, 76 + r, 32, 16, '#a4702f', '#714a22', '#46300f'); // wood pump
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; for (let i = 0; i < 5; i++) ctx.fillRect(cx - 14 + i * 7, 76 + r, 1, 16);
+  metalGradH(ctx, cx - 14, 58 + r, 28, 20, '#4a505a', '#33383f', '#1c1f24'); // receiver
+  metalGradH(ctx, cx - 7, 18 + r, 14, 42, '#6a727c', '#3c424a', '#23272c');   // barrel up
+  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(cx - 7, 18 + r, 3, 42);
+  metalGradH(ctx, cx + 7, 30 + r, 6, 30, '#4a505a', '#2e333a', '#191b1f');     // mag tube
+  ctx.fillStyle = '#15171a'; ctx.beginPath(); ctx.ellipse(cx, 18 + r, 7, 3, 0, 0, 7); ctx.fill(); // muzzle
+  if (fire) muzzleFlash(ctx, cx, 12 + r, 30);
   return texFrom(c, ctx);
 }
 
 function fpSuper(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const recoil = fire ? -11 : 0;
-  const y = 46 + recoil;
-  metalGrad(ctx, 50, y, 124, 11, '#6a727c', '#3c424a', '#23272c');
-  metalGrad(ctx, 50, y + 12, 124, 11, '#6a727c', '#3c424a', '#23272c');
-  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(50, y, 124, 1); ctx.fillRect(50, y + 12, 124, 1);
-  ctx.fillStyle = '#15171a'; ctx.fillRect(166, y, 14, 23);            // muzzles
-  ctx.fillStyle = '#2a2d33'; ctx.fillRect(166, y + 10, 14, 3);
-  metalGrad(ctx, 40, y + 5, 22, 30, '#4a505a', '#33383f', '#1c1f24'); // hinge/receiver
-  metalGrad(ctx, 28, y + 24, 40, 24, '#a4702f', '#714a22', '#46300f'); // wood grip
-  ctx.fillStyle = 'rgba(0,0,0,0.3)'; for (let i = 0; i < 5; i++) ctx.fillRect(32 + i * 7, y + 24, 1, 24);
-  glove(ctx, 56, y + 28, 32, 32);
-  glove(ctx, 100, y + 30, 30, 32);
-  if (fire) { muzzleFlash(ctx, 188, y + 4, 27); muzzleFlash(ctx, 188, y + 18, 27); }
+  const cx = 100, r = fire ? 10 : 0;
+  glove(ctx, cx - 24, 88 + r, 26, 36); glove(ctx, cx + 2, 92 + r, 24, 34);
+  metalGradH(ctx, cx - 18, 76 + r, 36, 18, '#a4702f', '#714a22', '#46300f'); // wood
+  metalGradH(ctx, cx - 16, 56 + r, 32, 22, '#4a505a', '#33383f', '#1c1f24'); // hinge/receiver
+  metalGradH(ctx, cx - 11, 20 + r, 10, 40, '#6a727c', '#3c424a', '#23272c'); // left barrel
+  metalGradH(ctx, cx + 1, 20 + r, 10, 40, '#6a727c', '#3c424a', '#23272c');  // right barrel
+  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(cx - 11, 20 + r, 2, 40); ctx.fillRect(cx + 1, 20 + r, 2, 40);
+  ctx.fillStyle = '#15171a';
+  ctx.beginPath(); ctx.ellipse(cx - 6, 20 + r, 5, 3, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 6, 20 + r, 5, 3, 0, 0, 7); ctx.fill();
+  if (fire) { muzzleFlash(ctx, cx - 6, 14 + r, 24); muzzleFlash(ctx, cx + 6, 14 + r, 24); }
   return texFrom(c, ctx);
 }
 
 function fpChaingun(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const y = 48;
-  metalGrad(ctx, 58, y, 46, 48, '#5a626c', '#3a4048', '#1d2127');     // housing
-  ctx.fillStyle = '#23272c'; ctx.fillRect(58, y + 22, 46, 4);
-  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(58, y, 46, 2);
-  for (let i = 0; i < 5; i++) {                                       // barrel cluster
-    const yy = y + 5 + i * 8;
-    metalGrad(ctx, 104, yy, 74, 6, '#828a94', '#4a505a', '#2a2e34');
-    ctx.fillStyle = '#15171a'; ctx.fillRect(172, yy + 1, 6, 4);
+  const cx = 100;
+  glove(ctx, cx - 22, 92, 26, 34); glove(ctx, cx + 4, 96, 22, 30);
+  metalGradH(ctx, cx - 18, 64, 36, 32, '#5a626c', '#3a4048', '#1d2127'); // housing
+  ctx.fillStyle = '#33383f'; ctx.beginPath(); ctx.ellipse(cx, 60, 18, 7, 0, 0, 7); ctx.fill(); // rotor
+  ctx.fillStyle = '#1c1f24'; ctx.beginPath(); ctx.arc(cx, 60, 4, 0, 7); ctx.fill();
+  for (let i = 0; i < 5; i++) {                                          // barrel cluster up
+    const bx = cx - 16 + i * 8;
+    metalGradH(ctx, bx, 20, 6, 42, '#828a94', '#4a505a', '#2a2e34');
+    ctx.fillStyle = '#15171a'; ctx.fillRect(bx + 1, 20, 4, 3);
   }
-  ctx.fillStyle = '#33383f'; ctx.beginPath(); ctx.ellipse(104, y + 25, 7, 25, 0, 0, 7); ctx.fill(); // rotor
-  ctx.fillStyle = '#1c1f24'; ctx.beginPath(); ctx.arc(104, y + 25, 4, 0, 7); ctx.fill();
-  glove(ctx, 54, y + 42, 32, 34);
-  glove(ctx, 92, y + 44, 26, 32);
-  if (fire) muzzleFlash(ctx, 182, y + 9 + (Math.floor(Math.random() * 5)) * 8, 18);
+  if (fire) muzzleFlash(ctx, cx - 16 + (Math.floor(Math.random() * 5)) * 8 + 3, 16, 16);
   return texFrom(c, ctx);
 }
 
 function fpRocket(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const y = 54;
-  metalGrad(ctx, 42, y, 142, 26, '#3f5a3a', '#2c4129', '#16241a');    // tube
-  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(42, y, 142, 3);
-  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(42, y + 23, 142, 3);
-  ctx.fillStyle = '#11180f'; ctx.fillRect(176, y + 1, 10, 24);        // muzzle ring
-  ctx.fillStyle = '#0c130a'; ctx.beginPath(); ctx.ellipse(185, y + 13, 4, 12, 0, 0, 7); ctx.fill();
-  metalGrad(ctx, 92, y - 11, 34, 12, '#4a505a', '#33383f', '#1c1f24'); // sight rail
-  ctx.fillStyle = '#222'; ctx.fillRect(104, y - 15, 4, 6);
-  ctx.fillStyle = '#b33'; ctx.beginPath(); ctx.ellipse(56, y + 13, 5, 9, 0, 0, 7); ctx.fill(); // warhead
-  ctx.fillStyle = '#ddd'; ctx.fillRect(50, y + 10, 4, 6);
-  glove(ctx, 74, y + 22, 30, 42);
-  glove(ctx, 120, y + 22, 28, 42);
-  if (fire) muzzleFlash(ctx, 58, y + 13, 26);                         // back-blast
+  const cx = 100;
+  glove(ctx, cx - 24, 86, 26, 42); glove(ctx, cx + 4, 86, 24, 42);
+  metalGradH(ctx, cx - 14, 22, 28, 78, '#3f5a3a', '#2c4129', '#16241a'); // tube up
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(cx - 14, 22, 3, 78);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(cx + 11, 22, 3, 78);
+  ctx.fillStyle = '#222'; ctx.fillRect(cx - 2, 34, 4, 8);                // top sight
+  ctx.fillStyle = '#11180f'; ctx.beginPath(); ctx.ellipse(cx, 22, 14, 5, 0, 0, 7); ctx.fill(); // muzzle ring
+  ctx.fillStyle = '#0c130a'; ctx.beginPath(); ctx.ellipse(cx, 22, 9, 3, 0, 0, 7); ctx.fill();
+  if (fire) muzzleFlash(ctx, cx, 16, 26);
   return texFrom(c, ctx);
 }
 
@@ -929,6 +911,207 @@ export function makeFace(state, mood) {
   return texFrom(c, ctx);
 }
 
+// ----- extra surfaces for variety ----------------------------------------
+
+function consoleWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#272c33'; ctx.fillRect(0, 0, 64, 64);
+  metalGrad(ctx, 0, 0, 64, 64, 'rgba(255,255,255,0.05)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.28)');
+  for (const [sx, sy] of [[6, 6], [34, 6], [6, 34], [34, 34]]) {
+    ctx.fillStyle = '#0a140c'; ctx.fillRect(sx, sy, 24, 22);
+    ctx.fillStyle = '#123c1a'; ctx.fillRect(sx + 1, sy + 1, 22, 20);
+    ctx.fillStyle = '#5be05b';
+    for (let i = 0; i < 5; i++) ctx.fillRect(sx + 2, sy + 3 + i * 4, 4 + (rng() * 16 | 0), 2);
+    ctx.fillStyle = 'rgba(120,255,120,0.12)'; ctx.fillRect(sx + 1, sy + 1, 22, 20);
+  }
+  ctx.fillStyle = '#e0b020'; for (let i = 0; i < 4; i++) ctx.fillRect(8 + i * 14, 30, 3, 3);
+  noiseOverlay(ctx, 64, 64, rng, 12);
+  return texFrom(c, ctx);
+}
+
+function hazardWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#1a1c1f'; ctx.fillRect(0, 0, 64, 64);
+  ctx.fillStyle = '#e8c020';
+  for (let i = -64; i < 64; i += 24) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 12, 0); ctx.lineTo(i + 12 + 64, 64); ctx.lineTo(i + 64, 64); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, 64, 6); ctx.fillRect(0, 58, 64, 6);
+  ctx.fillStyle = '#1a1c1f'; ctx.fillRect(0, 28, 64, 8); ctx.fillStyle = '#c0c4c8'; ctx.fillRect(0, 28, 64, 1);
+  noiseOverlay(ctx, 64, 64, rng, 16);
+  return texFrom(c, ctx);
+}
+
+function vineWall(seed) {
+  const t = stoneWall(seed); const { c, ctx } = makeCanvas(64, 64);
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(t.pixels.buffer.slice(0)), 64, 64), 0, 0);
+  const rng = mulberry32(seed + 5);
+  ctx.strokeStyle = '#2c5a22'; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    let x = rng() * 64, y = 0; ctx.beginPath(); ctx.moveTo(x, y);
+    while (y < 64) { x += (rng() - 0.5) * 14; y += 7; ctx.lineTo(x, y); }
+    ctx.stroke();
+    ctx.fillStyle = '#3c7a2c'; for (let k = 0; k < 4; k++) ctx.fillRect((x + (rng() - 0.5) * 20) | 0, (rng() * 64) | 0, 3, 2);
+  }
+  ctx.fillStyle = 'rgba(40,90,30,0.25)'; ctx.fillRect(0, 0, 64, 64);
+  return texFrom(c, ctx);
+}
+
+function pipeWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#34383e'; ctx.fillRect(0, 0, 64, 64);
+  noiseOverlay(ctx, 64, 64, rng, 14);
+  for (const px of [10, 30, 50]) {
+    metalGradH(ctx, px - 5, 0, 10, 64, '#7a828c', '#454b53', '#23272c');
+    ctx.fillStyle = '#23272c'; ctx.fillRect(px - 7, 20, 14, 4); ctx.fillRect(px - 7, 44, 14, 4); // brackets
+  }
+  ctx.fillStyle = '#8a929c'; ctx.beginPath(); ctx.arc(50, 32, 6, 0, 7); ctx.fill(); // valve
+  ctx.fillStyle = '#b22'; ctx.fillRect(48, 31, 4, 2); ctx.fillRect(49, 28, 2, 8);
+  return texFrom(c, ctx);
+}
+
+function woodWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  for (let p = 0; p < 4; p++) {
+    const v = 0.85 + rng() * 0.3;
+    ctx.fillStyle = `rgb(${(120 * v) | 0},${(80 * v) | 0},${(42 * v) | 0})`;
+    ctx.fillRect(p * 16, 0, 16, 64);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(p * 16 + 15, 0, 1, 64);
+    ctx.strokeStyle = 'rgba(60,36,16,0.4)'; ctx.lineWidth = 1;
+    for (let g = 0; g < 3; g++) { ctx.beginPath(); ctx.moveTo(p * 16 + 2 + g * 5, 0); for (let y = 0; y < 64; y += 8) ctx.lineTo(p * 16 + 2 + g * 5 + (rng() - 0.5) * 3, y); ctx.stroke(); }
+    ctx.fillStyle = '#3a2410'; ctx.fillRect(p * 16 + 6, 4, 2, 2); ctx.fillRect(p * 16 + 6, 58, 2, 2); // nails
+  }
+  noiseOverlay(ctx, 64, 64, rng, 14);
+  return texFrom(c, ctx);
+}
+
+function fleshWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 40);
+  g.addColorStop(0, '#9a2e2e'); g.addColorStop(1, '#5a1414');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+  ctx.strokeStyle = 'rgba(40,8,8,0.6)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) { let x = rng() * 64, y = rng() * 64; ctx.beginPath(); ctx.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rng() - 0.5) * 22; y += (rng() - 0.5) * 22; ctx.lineTo(x, y); } ctx.stroke(); }
+  // a watching eye
+  ctx.fillStyle = '#e8d8c0'; ctx.beginPath(); ctx.ellipse(32, 30, 10, 7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#c0a020'; ctx.beginPath(); ctx.arc(32, 30, 4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#100'; ctx.beginPath(); ctx.arc(32, 30, 2, 0, 7); ctx.fill();
+  noiseOverlay(ctx, 64, 64, rng, 18);
+  return texFrom(c, ctx);
+}
+
+function circuitWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#0e2418'; ctx.fillRect(0, 0, 64, 64);
+  ctx.strokeStyle = '#1f7a44'; ctx.lineWidth = 1;
+  for (let i = 0; i < 10; i++) {
+    let x = (rng() * 64) | 0, y = (rng() * 64) | 0; ctx.beginPath(); ctx.moveTo(x, y);
+    for (let s = 0; s < 3; s++) { if (rng() < 0.5) x += (rng() < 0.5 ? -1 : 1) * (8 + rng() * 16 | 0); else y += (rng() < 0.5 ? -1 : 1) * (8 + rng() * 16 | 0); ctx.lineTo(x, y); }
+    ctx.stroke();
+    ctx.fillStyle = '#2fa05a'; ctx.fillRect(x - 1, y - 1, 3, 3);
+  }
+  const leds = ['#e85038', '#f0c030', '#40a8ff'];
+  for (let i = 0; i < 6; i++) { ctx.fillStyle = leds[i % 3]; ctx.fillRect((rng() * 60 | 0) + 2, (rng() * 60 | 0) + 2, 2, 2); }
+  noiseOverlay(ctx, 64, 64, rng, 10);
+  return texFrom(c, ctx);
+}
+
+function lightPanel(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#3a4048'; ctx.fillRect(0, 0, 64, 64);
+  for (let gy = 0; gy < 2; gy++) for (let gx = 0; gx < 2; gx++) {
+    const x = 4 + gx * 30, y = 4 + gy * 30;
+    ctx.fillStyle = '#1a1d22'; ctx.fillRect(x, y, 26, 26);
+    const g = ctx.createLinearGradient(x, y, x, y + 26);
+    g.addColorStop(0, '#dffaff'); g.addColorStop(0.5, '#8fd8ff'); g.addColorStop(1, '#3a9adf');
+    ctx.fillStyle = g; ctx.fillRect(x + 2, y + 2, 22, 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(x + 2, y + 2, 22, 3);
+  }
+  return texFrom(c, ctx);
+}
+
+function rustWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  metalGrad(ctx, 0, 0, 64, 64, '#5a5046', '#3e362c', '#241e18');
+  for (let i = 0; i < 60; i++) {
+    const x = rng() * 64, y = rng() * 64, r = 2 + rng() * 8;
+    const o = ctx.createRadialGradient(x, y, 1, x, y, r);
+    o.addColorStop(0, 'rgba(150,70,30,0.5)'); o.addColorStop(1, 'rgba(120,50,20,0)');
+    ctx.fillStyle = o; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(20,14,10,0.7)'; for (let i = 0; i < 4; i++) ctx.fillRect((rng() * 60 | 0), (rng() * 40 | 0), 2, 10 + rng() * 18); // holes/streaks
+  noiseOverlay(ctx, 64, 64, rng, 26);
+  return texFrom(c, ctx);
+}
+
+function gothicWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#43403a'; ctx.fillRect(0, 0, 64, 64);
+  // big carved block bevels
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(0, 0, 64, 2); ctx.fillRect(0, 0, 2, 64);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, 62, 64, 2); ctx.fillRect(62, 0, 2, 64);
+  // recessed arch with a cross relief
+  ctx.fillStyle = '#33302a'; ctx.fillRect(20, 12, 24, 44);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(20, 12, 24, 2);
+  ctx.fillStyle = '#56524a'; ctx.fillRect(30, 18, 4, 30); ctx.fillRect(24, 26, 16, 4);
+  noiseOverlay(ctx, 64, 64, rng, 22);
+  return texFrom(c, ctx);
+}
+
+function crystalWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#16263a'; ctx.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 16; i++) {
+    const x = rng() * 64, y = rng() * 64, s = 8 + rng() * 16;
+    const v = 0.5 + rng() * 0.6;
+    ctx.fillStyle = `rgba(${(80 * v) | 0},${(150 * v) | 0},${(220 * v) | 0},0.9)`;
+    ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.6, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.6, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(220,240,255,0.4)'; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.6, y); ctx.lineTo(x, y); ctx.closePath(); ctx.fill();
+  }
+  return texFrom(c, ctx);
+}
+
+function slimeWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#2c3a22'; ctx.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 30; i++) { const x = rng() * 64, y = rng() * 64, r = 4 + rng() * 10; const o = ctx.createRadialGradient(x, y, 1, x, y, r); o.addColorStop(0, 'rgba(90,150,40,0.4)'); o.addColorStop(1, 'rgba(40,80,20,0)'); ctx.fillStyle = o; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  // drips
+  ctx.fillStyle = '#7ab030'; for (let i = 0; i < 5; i++) { const x = (rng() * 60 | 0) + 2; ctx.fillRect(x, 0, 3, 10 + rng() * 30); ctx.beginPath(); ctx.arc(x + 1, 10 + rng() * 30, 3, 0, 7); ctx.fill(); }
+  noiseOverlay(ctx, 64, 64, rng, 18);
+  return texFrom(c, ctx);
+}
+
+function grateFloor(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#0c0e10'; ctx.fillRect(0, 0, 64, 64);
+  ctx.fillStyle = '#5a626c';
+  for (let i = 0; i <= 64; i += 16) { ctx.fillRect(i, 0, 4, 64); ctx.fillRect(0, i, 64, 4); }
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; for (let i = 0; i <= 64; i += 16) ctx.fillRect(i, 0, 1, 64);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; for (let i = 0; i <= 64; i += 16) ctx.fillRect(i + 3, 0, 1, 64);
+  noiseOverlay(ctx, 64, 64, rng, 12);
+  return texFrom(c, ctx);
+}
+
+function lavaFloor(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  ctx.fillStyle = '#5a1404'; ctx.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 40; i++) { const x = rng() * 64, y = rng() * 64, r = 3 + rng() * 12; const o = ctx.createRadialGradient(x, y, 1, x, y, r); o.addColorStop(0, 'rgba(255,210,60,0.9)'); o.addColorStop(0.5, 'rgba(240,90,10,0.6)'); o.addColorStop(1, 'rgba(120,20,0,0)'); ctx.fillStyle = o; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#1a0602'; ctx.lineWidth = 1; ctx.strokeStyle = '#1a0602';
+  for (let i = 0; i < 5; i++) { let x = rng() * 64, y = rng() * 64; ctx.beginPath(); ctx.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rng() - 0.5) * 24; y += (rng() - 0.5) * 24; ctx.lineTo(x, y); } ctx.stroke(); }
+  return texFrom(c, ctx);
+}
+
+function tileFloor(seed) {
+  const { c, ctx } = makeCanvas(64, 64); const rng = mulberry32(seed);
+  for (let gy = 0; gy < 4; gy++) for (let gx = 0; gx < 4; gx++) {
+    const dark = (gx + gy) % 2 === 0;
+    const v = 0.9 + rng() * 0.2;
+    ctx.fillStyle = dark ? `rgb(${44 * v | 0},${46 * v | 0},${52 * v | 0})` : `rgb(${92 * v | 0},${94 * v | 0},${100 * v | 0})`;
+    ctx.fillRect(gx * 16, gy * 16, 16, 16);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(gx * 16, gy * 16, 16, 1); ctx.fillRect(gx * 16, gy * 16, 1, 16);
+  }
+  noiseOverlay(ctx, 64, 64, rng, 12);
+  return texFrom(c, ctx);
+}
+
 // ----- build everything ---------------------------------------------------
 
 export function buildAssets() {
@@ -948,6 +1131,23 @@ export function buildAssets() {
   TEX.floor2 = floorTex(24, [52, 44, 40]);
   TEX.ceil = ceilTex(21);
   TEX.blood = bloodFloor(22);
+
+  // 15 extra surfaces for variety (12 walls + 3 flats)
+  TEX.console = consoleWall(31);
+  TEX.hazard = hazardWall(32);
+  TEX.vine = vineWall(33);
+  TEX.pipe = pipeWall(34);
+  TEX.wood = woodWall(35);
+  TEX.flesh = fleshWall(36);
+  TEX.circuit = circuitWall(37);
+  TEX.lightpanel = lightPanel(38);
+  TEX.rust = rustWall(39);
+  TEX.gothic = gothicWall(40);
+  TEX.crystal = crystalWall(41);
+  TEX.slime = slimeWall(42);
+  TEX.grate = grateFloor(43);
+  TEX.lava = lavaFloor(44);
+  TEX.tile = tileFloor(45);
 
   // enemies
   SPR.zombie_walk0 = zombie('walk0');

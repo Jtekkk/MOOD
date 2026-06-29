@@ -10,18 +10,20 @@ const BAR_H = 32;
 const BAR_Y = RENDER_H - BAR_H;     // 168
 
 // ---- first-person weapon, blitted straight into the pixel buffer ----------
+const WEAPON_SCALE = 0.58;   // keep the gun small, tucked into the bottom
 export function blitWeapon(renderer, game) {
   const p = game.player;
   const w = WEAPONS[p.weapon];
   const tex = (p.weaponFlash > 0 ? SPR[w.fpFire] : SPR[w.fp]) || SPR.fp_pistol;
-  const scale = 1.12;
+  const scale = WEAPON_SCALE;
   const drawW = tex.w * scale, drawH = tex.h * scale;
-  const bobX = Math.sin(p.bobPhase) * 4 * p.bobAmt;
-  const bobY = Math.abs(Math.cos(p.bobPhase)) * 5 * p.bobAmt;
-  const recoil = p.recoil * 7;
-  const raise = (p.raiseT / 0.16) * 46;
-  const dx = (RENDER_W - drawW) / 2 + bobX;
-  const dy = BAR_Y - drawH + 6 + bobY + recoil + raise;
+  const bobX = Math.sin(p.bobPhase) * 3 * p.bobAmt;
+  const bobY = Math.abs(Math.cos(p.bobPhase)) * 3 * p.bobAmt;
+  const recoil = p.recoil * 5;
+  const raise = (p.raiseT / 0.16) * 26;
+  // anchor the bottom of the sprite just under the status bar, slightly right of centre
+  const dx = (RENDER_W - drawW) / 2 + 6 + bobX;
+  const dy = BAR_Y - drawH + 10 + bobY + recoil + raise;
   blitSprite(renderer.buf, tex, dx | 0, dy | 0, scale);
 }
 
