@@ -315,7 +315,7 @@ function zombie(frame) {
   return texFrom(c, ctx);
 }
 
-function zombieDie(stage) { return genericDie(stage, '#566a39', '#2c3620'); }
+function zombieDie(stage) { return humanoidDeath(56, 68, stage, '#566a39', '#2c3620', '#aab797'); }
 
 // ----- enemy: imp ---------------------------------------------------------
 
@@ -365,7 +365,7 @@ function imp(frame) {
   return texFrom(c, ctx);
 }
 
-function impDie(stage) { return genericDie(stage, '#8a4a28', '#3a1a0a'); }
+function impDie(stage) { return humanoidDeath(56, 66, stage, '#9a5728', '#4a2812', '#ad632f'); }
 
 // ----- enemy: demon (pinky) ----------------------------------------------
 
@@ -404,7 +404,7 @@ function demon(frame) {
   return texFrom(c, ctx);
 }
 
-function demonDie(stage) { return genericDie(stage, '#d98aa0', '#7a1f2f'); }
+function demonDie(stage) { return humanoidDeath(64, 54, stage, '#d98aa0', '#a85368', '#eaa6ba', true); }
 
 // ----- enemy: cacodemon (floating ranged) ---------------------------------
 
@@ -443,7 +443,7 @@ function caco(frame) {
   return texFrom(c, ctx);
 }
 
-function cacoDie(stage) { return genericDie(stage, '#b04040', '#2a0a0a'); }
+function cacoDie(stage) { return cacoDeath(stage); }
 
 // Generic collapse-into-gibs death used by all monsters.
 function genericDie(stage, body, dark) {
@@ -458,6 +458,80 @@ function genericDie(stage, body, dark) {
     ctx.fillStyle = '#9a2424';
     for (let i = 0; i < 10; i++) ctx.fillRect(8 + i * 5, 50 + (i % 3) * 3, 3, 3);
     ctx.fillStyle = '#c43a3a'; ctx.fillRect(20, 52, 5, 4); ctx.fillRect(38, 51, 5, 4);
+  }
+  return texFrom(c, ctx);
+}
+
+// A 4-stage collapse: recoil → double-over → sprawl → corpse + blood pool.
+function humanoidDeath(W, H, stage, body, dark, head, wide = false) {
+  const { c, ctx } = makeCanvas(W, H);
+  const cx = W / 2, gy = H - 5;
+  const pool = (rx) => { ctx.fillStyle = 'rgba(120,18,18,0.82)'; ctx.beginPath(); ctx.ellipse(cx, gy + 2, rx, 5, 0, 0, 7); ctx.fill(); };
+  if (stage === 0) {
+    ctx.fillStyle = dark; ctx.fillRect(cx - 9, gy - 28, 18, 26);
+    ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(cx, gy - 22, 12, 16, 0.25, 0, 7); ctx.fill();
+    ctx.fillStyle = head; ctx.beginPath(); ctx.ellipse(cx + 7, gy - 36, 8, 8, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#7a1c1c'; ctx.fillRect(cx - 3, gy - 20, 6, 12);
+  } else if (stage === 1) {
+    ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(cx, gy - 11, wide ? 20 : 16, 12, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.ellipse(cx, gy - 6, wide ? 20 : 16, 8, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = head; ctx.beginPath(); ctx.ellipse(cx + 13, gy - 9, 7, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#8a2020'; ctx.fillRect(cx - 12, gy - 1, 24, 4);
+  } else if (stage === 2) {
+    pool(wide ? 24 : 22);
+    ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(cx, gy - 4, wide ? 24 : 20, 9, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.ellipse(cx + 4, gy - 3, 12, 5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = head; ctx.beginPath(); ctx.ellipse(cx - 16, gy - 4, 7, 6, 0, 0, 7); ctx.fill();
+  } else {
+    pool(wide ? 27 : 24);
+    ctx.fillStyle = dark; ctx.beginPath(); ctx.ellipse(cx, gy - 2, wide ? 24 : 21, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(cx - 4, gy - 3, 14, 5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#9a2424'; for (let i = 0; i < 9; i++) ctx.fillRect(cx - 22 + i * 5, gy - 1 + (i % 2 ? 2 : 0), 3, 3);
+    ctx.fillStyle = '#c43a3a'; ctx.fillRect(cx - 12, gy - 1, 5, 4); ctx.fillRect(cx + 8, gy - 2, 5, 4);
+  }
+  return texFrom(c, ctx);
+}
+
+// Cacodemon: recoils, deflates, drops, leaves a flattened heap.
+function cacoDeath(stage) {
+  const { c, ctx } = makeCanvas(60, 60);
+  if (stage === 0) {
+    const g = ctx.createRadialGradient(24, 20, 4, 30, 28, 28); g.addColorStop(0, '#c25450'); g.addColorStop(1, '#6e1818');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(30, 26, 25, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(30, 22, 9, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(33, 19, 3, 0, 7); ctx.fill();          // eye rolled up
+    ctx.fillStyle = '#2a0808'; ctx.beginPath(); ctx.ellipse(30, 40, 8, 5, 0, 0, 7); ctx.fill();
+  } else if (stage === 1) {
+    ctx.fillStyle = '#9a3030'; ctx.beginPath(); ctx.ellipse(30, 40, 24, 15, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#6e1818'; ctx.beginPath(); ctx.ellipse(30, 44, 22, 10, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#2a0808'; ctx.beginPath(); ctx.ellipse(30, 42, 13, 6, 0, 0, 7); ctx.fill();
+  } else if (stage === 2) {
+    ctx.fillStyle = 'rgba(120,18,18,0.82)'; ctx.beginPath(); ctx.ellipse(30, 52, 24, 6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#7a2222'; ctx.beginPath(); ctx.ellipse(30, 48, 23, 9, 0, 0, 7); ctx.fill();
+  } else {
+    ctx.fillStyle = 'rgba(120,18,18,0.85)'; ctx.beginPath(); ctx.ellipse(30, 52, 27, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#5e1414'; ctx.beginPath(); ctx.ellipse(30, 50, 21, 6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#9a2424'; for (let i = 0; i < 8; i++) ctx.fillRect(8 + i * 6, 49 + (i % 2 ? 2 : 0), 3, 3);
+  }
+  return texFrom(c, ctx);
+}
+
+// Lost soul: flames sputter out, skull cracks then shatters into bone shards.
+function lostsoulDeath(stage) {
+  const { c, ctx } = makeCanvas(44, 48);
+  if (stage < 2) {
+    const r = stage === 0 ? 14 : 8;
+    const h = ctx.createRadialGradient(22, 24, 2, 22, 24, r);
+    h.addColorStop(0, 'rgba(255,200,80,0.0)'); h.addColorStop(0.5, 'rgba(255,120,20,0.5)'); h.addColorStop(1, 'rgba(160,30,0,0)');
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(22, 24, r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#e8e4d8'; ctx.beginPath(); ctx.ellipse(22, 24, 11, 12, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#7a6a55'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(18, 14); ctx.lineTo(22, 26); ctx.lineTo(27, 16); ctx.stroke();
+    ctx.fillStyle = '#1a0e06'; ctx.fillRect(16, 21, 4, 4); ctx.fillRect(25, 21, 4, 4);
+  } else if (stage === 2) {
+    ctx.fillStyle = '#d8d2c4'; for (let i = 0; i < 7; i++) { const a = i / 7 * 7; ctx.fillRect((22 + Math.cos(a) * 11) | 0, (30 + Math.sin(a) * 7) | 0, 4, 4); }
+  } else {
+    ctx.fillStyle = 'rgba(90,20,10,0.6)'; ctx.beginPath(); ctx.ellipse(22, 44, 14, 3, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#cfc8b6'; for (let i = 0; i < 7; i++) ctx.fillRect(8 + i * 4, 40 + (i % 2 ? 2 : 0), 3, 3);
   }
   return texFrom(c, ctx);
 }
@@ -982,6 +1056,40 @@ function lostsoul(frame) {
   return texFrom(c, ctx);
 }
 
+function _soulFlames(ctx, t) {
+  const halo = ctx.createRadialGradient(22, 24, 3, 22, 24, 19);
+  halo.addColorStop(0, 'rgba(255,240,180,0)'); halo.addColorStop(0.55, 'rgba(255,150,30,0.58)'); halo.addColorStop(1, 'rgba(200,40,0,0)');
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(22, 24, 19, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,170,40,0.85)';
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + t * 0.5, rr = 15 + (i % 2 ? 5 : 0);
+    ctx.beginPath();
+    ctx.moveTo(22 + Math.cos(a) * 9, 22 + Math.sin(a) * 9);
+    ctx.lineTo(22 + Math.cos(a) * rr, 22 + Math.sin(a) * rr - 5);
+    ctx.lineTo(22 + Math.cos(a + 0.4) * 9, 22 + Math.sin(a + 0.4) * 9);
+    ctx.fill();
+  }
+}
+function lostsoulSide(frame) {
+  const { c, ctx } = makeCanvas(44, 48);
+  _soulFlames(ctx, frame === 'walk1' ? 1 : 0);
+  ctx.fillStyle = '#e8e4d8'; ctx.beginPath(); ctx.ellipse(21, 21, 11, 12, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#d3ccba'; ctx.beginPath(); ctx.moveTo(30, 20); ctx.lineTo(36, 24); ctx.lineTo(30, 28); ctx.fill(); // nasal
+  ctx.fillStyle = '#d3ccba'; ctx.fillRect(20, 28, 14, 6);                 // jaw
+  ctx.fillStyle = '#fff'; for (let x = 22; x < 34; x += 3) ctx.fillRect(x, 32, 2, 3);
+  ctx.fillStyle = '#1a0e06'; ctx.beginPath(); ctx.ellipse(20, 20, 3, 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ff7a1e'; ctx.fillRect(18, 19, 3, 3);
+  return texFrom(c, ctx);
+}
+function lostsoulBack(frame) {
+  const { c, ctx } = makeCanvas(44, 48);
+  _soulFlames(ctx, frame === 'walk1' ? 1 : 0);
+  ctx.fillStyle = '#ded8ca'; ctx.beginPath(); ctx.ellipse(22, 23, 11, 12, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,108,88,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(22, 12); ctx.lineTo(22, 34); ctx.stroke();
+  ctx.fillStyle = '#cfc8b6'; ctx.fillRect(16, 30, 12, 5);
+  return texFrom(c, ctx);
+}
+
 // ----- HUD: the marine's face (status-bar mug) ----------------------------
 // A tribute to the Nicolas Cage "Today I'm feeling..." chart. Each mood is a
 // distinct expression wired to gameplay events (see game.js _updateFace).
@@ -1437,7 +1545,13 @@ export function buildAssets() {
   SPR.lostsoul_walk1 = lostsoul('walk1');
   SPR.lostsoul_attack = lostsoul('attack');
   SPR.lostsoul_pain = lostsoul('walk0');
-  for (let i = 0; i < 4; i++) SPR['lostsoul_die' + i] = genericDie(i, '#d8d2c4', '#7a3020');
+  for (let i = 0; i < 4; i++) SPR['lostsoul_die' + i] = lostsoulDeath(i);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`lostsoul_front_${f}`] = SPR[`lostsoul_${f}`];
+    SPR[`lostsoul_sideR_${f}`] = lostsoulSide(f);
+    SPR[`lostsoul_sideL_${f}`] = mirrorTex(SPR[`lostsoul_sideR_${f}`]);
+    SPR[`lostsoul_back_${f}`] = lostsoulBack(f);
+  }
 
   // status-bar faces (5 damage states x the Nic Cage moods)
   for (let s = 0; s < 5; s++) for (const m of FACE_MOODS) SPR[`face_${s}_${m}`] = makeFace(s, m);
