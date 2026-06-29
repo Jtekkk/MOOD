@@ -17,6 +17,10 @@ export class Input {
     this._prevBtn = [];
     window.addEventListener('gamepadconnected', () => { this.hasGamepad = true; });
 
+    // touch state (on-screen controls fold into the same model — see touch.js)
+    this.touchDown = new Set();   // held movement codes from the virtual stick
+    this.touchFire = false;
+
     window.addEventListener('keydown', (e) => {
       const c = e.code;
       // Prevent the page from scrolling on arrows/space/etc while playing.
@@ -54,12 +58,12 @@ export class Input {
     if (this.locked && document.exitPointerLock) document.exitPointerLock();
   }
 
-  down(code) { return this.keys.has(code) || this.padDown.has(code); }
+  down(code) { return this.keys.has(code) || this.padDown.has(code) || this.touchDown.has(code); }
 
   // True only on the frame the key went down.
   justPressed(code) { return this.pressed.has(code); }
 
-  mouseDown(btn) { return this.mouseButtons.has(btn) || (btn === 0 && this.padFire); }
+  mouseDown(btn) { return this.mouseButtons.has(btn) || (btn === 0 && (this.padFire || this.touchFire)); }
   mouseJustPressed(btn) { return this.mousePressed.has(btn); }
 
   // Poll the first connected gamepad and fold it into the keyboard/mouse model.

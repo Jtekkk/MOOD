@@ -27,6 +27,34 @@ npm start            # serves on http://localhost:8080
 
 Then open **http://localhost:8080** and click the screen.
 
+### On a phone or tablet
+
+The same URL works on touch devices — load it in mobile Chrome/Safari (turn the
+phone **landscape**) and an on-screen control layer appears automatically: a
+virtual movement stick (bottom-left), a **FIRE** pad and **USE**/**WPN** buttons
+(bottom-right), **MAP** + pause (top-right), and *drag anywhere else to look*.
+For the best result, add it to your home screen so it runs full-screen.
+
+### As a desktop app (Windows `.exe`, macOS, Linux)
+
+MOOD can be packaged into a standalone desktop app with
+[Electron](https://www.electronjs.org/). The wrapper (`electron/main.js`) boots
+the bundled static server on a private port and opens the game in a window.
+
+```bash
+npm install                  # pulls electron + electron-builder (dev only)
+npm run desktop              # run the desktop app locally (no packaging)
+
+npm run dist:win             # build a Windows installer + portable .exe
+npm run dist:mac             # build a macOS .dmg
+npm run dist:linux           # build a Linux AppImage
+```
+
+Installers land in `dist-electron/` (e.g. `MOOD-0.1.0-x64.exe`). **Build each
+target on that OS** — producing a Windows `.exe` is most reliable *on Windows*
+(cross-building from Linux/macOS needs Wine and is finicky). The game itself
+stays a zero-dependency browser app; Electron is only used for packaging.
+
 ## Controls
 
 | Action            | Keyboard & mouse                      | Gamepad                       |
@@ -42,7 +70,8 @@ Then open **http://localhost:8080** and click the screen.
 | Options           | `O` (from title or pause)             | —                             |
 | Mute              | `M`                                   | `Y`                           |
 
-A gamepad (Xbox/standard mapping) is detected automatically when connected.
+A gamepad (Xbox/standard mapping) is detected automatically when connected, and
+on touch devices an on-screen control layer appears automatically (see above).
 
 **Goal:** clear the level and reach the **EXIT** switch. Some doors are locked —
 find the matching keycard.

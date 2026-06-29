@@ -1,11 +1,45 @@
 {
   "name": "mood",
   "version": "0.1.0",
-  "description": "MOOD — a reverse-engineered knockoff of Doom II. A browser raycasting FPS, zero dependencies.",
+  "description": "MOOD — a reverse-engineered knockoff of Doom II. A browser raycasting FPS, zero runtime dependencies.",
   "type": "module",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "start": "node server.mjs",
-    "validate": "node tools/validate-levels.mjs"
+    "validate": "node tools/validate-levels.mjs",
+    "desktop": "electron electron/main.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.mood.game",
+    "productName": "MOOD",
+    "directories": { "output": "dist-electron" },
+    "files": [
+      "electron/**/*",
+      "server.mjs",
+      "index.html",
+      "styles.css",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": ["nsis", "portable"],
+      "artifactName": "MOOD-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "mac": { "target": ["dmg"], "category": "public.app-category.games" },
+    "linux": { "target": ["AppImage"], "category": "Game" }
   }
 }

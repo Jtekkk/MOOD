@@ -2,6 +2,7 @@
 import { buildAssets, SPR, TEX, FACE_MOODS } from './assets.js';
 import { Renderer, RENDER_W, RENDER_H } from './raycaster.js';
 import { Input } from './input.js';
+import { initTouch } from './touch.js';
 import { AudioEngine } from './audio.js';
 import { Game } from './game.js';
 import {
@@ -41,6 +42,16 @@ const game = new Game(renderer, input, audio);
 if (loading) loading.style.display = 'none';
 
 function ensureAudio() { audio.init(); audio.resume(); game.applySettings(); }
+
+// On-screen controls for touch devices (no-op on desktop).
+const touchUI = initTouch(input, game, {
+  unlockAudio: ensureAudio,
+  toggleMap: () => { if (game.state === 'playing' || game.state === 'paused') game.showMap = !game.showMap; },
+  pause: () => {
+    if (game.state === 'playing') { game.state = 'paused'; input.exitLock(); }
+    else if (game.state === 'paused') { game.state = 'playing'; }
+  },
+});
 
 function startGame() {
   ensureAudio();
@@ -118,6 +129,7 @@ function frame(now) {
   if (game.state === 'title' && input.justPressed('Enter')) startGame();
   if (game.state === 'victory' && (input.justPressed('Enter') || input.justPressed('Space'))) game.state = 'title';
 
+  if (touchUI) touchUI.update(game.state);
   render();
   input.endFrame();
   requestAnimationFrame(frame);
