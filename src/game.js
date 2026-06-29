@@ -37,7 +37,8 @@ export class Game {
       bobPhase: 0, bobAmt: 0,
       damageFlash: 0, pickupFlash: 0,
       kills: 0, totalKills: 0, secrets: 0,
-      dead: false, deathTime: 0, faceTimer: 0, faceMood: 'fwd',
+      dead: false, deathTime: 0,
+      faceTimer: 0, faceMood: 'happy', calmT: 0, idleMoveT: 0, killStreak: 0, lastKillStamp: -99,
     };
   }
 
@@ -137,8 +138,10 @@ export class Game {
       this._movePlayer(mvx, mvy);
       p.bobPhase += dt * 10 * run;
       p.bobAmt = Math.min(1, p.bobAmt + dt * 4);
+      p.idleMoveT = 0;
     } else {
       p.bobAmt = Math.max(0, p.bobAmt - dt * 4);
+      p.idleMoveT += dt;
     }
 
     // --- weapon select ---
@@ -172,8 +175,7 @@ export class Game {
     // --- timers/flashes ---
     p.damageFlash = Math.max(0, p.damageFlash - dt * 2);
     p.pickupFlash = Math.max(0, p.pickupFlash - dt * 3);
-    p.faceTimer -= dt;
-    if (p.faceTimer <= 0) { p.faceMood = 'fwd'; }
+    this._updateFace(dt);
 
     if (p.health <= 0 && !p.dead) this._killPlayer();
   }
@@ -307,7 +309,7 @@ export class Game {
     p.fireCD = w.cooldown;
     p.weaponFlash = 0.09;
     p.recoil = 1;
-    p.faceMood = 'grin'; p.faceTimer = 0.3;
+    p.faceMood = (p.health <= 35 ? 'angry' : 'excited'); p.faceTimer = 0.35; p.calmT = 0;
     this.audio.play(w.sound);
 
     if (w.kind === 'projectile') {
@@ -439,7 +441,14 @@ export class Game {
     if (e.hp <= 0) {
       e.state = 'dying'; e.stateTime = 0; e.alive = false;
       this.audio.play('monster_death');
-      this.player.kills++;
+      const p = this.player;
+      p.kills++;
+      if (owner === 'player') {
+        p.killStreak = (this.timer - p.lastKillStamp < 2.5) ? p.killStreak + 1 : 1;
+        p.lastKillStamp = this.timer;
+        p.faceMood = p.killStreak >= 3 ? 'angry' : 'excited';
+        p.faceTimer = 0.55; p.calmT = 0;
+      }
       return;
     }
     if (Math.random() < e.def.painChance) {
@@ -458,7 +467,8 @@ export class Game {
     }
     p.health -= dealt;
     p.damageFlash = Math.min(1, p.damageFlash + dmg / 30);
-    p.faceMood = 'ouch'; p.faceTimer = 0.4;
+    const panic = dmg > 20 || p.health <= 20;
+    p.faceMood = panic ? 'bees' : 'stressed'; p.faceTimer = panic ? 0.8 : 0.45; p.calmT = 0;
     this.audio.play(dmg > 18 ? 'oof' : 'pain');
   }
 
@@ -469,6 +479,34 @@ export class Game {
     this.audio.play('death');
     this.audio.stopMusic();
     this.state = 'dead';
+  }
+
+  // Is an awake monster bearing down on the player right now?
+  _threatNear() {
+    const p = this.player;
+    for (const e of this.entities) {
+      if (e.kind === 'enemy' && e.alive && (e.state === 'chase' || e.state === 'attack' || e.state === 'pain')) {
+        if (dist(e.x, e.y, p.x, p.y) < 7 && this._lineOfSight(e.x, e.y, p.x, p.y)) return true;
+      }
+    }
+    return false;
+  }
+
+  // Drive the Nicolas Cage status-bar face from gameplay state.
+  // Short-lived event moods (fire/hurt/kill) are set elsewhere with a faceTimer;
+  // when none is active we fall back to an ambient mood.
+  _updateFace(dt) {
+    const p = this.player;
+    const threat = this._threatNear();
+    if (threat) p.calmT = 0; else p.calmT += dt;
+    if (p.faceTimer > 0) { p.faceTimer -= dt; return; }
+    let mood;
+    if (p.health <= 20) mood = 'bees';                 // BEES!!! — pure panic
+    else if (threat) mood = 'focused';                 // sunglasses, locked in
+    else if (p.calmT > 6 && p.health >= 100) mood = 'carefree';
+    else if (p.calmT > 3) mood = (p.idleMoveT > 5 ? 'meh' : 'relaxed');
+    else mood = 'happy';
+    p.faceMood = mood;
   }
 
   // ---- enemy AI ----------------------------------------------------------

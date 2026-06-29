@@ -61,8 +61,17 @@ find the matching keycard.
 - **Pickups:** stimpacks, medikits, health/armor bonuses, MegaArmor, MegaSphere,
   ammo of every type, weapons, and three colored keycards.
 - **Explosive barrels** with chain-reaction splash damage.
-- **Classic status-bar HUD:** ammo, health, the ARMS panel, a live Doomguy mug
-  shot that reacts to damage and firing, armor, keys, and per-type ammo counts.
+- **Classic status-bar HUD:** ammo, health, the ARMS panel, armor, keys, and
+  per-type ammo counts — plus a live mug shot.
+- **The "Today I'm Feeling..." face:** the status-bar portrait cycles through
+  nine Nicolas-Cage-meme moods wired to what's actually happening —
+  **HAPPY** (idle & fine), **CAREFREE** (full health, no threats),
+  **RELAXED** (calm), **EXCITED** (firing / a kill), **FOCUSED** (sunglasses on
+  when a monster is stalking you), **STRESSED** (taking hits), **ANGRY** (a 3+
+  kill streak / fighting while wounded), **MEH** (bored), and **BEES!!!** — full
+  panic, complete with a wire cage and a swarm, when you're nearly dead.
+
+  ![The nine moods](docs/screens/faces.png)
 - **Two hand-authored levels** with a title screen, level-complete intermission
   (with kill tally), death/respawn, and a final victory screen.
 - **Procedurally synthesized audio** (WebAudio) for every weapon, monster, door,

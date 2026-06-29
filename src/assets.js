@@ -655,44 +655,146 @@ function fpRocket(fire) {
 }
 
 // ----- HUD: the marine's face (status-bar mug) ----------------------------
-// state: 0 healthy .. 4 near death; mood: 'fwd','left','right','ouch','grin','god','dead'
+// A tribute to the Nicolas Cage "Today I'm feeling..." chart. Each mood is a
+// distinct expression wired to gameplay events (see game.js _updateFace).
+// state: 0 healthy .. 4 near death.
+// moods: happy, carefree, relaxed, excited, focused, stressed, angry, bees, meh, dead
+export const FACE_MOODS = [
+  'happy', 'carefree', 'relaxed', 'excited', 'focused', 'stressed', 'angry', 'bees', 'meh',
+];
+
 export function makeFace(state, mood) {
   const { c, ctx } = makeCanvas(48, 56);
   ctx.fillStyle = '#1a0d0d'; ctx.fillRect(0, 0, 48, 56);
+
   if (mood === 'dead') {
     ctx.fillStyle = '#7a1f1f'; ctx.fillRect(4, 30, 40, 24);
     ctx.fillStyle = '#b33'; for (let i = 0; i < 14; i++) ctx.fillRect(2 + i * 3, 28 + (i % 3) * 4, 3, 4);
     ctx.fillStyle = '#ddd'; ctx.fillRect(14, 40, 4, 4); ctx.fillRect(30, 40, 4, 4);
     return texFrom(c, ctx);
   }
-  // skin gets paler / bloodier with damage
+
   const skinShades = ['#caa07a', '#c49770', '#bd8a64', '#b07050', '#9a5a44'];
   const skin = skinShades[Math.min(4, state)];
-  // hair
-  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 6, 32, 12);
+  const HAIR = '#4a2f17', BROW = '#3a2410', MOUTH = '#3a1010';
+
+  // hair (carefree gets long flowing locks)
+  ctx.fillStyle = HAIR; ctx.fillRect(8, 5, 32, 13);
+  if (mood === 'carefree') { ctx.fillRect(5, 9, 5, 34); ctx.fillRect(38, 9, 5, 34); }
   // face
   ctx.fillStyle = skin; ctx.fillRect(8, 14, 32, 34);
   ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(8, 14, 4, 34); ctx.fillRect(36, 14, 4, 34);
+  if (mood === 'angry') { ctx.fillStyle = 'rgba(170,30,0,0.16)'; ctx.fillRect(8, 14, 32, 34); }
+  // stubble for the laid-back moods
+  if (mood === 'relaxed' || mood === 'carefree') { ctx.fillStyle = 'rgba(40,28,18,0.28)'; ctx.fillRect(10, 39, 28, 9); }
   // blood spatter with damage
-  if (state >= 2) { ctx.fillStyle = '#9a2020'; ctx.fillRect(10, 18, 6, 3); ctx.fillRect(30, 22, 5, 4); }
-  if (state >= 3) { ctx.fillStyle = '#b32020'; ctx.fillRect(20, 16, 8, 3); ctx.fillRect(14, 40, 6, 3); }
-  // eyes: look direction
-  let ex = 0;
-  if (mood === 'left') ex = -3; else if (mood === 'right') ex = 3;
-  ctx.fillStyle = '#fff'; ctx.fillRect(13, 24, 8, 6); ctx.fillRect(27, 24, 8, 6);
-  ctx.fillStyle = (mood === 'god') ? '#fd0' : '#222';
-  ctx.fillRect(16 + ex, 25, 3, 4); ctx.fillRect(30 + ex, 25, 3, 4);
-  // brow
-  ctx.fillStyle = '#3a2410';
-  if (mood === 'ouch' || mood === 'grin') { ctx.fillRect(13, 22, 9, 2); ctx.fillRect(27, 22, 9, 2); }
-  else { ctx.fillRect(13, 23, 8, 2); ctx.fillRect(27, 23, 8, 2); }
-  // moustache
-  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(14, 36, 20, 4);
-  // mouth
-  ctx.fillStyle = '#3a1010';
-  if (mood === 'grin') { ctx.fillRect(15, 41, 18, 4); ctx.fillStyle = '#fff'; ctx.fillRect(17, 41, 14, 2); }
-  else if (mood === 'ouch') { ctx.fillRect(19, 41, 10, 6); }
-  else { ctx.fillRect(17, 42, 14, 3); }
+  if (state >= 2) { ctx.fillStyle = '#9a2020'; ctx.fillRect(10, 18, 6, 3); ctx.fillRect(31, 22, 5, 4); }
+  if (state >= 3) { ctx.fillStyle = '#b32020'; ctx.fillRect(20, 16, 8, 3); ctx.fillRect(13, 41, 6, 3); }
+
+  const eyeWhite = (x, y, w, h) => { ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, h); };
+  const pupil = (x, y, w, h, col = '#1a1a1a') => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+  const brow = (lx, ly, rx, ry, w = 9, h = 2) => { ctx.fillStyle = BROW; ctx.fillRect(lx, ly, w, h); ctx.fillRect(rx, ry, w, h); };
+  const moustache = () => { ctx.fillStyle = HAIR; ctx.fillRect(14, 36, 20, 4); };
+
+  switch (mood) {
+    case 'happy': {
+      brow(13, 22, 27, 22, 8, 2);
+      eyeWhite(13, 24, 8, 6); eyeWhite(27, 24, 8, 6);
+      pupil(16, 26, 3, 3); pupil(30, 26, 3, 3);
+      moustache();
+      ctx.fillStyle = MOUTH; ctx.fillRect(16, 42, 16, 3); ctx.fillRect(15, 40, 2, 2); ctx.fillRect(31, 40, 2, 2);
+      ctx.fillStyle = '#fff'; ctx.fillRect(18, 42, 12, 1);
+      break;
+    }
+    case 'carefree': {
+      // blissful, eyes shut, gentle smile
+      ctx.fillStyle = BROW; ctx.fillRect(13, 26, 8, 2); ctx.fillRect(27, 26, 8, 2);
+      ctx.fillRect(13, 28, 3, 1); ctx.fillRect(32, 28, 3, 1);
+      ctx.fillStyle = 'rgba(255,160,140,0.30)'; ctx.fillRect(11, 32, 5, 4); ctx.fillRect(32, 32, 5, 4);
+      moustache();
+      ctx.fillStyle = MOUTH; ctx.fillRect(17, 41, 14, 2); ctx.fillRect(15, 39, 3, 2); ctx.fillRect(30, 39, 3, 2);
+      break;
+    }
+    case 'relaxed': {
+      brow(13, 22, 27, 22, 8, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(13, 24, 8, 2); ctx.fillRect(27, 24, 8, 2); // heavy lids
+      eyeWhite(13, 26, 8, 3); eyeWhite(27, 26, 8, 3);
+      pupil(16, 27, 3, 2); pupil(30, 27, 3, 2);
+      moustache();
+      ctx.fillStyle = MOUTH; ctx.fillRect(16, 42, 13, 2); ctx.fillRect(28, 40, 3, 2); // smirk
+      break;
+    }
+    case 'excited': {
+      brow(12, 20, 27, 20, 9, 2);
+      eyeWhite(12, 23, 9, 7); eyeWhite(27, 23, 9, 7);
+      pupil(16, 25, 4, 4); pupil(30, 25, 4, 4);
+      // big open grin (skip moustache so it reads)
+      ctx.fillStyle = MOUTH; ctx.fillRect(15, 39, 18, 9);
+      ctx.fillStyle = '#fff'; ctx.fillRect(16, 39, 16, 3);
+      ctx.fillStyle = '#a33'; ctx.fillRect(20, 45, 8, 3); // tongue
+      break;
+    }
+    case 'focused': {
+      // sunglasses, cool and impassive
+      brow(12, 21, 27, 21, 9, 2);
+      ctx.fillStyle = '#111'; ctx.fillRect(11, 24, 26, 7);
+      ctx.fillStyle = '#333'; ctx.fillRect(11, 23, 26, 1); ctx.fillRect(22, 26, 4, 2); // frame + bridge
+      ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(13, 25, 5, 2); ctx.fillRect(28, 25, 5, 2);
+      moustache();
+      ctx.fillStyle = MOUTH; ctx.fillRect(17, 42, 14, 2);
+      break;
+    }
+    case 'stressed': {
+      brow(13, 21, 26, 21, 9, 2);
+      eyeWhite(13, 24, 8, 6); eyeWhite(27, 24, 8, 6);
+      pupil(16, 24, 2, 2); pupil(30, 24, 2, 2); // pupils up, nervous
+      ctx.fillStyle = '#9cf'; ctx.fillRect(36, 17, 2, 5); ctx.fillRect(10, 19, 2, 4); // sweat
+      moustache();
+      ctx.fillStyle = MOUTH; ctx.fillRect(16, 42, 16, 4); // gritted teeth
+      ctx.fillStyle = '#eee'; for (let x = 17; x < 32; x += 3) ctx.fillRect(x, 42, 1, 4);
+      break;
+    }
+    case 'angry': {
+      // furrowed inward brows
+      ctx.fillStyle = BROW;
+      ctx.fillRect(13, 22, 3, 2); ctx.fillRect(16, 23, 3, 2); ctx.fillRect(19, 24, 3, 2);
+      ctx.fillRect(26, 24, 3, 2); ctx.fillRect(29, 23, 3, 2); ctx.fillRect(32, 22, 3, 2);
+      eyeWhite(14, 25, 7, 4); eyeWhite(27, 25, 7, 4);
+      pupil(17, 26, 3, 3); pupil(30, 26, 3, 3);
+      ctx.fillStyle = MOUTH; ctx.fillRect(16, 40, 16, 7); // shout
+      ctx.fillStyle = '#fff'; ctx.fillRect(17, 40, 14, 2);
+      break;
+    }
+    case 'bees': {
+      // pure panic, then a wire cage + a swarm of bees
+      brow(12, 20, 27, 20, 9, 2);
+      eyeWhite(12, 23, 9, 7); eyeWhite(27, 23, 9, 7);
+      pupil(16, 26, 2, 2); pupil(30, 26, 2, 2);
+      ctx.fillStyle = '#2a0a0a'; ctx.beginPath(); ctx.ellipse(24, 42, 8, 6, 0, 0, 7); ctx.fill(); // scream
+      // bees
+      const bees = [[12, 16], [20, 12], [33, 15], [16, 30], [28, 33], [36, 26], [10, 36], [24, 20], [31, 39], [14, 44], [22, 49], [34, 45]];
+      for (const [bx, by] of bees) {
+        ctx.fillStyle = '#1a1a1a'; ctx.fillRect(bx, by, 2, 2);
+        ctx.fillStyle = 'rgba(220,200,40,0.8)'; ctx.fillRect(bx, by, 1, 1);
+      }
+      // cage
+      ctx.strokeStyle = 'rgba(40,40,46,0.85)'; ctx.lineWidth = 1;
+      for (let x = 12; x <= 36; x += 6) { ctx.beginPath(); ctx.moveTo(x + 0.5, 8); ctx.lineTo(x + 0.5, 52); ctx.stroke(); }
+      for (let y = 12; y <= 48; y += 8) { ctx.beginPath(); ctx.moveTo(8, y + 0.5); ctx.lineTo(40, y + 0.5); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(10, 14); ctx.quadraticCurveTo(24, 2, 38, 14); ctx.stroke(); // dome
+      break;
+    }
+    case 'meh':
+    default: {
+      brow(13, 23, 27, 23, 8, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(13, 25, 8, 1); ctx.fillRect(27, 25, 8, 1);
+      eyeWhite(13, 26, 8, 4); eyeWhite(27, 26, 8, 4);
+      pupil(18, 27, 3, 2); pupil(32, 27, 3, 2); // staring blankly
+      moustache();
+      ctx.fillStyle = MOUTH; ctx.fillRect(16, 43, 16, 2); // dead-flat line
+      break;
+    }
+  }
   return texFrom(c, ctx);
 }
 
@@ -769,9 +871,8 @@ export function buildAssets() {
   SPR.pickup_chaingun = weaponPickup('chaingun');
   SPR.pickup_rocket = weaponPickup('rocket');
 
-  // status-bar faces (5 damage states x moods)
-  const moods = ['fwd', 'left', 'right', 'ouch', 'grin', 'god'];
-  for (let s = 0; s < 5; s++) for (const m of moods) SPR[`face_${s}_${m}`] = makeFace(s, m);
+  // status-bar faces (5 damage states x the Nic Cage moods)
+  for (let s = 0; s < 5; s++) for (const m of FACE_MOODS) SPR[`face_${s}_${m}`] = makeFace(s, m);
   SPR.face_dead = makeFace(0, 'dead');
 
   // first-person weapons

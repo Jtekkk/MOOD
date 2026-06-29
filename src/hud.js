@@ -85,10 +85,15 @@ function faceSprite(p) {
   if (p.dead || p.faceMood === 'dead') return SPR.face_dead;
   const h = p.health;
   const s = h > 80 ? 0 : h > 60 ? 1 : h > 40 ? 2 : h > 20 ? 3 : 4;
-  let mood = p.faceMood;
-  if (!['fwd', 'ouch', 'grin'].includes(mood)) mood = 'fwd';
-  return SPR[`face_${s}_${mood}`] || SPR.face_0_fwd;
+  const mood = p.faceMood || 'happy';
+  return SPR[`face_${s}_${mood}`] || SPR.face_0_happy;
 }
+
+// The label under the face — the meme caption for the current mood.
+const MOOD_LABEL = {
+  happy: 'HAPPY', carefree: 'CAREFREE', relaxed: 'RELAXED', excited: 'EXCITED',
+  focused: 'FOCUSED', stressed: 'STRESSED', angry: 'ANGRY', bees: 'BEES!!!', meh: 'MEH',
+};
 
 // ---- the status bar -------------------------------------------------------
 export function drawStatusBar(ctx, game) {
@@ -119,12 +124,15 @@ export function drawStatusBar(ctx, game) {
     ctx.fillText(String(i + 1), col, row);
   }
 
-  // face mug
+  // face mug + meme caption ("TODAY I'M FEELING...")
   const face = faceSprite(p);
   if (face) {
-    const fw = 22, fh = 26, fx = 150, fy = BAR_Y + 3;
+    const fw = 20, fh = 21, fx = 151, fy = BAR_Y + 1;
     ctx.fillStyle = '#000'; ctx.fillRect(fx - 1, fy - 1, fw + 2, fh + 2);
     drawTex(ctx, face, fx, fy, fw, fh);
+    ctx.font = '5px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = p.faceMood === 'bees' ? '#ffd040' : '#bbaa88';
+    ctx.fillText(MOOD_LABEL[p.faceMood] || '', fx + fw / 2, RENDER_H - 1);
   }
 
   bigNum(ctx, String(Math.max(0, p.armor)) + '%', 210, BAR_Y + 8, '#30b030');
