@@ -46,13 +46,16 @@ export class Renderer {
 
   renderWorld(game) {
     const p = game.player;
-    const dirX = Math.cos(p.angle), dirY = Math.sin(p.angle);
+    const sh = game.shake || 0;
+    const angle = p.angle + (sh > 0 ? (Math.random() - 0.5) * sh * 0.045 : 0);
+    const dirX = Math.cos(angle), dirY = Math.sin(angle);
     const planeX = -dirY * PLANE, planeY = dirX * PLANE;
-    const horizon = (HALF_H + p.pitch) | 0;
+    const horizon = ((HALF_H + p.pitch) + (sh > 0 ? (Math.random() - 0.5) * sh * 13 : 0)) | 0;
     this._fog = hexToPacked(game.map.skyTint || '#15171c');
     this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
     this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
     this._sprites(game, p, dirX, dirY, planeX, planeY, horizon);
+    this._particles(game, p, dirX, dirY, planeX, planeY, horizon);
   }
 
   // ---- floor + ceiling (per-row casting) ---------------------------------
@@ -206,6 +209,7 @@ export class Renderer {
       const x1 = Math.min(RENDER_W - 1, screenX + (drawW >> 1));
       const light = e.fullbright ? 1 : lightFor(tY);
       const ft = e.fullbright ? 0 : fogT(tY) * 0.55, fog = this._fog;
+      const flash = (e.kind === 'enemy' && e.flash > 0) ? 0.78 : 0;   // white hit-flash
       const tw = sprite.w, th = sprite.h, px = sprite.pixels;
       for (let x = x0; x <= x1; x++) {
         if (tY >= this.zbuf[x]) continue;             // behind a wall
@@ -217,7 +221,36 @@ export class Renderer {
           if (texY < 0 || texY >= th) continue;
           const c = px[texY * tw + texX];
           if ((c >>> 24) < 128) continue;             // transparent / soft edge
-          buf[y * RENDER_W + x] = (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
+          let out = (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
+          if (flash) out = whiten(out, flash);
+          buf[y * RENDER_W + x] = out;
+        }
+      }
+    }
+  }
+
+  // ---- particles (blood / sparks / debris) ------------------------------
+  _particles(game, p, dirX, dirY, planeX, planeY, horizon) {
+    const arr = game.particles;
+    if (!arr || !arr.length) return;
+    const invDet = 1.0 / (planeX * dirY - dirX * planeY);
+    const buf = this.buf;
+    for (const pt of arr) {
+      const rx = pt.x - p.x, ry = pt.y - p.y;
+      const tX = invDet * (dirY * rx - dirX * ry);
+      const tY = invDet * (-planeY * rx + planeX * ry);
+      if (tY <= 0.12) continue;
+      const sx = ((RENDER_W / 2) * (1 + tX / tY)) | 0;
+      if (sx < 0 || sx >= RENDER_W || tY >= this.zbuf[sx]) continue;
+      const lineH = RENDER_H / tY;
+      const sy = (horizon + lineH * (0.5 - pt.z)) | 0;
+      const ps = lineH > 60 ? 2 : 1;
+      const c = pt.color;
+      for (let yy = sy; yy < sy + ps; yy++) {
+        if (yy < 0 || yy >= RENDER_H) continue;
+        for (let xx = sx; xx < sx + ps; xx++) {
+          if (xx < 0 || xx >= RENDER_W) continue;
+          buf[yy * RENDER_W + xx] = c;
         }
       }
     }
@@ -252,6 +285,13 @@ function shadeFog(c, f, fog, t) {
     const fr = fog & 0xff, fg = (fog >>> 8) & 0xff, fb = (fog >>> 16) & 0xff;
     r += (fr - r) * t; g += (fg - g) * t; b += (fb - b) * t;
   }
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
+// Blend a packed colour toward white by t (used for the enemy hit-flash).
+function whiten(c, t) {
+  let r = c & 0xff, g = (c >>> 8) & 0xff, b = (c >>> 16) & 0xff;
+  r += (255 - r) * t; g += (255 - g) * t; b += (255 - b) * t;
   return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
 }
 

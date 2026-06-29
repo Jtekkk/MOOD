@@ -5,9 +5,12 @@ import { LEVELS, parseLevel, SOLID, DOOR_LOCK } from './data/levels.js';
 import { ENEMY_TYPES, ENEMY_CHAR, enemyFrame } from './data/enemies.js';
 import { WEAPONS, AMMO_MAX } from './data/weapons.js';
 import { ITEMS } from './data/items.js';
-import { clamp, normalizeAngle, dist, rgba } from './math.js';
+import { clamp, normalizeAngle, dist, rgba, TAU } from './math.js';
 
 const PLAYER_R = 0.22;
+const BLOOD = [rgba(150, 22, 22), rgba(110, 14, 14), rgba(90, 6, 6), rgba(180, 40, 40)];
+const SPARKS = [rgba(255, 224, 130), rgba(255, 170, 50), rgba(220, 220, 230)];
+const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(60, 50, 45)];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
 
@@ -24,6 +27,36 @@ export class Game {
     this.player = this._freshPlayer();
     this.intermission = null;
     this.tally = null;
+    this.particles = [];   // blood / sparks / debris
+    this.shake = 0;        // screen-shake magnitude (decays)
+  }
+
+  addShake(a) { this.shake = Math.min(1, this.shake + a); }
+
+  // Spawn a burst of particles at (x,y) at height z (cells above the floor).
+  _spawnParticles(x, y, z, count, { speed = 3, up = 2.2, life = 0.5, colors = BLOOD } = {}) {
+    const arr = this.particles;
+    for (let i = 0; i < count; i++) {
+      if (arr.length >= 360) arr.shift();
+      const a = Math.random() * TAU, sp = Math.random() * speed;
+      arr.push({
+        x, y, z, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: Math.random() * up,
+        life: life * (0.6 + Math.random() * 0.7), color: colors[(Math.random() * colors.length) | 0],
+      });
+    }
+  }
+
+  _updateParticles(dt) {
+    const arr = this.particles;
+    for (const p of arr) {
+      p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      p.vz -= 7 * dt; p.vx *= (1 - 1.6 * dt); p.vy *= (1 - 1.6 * dt);
+      p.life -= dt;
+      if (p.z < 0) { p.z = 0; p.vz = 0; p.vx *= 0.55; p.vy *= 0.55; }
+      // stop particles that drift into a wall
+      if (this._rayBlocked(Math.floor(p.x), Math.floor(p.y))) { p.x -= p.vx * dt; p.y -= p.vy * dt; p.vx = p.vy = 0; }
+    }
+    if (arr.length) this.particles = arr.filter((p) => p.life > 0);
   }
 
   _freshPlayer() {
@@ -65,6 +98,8 @@ export class Game {
     };
     this.map = map;
     this.entities = [];
+    this.particles = [];
+    this.shake = 0;
     this.player.x = map.start.x;
     this.player.y = map.start.y;
     this.player.angle = map.startAngle;
@@ -184,8 +219,10 @@ export class Game {
     }
     this.entities = this.entities.filter((e) => !e._remove);
 
-    // --- doors ---
+    // --- doors / particles / shake ---
     for (const d of this.map.doors) this._updateDoor(d, dt);
+    this._updateParticles(dt);
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 3);
 
     // --- timers/flashes ---
     p.damageFlash = Math.max(0, p.damageFlash - dt * 2);
@@ -364,6 +401,8 @@ export class Game {
       }
     }
     if (w.name !== 'FIST') this._alertNearby(p.x, p.y, 6);  // the noise draws monsters
+    if (w.name === 'SUPER SHOTGUN' || w.name === 'ROCKET LAUNCHER') this.addShake(0.28);
+    else if (w.name === 'SHOTGUN' || w.name === 'CHAINGUN') this.addShake(0.1);
   }
 
   // March a ray; damage the first thing hit before a wall. `source` is
@@ -444,6 +483,9 @@ export class Game {
   _explode(x, y, radius, dmg, source) {
     this.audio.play('explosion');
     this._spawnEffect(x, y, radius * 0.6);
+    this._spawnParticles(x, y, 0.5, 24, { speed: 5, up: 4, life: 0.7, colors: DEBRIS });
+    const dpl = dist(x, y, this.player.x, this.player.y);
+    if (dpl < radius + 4) this.addShake(Math.min(0.9, (radius + 4 - dpl) / (radius + 4) * 0.9));
     for (const e of this.entities) {
       if (e.kind === 'enemy' && e.alive && e.state !== 'dead' && e.state !== 'dying') {
         const d = dist(x, y, e.x, e.y);
@@ -470,6 +512,7 @@ export class Game {
   }
   _spawnPuff(x, y) {
     this.entities.push({ kind: 'effect', x, y, spriteH: 0.3, vOffset: 0.5, time: 0, dur: 0.16, fullbright: true, sprite: SPR.explosion0, alive: true, small: true });
+    this._spawnParticles(x, y, 0.55, 5, { speed: 2.2, up: 1.6, life: 0.32, colors: SPARKS });
   }
   _updateEffect(e, dt) {
     e.time += dt;
@@ -489,6 +532,8 @@ export class Game {
   _damageEnemy(e, dmg, source) {
     if (!e.alive || e.state === 'dead' || e.state === 'dying') return;
     e.hp -= dmg;
+    e.flash = 0.09;     // bright hit-flash
+    this._spawnParticles(e.x, e.y, (e.vOffset || 0) + 0.55, 4 + (dmg / 8 | 0), { speed: 2.5, up: 2.4, life: 0.5, colors: BLOOD });
     const wasIdle = e.state === 'idle';
     // retaliate against whoever hurt us — a monster hit by another monster
     // turns on it (infighting); a player hit re-aims it at the player.
@@ -498,6 +543,7 @@ export class Game {
 
     if (e.hp <= 0) {
       e.state = 'dying'; e.stateTime = 0; e.alive = false;
+      this._spawnParticles(e.x, e.y, (e.vOffset || 0) + 0.5, 14, { speed: 3.5, up: 3, life: 0.7, colors: BLOOD });
       this.audio.play('monster_death');
       const p = this.player;
       p.kills++;
@@ -523,6 +569,7 @@ export class Game {
     }
     p.health -= dealt;
     p.damageFlash = Math.min(1, p.damageFlash + dmg / 30);
+    this.addShake(Math.min(0.7, 0.18 + dmg * 0.02));
     const panic = dmg > 20 || p.health <= 20;
     p.faceMood = panic ? 'bees' : 'stressed'; p.faceTimer = panic ? 0.8 : 0.45; p.calmT = 0;
     this.audio.play(dmg > 18 ? 'oof' : 'pain');
@@ -575,6 +622,7 @@ export class Game {
       return;
     }
 
+    if (e.flash > 0) e.flash -= dt;
     // physics: ride out any knockback impulse, then decay it
     if (e.kx || e.ky) {
       this._moveEnemy(e, e.kx * dt, e.ky * dt);
@@ -625,13 +673,24 @@ export class Game {
       e.sprite = enemyFrame(e);
       return;
     }
-    const wantClose = e.def.attack === 'melee' || d > e.def.range * 0.8;
-    if (wantClose && (see || d < 18)) {
-      const ang = Math.atan2(ty - e.y, tx - e.x);
-      e.angle = ang;
-      const sp = e.def.speed * dt;
-      this._enemyOpenDoors(e, ang);
-      this._moveEnemy(e, Math.cos(ang) * sp, Math.sin(ang) * sp);
+    const ang = Math.atan2(ty - e.y, tx - e.x);
+    e.angle = ang;
+    const sp = e.def.speed * dt;
+    const ranged = e.def.attack !== 'melee';
+    if (e.def.attack === 'melee' || d > e.def.range * 0.85) {
+      // approach
+      if (see || d < 18) { this._enemyOpenDoors(e, ang); this._moveEnemy(e, Math.cos(ang) * sp, Math.sin(ang) * sp); }
+    } else if (ranged && d < e.def.range * 0.45) {
+      // too close — back off to keep firing range
+      this._moveEnemy(e, -Math.cos(ang) * sp * 0.8, -Math.sin(ang) * sp * 0.8);
+    }
+    // ranged monsters juke sideways to dodge fire
+    if (ranged && see && d < e.def.range * 1.2 && d > 1.4) {
+      e.strafeT = (e.strafeT || 0) - dt;
+      if (e.strafeT <= 0) { e.strafe = Math.random() < 0.5 ? 1 : -1; e.strafeT = 0.5 + Math.random() * 0.9; }
+      const perp = ang + Math.PI / 2;
+      const ss = sp * 0.6 * (e.strafe || 1);
+      this._moveEnemy(e, Math.cos(perp) * ss, Math.sin(perp) * ss);
     }
     e.sprite = enemyFrame(e);
   }
