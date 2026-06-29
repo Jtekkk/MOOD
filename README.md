@@ -38,6 +38,7 @@ Then open **http://localhost:8080** and click the screen.
 | Run               | `Shift`                               |
 | Select weapon     | `1`–`8` (`Q` cycles)                  |
 | Automap           | `Tab`                                 |
+| Options           | `O` (from title or pause)             |
 | Pause             | `Esc`                                 |
 | Mute              | `M`                                   |
 
@@ -82,6 +83,9 @@ find the matching keycard.
   side, or back view based on its facing — you see them turn and flee.
 - **Automap** (`Tab`): a top-down overlay of the level with the player, doors,
   the exit, monsters, items, and barrels.
+- **Options menu** (`O`): mouse sensitivity, sound + music volume, and three
+  skill levels (Easy / Normal / Hard) that scale incoming damage and monster
+  attack rate. Settings persist in `localStorage`.
 - **Pickups:** stimpacks, medikits, health/armor bonuses, MegaArmor, MegaSphere,
   ammo of every type, weapons, and three colored keycards.
 - **Explosive barrels** with chain-reaction splash damage.

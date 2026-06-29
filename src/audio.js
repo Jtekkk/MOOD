@@ -7,6 +7,7 @@ export class AudioEngine {
     this.master = null;
     this.musicGain = null;
     this.enabled = true;
+    this.masterVol = 0.6;
     // streamed background music
     this.musicEl = null;
     this.musicTracks = [];
@@ -21,7 +22,7 @@ export class AudioEngine {
     if (!AC) { this.enabled = false; return; }
     this.ctx = new AC();
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.6;
+    this.master.gain.value = this.enabled ? this.masterVol : 0;
     this.master.connect(this.ctx.destination);
     this.musicGain = this.ctx.createGain();
     this.musicGain.gain.value = 0.18;
@@ -141,8 +142,17 @@ export class AudioEngine {
 
   toggleMute() {
     this.enabled = !this.enabled;
-    if (this.master) this.master.gain.value = this.enabled ? 0.6 : 0;
+    if (this.master) this.master.gain.value = this.enabled ? this.masterVol : 0;
     if (this.musicEl) this.musicEl.muted = !this.enabled;
     return this.enabled;
+  }
+
+  setMasterVolume(v) {
+    this.masterVol = v;
+    if (this.master) this.master.gain.value = this.enabled ? v : 0;
+  }
+  setMusicVolume(v) {
+    this.musicVol = v;
+    if (this.musicEl) this.musicEl.volume = v;
   }
 }

@@ -8,6 +8,16 @@ import { ITEMS } from './data/items.js';
 import { clamp, normalizeAngle, dist, rgba, TAU } from './math.js';
 
 const PLAYER_R = 0.22;
+export const SKILLS = [
+  { name: 'EASY', dmgTaken: 0.5, atkCooldown: 1.4 },
+  { name: 'NORMAL', dmgTaken: 1.0, atkCooldown: 1.0 },
+  { name: 'HARD', dmgTaken: 1.7, atkCooldown: 0.7 },
+];
+const DEFAULT_SETTINGS = { mouseSens: 1.0, volume: 0.6, musicVol: 0.42, skill: 1 };
+function loadSettings() {
+  try { const s = JSON.parse(localStorage.getItem('mood_settings')); if (s) return { ...DEFAULT_SETTINGS, ...s }; } catch { /* no storage */ }
+  return { ...DEFAULT_SETTINGS };
+}
 const BLOOD = [rgba(150, 22, 22), rgba(110, 14, 14), rgba(90, 6, 6), rgba(180, 40, 40)];
 const SPARKS = [rgba(255, 224, 130), rgba(255, 170, 50), rgba(220, 220, 230)];
 const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(60, 50, 45)];
@@ -29,6 +39,37 @@ export class Game {
     this.tally = null;
     this.particles = [];   // blood / sparks / debris
     this.shake = 0;        // screen-shake magnitude (decays)
+    this.settings = loadSettings();
+    this.skill = SKILLS[clamp(this.settings.skill | 0, 0, 2)];
+    this.settingsSel = 0;
+    this.settingsReturn = 'title';
+  }
+
+  // Apply current settings to audio + difficulty (call once audio is inited).
+  applySettings() {
+    this.skill = SKILLS[clamp(this.settings.skill | 0, 0, 2)];
+    this.audio.setMasterVolume(this.settings.volume);
+    this.audio.setMusicVolume(this.settings.musicVol);
+  }
+  saveSettings() { try { localStorage.setItem('mood_settings', JSON.stringify(this.settings)); } catch { /* no storage */ } }
+  openSettings(from) { this.settingsReturn = from; this.settingsSel = 0; this.state = 'settings'; }
+
+  _updateSettings() {
+    const inp = this.input, N = 5;
+    if (inp.justPressed('ArrowUp')) { this.settingsSel = (this.settingsSel + N - 1) % N; this.audio.play('menu'); }
+    if (inp.justPressed('ArrowDown')) { this.settingsSel = (this.settingsSel + 1) % N; this.audio.play('menu'); }
+    const dir = inp.justPressed('ArrowRight') ? 1 : inp.justPressed('ArrowLeft') ? -1 : 0;
+    if (dir) {
+      const s = this.settings;
+      if (this.settingsSel === 0) s.mouseSens = clamp(+(s.mouseSens + dir * 0.1).toFixed(2), 0.2, 3);
+      else if (this.settingsSel === 1) s.volume = clamp(+(s.volume + dir * 0.1).toFixed(2), 0, 1);
+      else if (this.settingsSel === 2) s.musicVol = clamp(+(s.musicVol + dir * 0.05).toFixed(2), 0, 1);
+      else if (this.settingsSel === 3) s.skill = clamp((s.skill | 0) + dir, 0, 2);
+      this.applySettings(); this.saveSettings(); this.audio.play('menu');
+    }
+    if (inp.justPressed('Escape') || ((inp.justPressed('Enter') || inp.mouseJustPressed(0)) && this.settingsSel === 4)) {
+      this.state = this.settingsReturn || 'title';
+    }
   }
 
   addShake(a) { this.shake = Math.min(1, this.shake + a); }
@@ -152,6 +193,7 @@ export class Game {
       case 'playing': this._updatePlaying(dt); break;
       case 'intermission': this._updateIntermission(dt); break;
       case 'dead': this._updateDead(dt); break;
+      case 'settings': this._updateSettings(); break;
       default: break;
     }
   }
@@ -160,7 +202,7 @@ export class Game {
     const inp = this.input, p = this.player;
     // --- look (mouse + arrows/Q-E) ---
     const turnSpeed = 2.6;
-    p.angle += inp.mouseDX * 0.0026;
+    p.angle += inp.mouseDX * 0.0026 * (this.settings.mouseSens || 1);
     if (inp.down('ArrowLeft')) p.angle -= turnSpeed * dt;
     if (inp.down('ArrowRight')) p.angle += turnSpeed * dt;
     p.angle = normalizeAngle(p.angle);
@@ -567,6 +609,7 @@ export class Game {
   _damagePlayer(dmg) {
     const p = this.player;
     if (p.dead) return;
+    dmg = Math.max(1, Math.round(dmg * (this.skill ? this.skill.dmgTaken : 1)));
     let dealt = dmg;
     if (p.armor > 0) {
       const absorbed = Math.min(p.armor, Math.floor(dmg / 3));
@@ -663,7 +706,7 @@ export class Game {
         e.didAttack = true;
         if (see) this._enemyAttack(e);
       }
-      if (e.attackTime >= 0.6) { e.state = 'chase'; e.cooldownTimer = e.def.cooldown; }
+      if (e.attackTime >= 0.6) { e.state = 'chase'; e.cooldownTimer = e.def.cooldown * (this.skill ? this.skill.atkCooldown : 1); }
       e.sprite = enemyFrame(e);
       return;
     }

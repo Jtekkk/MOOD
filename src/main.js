@@ -6,7 +6,7 @@ import { AudioEngine } from './audio.js';
 import { Game } from './game.js';
 import {
   blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette, drawAutomap,
-  drawTitle, drawPause, drawDead, drawIntermission, drawVictory,
+  drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings,
 } from './hud.js';
 
 const canvas = document.getElementById('screen');
@@ -40,7 +40,7 @@ audio.setTracks([
 const game = new Game(renderer, input, audio);
 if (loading) loading.style.display = 'none';
 
-function ensureAudio() { audio.init(); audio.resume(); }
+function ensureAudio() { audio.init(); audio.resume(); game.applySettings(); }
 
 function startGame() {
   ensureAudio();
@@ -63,6 +63,7 @@ document.addEventListener('pointerlockchange', () => {
 window.addEventListener('keydown', (e) => {
   ensureAudio();
   if (e.code === 'KeyM') { const on = audio.toggleMute(); game.message(on ? 'sound on' : 'sound off'); }
+  if (e.code === 'KeyO' && (game.state === 'title' || game.state === 'paused')) game.openSettings(game.state);
   if (e.code === 'Tab' && (game.state === 'playing' || game.state === 'paused')) game.showMap = !game.showMap;
   if (e.code === 'Escape' && game.state === 'playing') { game.state = 'paused'; input.exitLock(); }
 });
@@ -71,6 +72,7 @@ function render() {
   const octx = renderer.octx;
   switch (game.state) {
     case 'title': drawTitle(octx, game.timer); renderer.presentOverlay(); return;
+    case 'settings': drawSettings(octx, game); renderer.presentOverlay(); return;
     case 'intermission': drawIntermission(octx, game); renderer.presentOverlay(); return;
     case 'victory': drawVictory(octx, game.timer); renderer.presentOverlay(); return;
     default: break;

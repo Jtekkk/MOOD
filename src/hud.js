@@ -6,6 +6,8 @@ import { SPR } from './assets.js';
 import { WEAPONS, AMMO_MAX } from './data/weapons.js';
 import { RENDER_W, RENDER_H } from './raycaster.js';
 import { SOLID, DOORS } from './data/levels.js';
+import { SKILLS } from './game.js';
+import { clamp } from './math.js';
 
 const BAR_H = 32;
 const BAR_Y = RENDER_H - BAR_H;     // 168
@@ -272,16 +274,48 @@ export function drawTitle(ctx, t) {
 
   ctx.font = '7px monospace'; ctx.fillStyle = '#998';
   ctx.fillText('WASD move   MOUSE look   CLICK fire   1-8 weapons', RENDER_W / 2, 150);
-  ctx.fillText('E/SPACE use   SHIFT run   TAB map   M mute', RENDER_W / 2, 162);
+  ctx.fillText('E/SPACE use  SHIFT run  TAB map  O options  M mute', RENDER_W / 2, 162);
   ctx.fillText('Reach the EXIT switch. Kill everything that moves.', RENDER_W / 2, 178);
+}
+
+export function drawSettings(ctx, game) {
+  const s = game.settings;
+  const bg = ctx.createLinearGradient(0, 0, 0, RENDER_H);
+  bg.addColorStop(0, '#0c1018'); bg.addColorStop(1, '#04060a');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, RENDER_W, RENDER_H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = 'bold 16px monospace'; ctx.fillStyle = '#cfcf40';
+  ctx.fillText('OPTIONS', RENDER_W / 2, 30);
+
+  const bar = (v) => { const n = Math.round(clamp(v, 0, 1) * 10); return '[' + '='.repeat(n) + ' '.repeat(10 - n) + ']'; };
+  const rows = [
+    ['MOUSE', `${bar((s.mouseSens - 0.2) / 2.8)} ${s.mouseSens.toFixed(1)}x`],
+    ['SOUND', `${bar(s.volume)} ${Math.round(s.volume * 100)}%`],
+    ['MUSIC', `${bar(s.musicVol)} ${Math.round(s.musicVol * 100)}%`],
+    ['SKILL', `<  ${SKILLS[clamp(s.skill | 0, 0, 2)].name}  >`],
+    ['BACK', ''],
+  ];
+  ctx.font = '9px monospace';
+  let y = 66;
+  rows.forEach((r, i) => {
+    const sel = i === game.settingsSel;
+    ctx.textAlign = 'left'; ctx.fillStyle = sel ? '#ffd040' : '#9aa';
+    ctx.fillText((sel ? '> ' : '  ') + r[0], RENDER_W / 2 - 92, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = sel ? '#fff' : '#bcc';
+    ctx.fillText(r[1], RENDER_W / 2 + 96, y);
+    y += 18;
+  });
+  ctx.textAlign = 'center'; ctx.font = '7px monospace'; ctx.fillStyle = '#8a8aa0';
+  ctx.fillText('UP/DOWN select    LEFT/RIGHT change    ESC back', RENDER_W / 2, RENDER_H - 18);
 }
 
 export function drawPause(ctx) {
   ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, RENDER_W, BAR_Y);
   ctx.textAlign = 'center'; ctx.font = 'bold 22px monospace';
-  ctx.fillStyle = '#ffd040'; ctx.fillText('PAUSED', RENDER_W / 2, 70);
+  ctx.fillStyle = '#ffd040'; ctx.fillText('PAUSED', RENDER_W / 2, 66);
   ctx.font = '8px monospace'; ctx.fillStyle = '#ccc';
-  ctx.fillText('click to resume', RENDER_W / 2, 96);
+  ctx.fillText('click to resume', RENDER_W / 2, 90);
+  ctx.fillStyle = '#9aa'; ctx.fillText('press O for options', RENDER_W / 2, 104);
 }
 
 export function drawDead(ctx, game) {
