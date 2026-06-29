@@ -44,6 +44,26 @@ export function blitSprite(buf, tex, dx, dy, scale) {
   }
 }
 
+// ---- vignette (darkened edges over the 3D view) ---------------------------
+let _vignette = null;
+export function drawVignette(ctx) {
+  if (!_vignette) {
+    const g = ctx.createRadialGradient(
+      RENDER_W / 2, BAR_Y / 2, BAR_Y * 0.25,
+      RENDER_W / 2, BAR_Y / 2, RENDER_W * 0.62
+    );
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.62, 'rgba(224,224,228,1)');
+    g.addColorStop(1, 'rgba(112,112,124,1)');
+    _vignette = g;
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = _vignette;
+  ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  ctx.restore();
+}
+
 // ---- full-screen tints (damage/pickup) ------------------------------------
 export function drawTints(ctx, game) {
   const p = game.player;

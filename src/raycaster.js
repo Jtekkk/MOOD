@@ -48,6 +48,7 @@ export class Renderer {
     const dirX = Math.cos(p.angle), dirY = Math.sin(p.angle);
     const planeX = -dirY * PLANE, planeY = dirX * PLANE;
     const horizon = (HALF_H + p.pitch) | 0;
+    this._fog = hexToPacked(game.map.skyTint || '#15171c');
     this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
     this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
     this._sprites(game, p, dirX, dirY, planeX, planeY, horizon);
@@ -73,7 +74,8 @@ export class Renderer {
       const stepY = rowDist * (rayDirY1 - rayDirY0) / RENDER_W;
       let fx = p.x + rowDist * rayDirX0;
       let fy = p.y + rowDist * rayDirY0;
-      const light = lightFor(rowDist) * (isFloor ? 1 : 0.78);
+      const light = lightFor(rowDist) * (isFloor ? 1 : 0.74);
+      const ft = fogT(rowDist), fog = this._fog;
       const rowOff = y * RENDER_W;
       const tex = isFloor ? fp : cp;
       const tw = isFloor ? fw : ch;
@@ -82,7 +84,7 @@ export class Renderer {
         let ty = (fy - Math.floor(fy)) * tw | 0;
         if (tx < 0) tx += tw; if (ty < 0) ty += tw;
         const c = tex[(ty * tw + tx) | 0];
-        buf[rowOff + x] = shadePacked(c, light);
+        buf[rowOff + x] = shadeFog(c, light, fog, ft);
         fx += stepX; fy += stepY;
       }
     }
@@ -155,14 +157,15 @@ export class Renderer {
       const tw = tex.w, th = tex.h;
       let texX = (texXf * tw) | 0;
       if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
-      const light = lightFor(perpDist) * (side === 1 ? 0.72 : 1.0);
+      const light = lightFor(perpDist) * (side === 1 ? 0.70 : 1.0);
+      const ft = fogT(perpDist), fog = this._fog;
       const texCol = texX;
       const stepTex = th / lineH;
       let texPos = (y0 - drawStart) * stepTex;
       for (let y = y0; y <= y1; y++) {
         let ty = texPos | 0; if (ty >= th) ty = th - 1;
         const c = tex.pixels[ty * tw + texCol];
-        buf[y * RENDER_W + x] = shadePacked(c, light);
+        buf[y * RENDER_W + x] = shadeFog(c, light, fog, ft);
         texPos += stepTex;
       }
     }
@@ -200,6 +203,7 @@ export class Renderer {
       const x0 = Math.max(0, screenX - (drawW >> 1));
       const x1 = Math.min(RENDER_W - 1, screenX + (drawW >> 1));
       const light = e.fullbright ? 1 : lightFor(tY);
+      const ft = e.fullbright ? 0 : fogT(tY) * 0.55, fog = this._fog;
       const tw = sprite.w, th = sprite.h, px = sprite.pixels;
       for (let x = x0; x <= x1; x++) {
         if (tY >= this.zbuf[x]) continue;             // behind a wall
@@ -210,9 +214,8 @@ export class Renderer {
           let texY = (((y - drawTop) * th) / drawH) | 0;
           if (texY < 0 || texY >= th) continue;
           const c = px[texY * tw + texX];
-          if ((c & 0xff000000) === 0) continue;       // transparent
-          if ((c >>> 24) < 128) continue;             // mostly-transparent edge
-          buf[y * RENDER_W + x] = light >= 1 ? c : shadePacked(c, light);
+          if ((c >>> 24) < 128) continue;             // transparent / soft edge
+          buf[y * RENDER_W + x] = (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
         }
       }
     }
@@ -221,8 +224,15 @@ export class Renderer {
 
 // Distance light falloff (diminishing lighting like the original).
 function lightFor(dist) {
-  const l = 1.0 / (1 + dist * 0.16);
-  return l < 0.18 ? 0.18 : l > 1 ? 1 : l;
+  const l = 1.0 / (1 + dist * 0.115);
+  return l < 0.36 ? 0.36 : l > 1 ? 1 : l;
+}
+
+// How much distance haze to mix in (0 near .. ~0.6 far).
+function fogT(dist) {
+  if (dist < 4) return 0;
+  const t = (dist - 4) * 0.044;
+  return t > 0.6 ? 0.6 : t;
 }
 
 // Fast packed-color shade (scale RGB by f, keep alpha 0xff).
@@ -230,6 +240,22 @@ function shadePacked(c, f) {
   const r = (c & 0xff) * f & 0xff;
   const g = ((c >>> 8) & 0xff) * f & 0xff;
   const b = ((c >>> 16) & 0xff) * f & 0xff;
+  return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+}
+
+// Shade by light factor `f`, then blend toward fog colour by `t`.
+function shadeFog(c, f, fog, t) {
+  let r = (c & 0xff) * f, g = ((c >>> 8) & 0xff) * f, b = ((c >>> 16) & 0xff) * f;
+  if (t > 0) {
+    const fr = fog & 0xff, fg = (fog >>> 8) & 0xff, fb = (fog >>> 16) & 0xff;
+    r += (fr - r) * t; g += (fg - g) * t; b += (fb - b) * t;
+  }
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
+function hexToPacked(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
   return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
 }
 

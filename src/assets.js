@@ -31,6 +31,23 @@ function texFrom(c, ctx) {
   return { w: c.width, h: c.height, pixels: new Uint32Array(img.data.buffer.slice(0)) };
 }
 
+// Add a 1px dark outline around the opaque silhouette so the sprite reads
+// crisply against the world (monsters and pickups get this in buildAssets).
+function outlineTex(tex, color = 0xff080808) {
+  const { w, h, pixels } = tex;
+  const out = new Uint32Array(pixels);
+  const op = (i) => (pixels[i] >>> 24) >= 110;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (op(i)) continue;
+      if ((x > 0 && op(i - 1)) || (x < w - 1 && op(i + 1)) ||
+          (y > 0 && op(i - w)) || (y < h - 1 && op(i + w))) out[i] = color;
+    }
+  }
+  return { w, h, pixels: out };
+}
+
 // ----- wall / flat textures (64x64, tileable-ish, opaque) -----------------
 
 function noiseOverlay(ctx, w, h, rng, amt, alpha = 0.12) {
@@ -45,25 +62,35 @@ function noiseOverlay(ctx, w, h, rng, amt, alpha = 0.12) {
   ctx.putImageData(img, 0, 0);
 }
 
-function techWall(seed, base = '#5a6b7a', panel = '#3c4a57', rivet = '#8595a4') {
+function techWall(seed, base = '#5a6b7a', panel = '#384552', rivet = '#9aaab8') {
   const { c, ctx } = makeCanvas(64, 64);
   const rng = mulberry32(seed);
   ctx.fillStyle = base; ctx.fillRect(0, 0, 64, 64);
-  // recessed panels
-  ctx.fillStyle = panel;
-  ctx.fillRect(4, 4, 56, 26);
-  ctx.fillRect(4, 34, 56, 26);
-  // bevels
-  ctx.fillStyle = 'rgba(255,255,255,0.10)';
-  ctx.fillRect(4, 4, 56, 2); ctx.fillRect(4, 34, 56, 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fillRect(4, 28, 56, 2); ctx.fillRect(4, 58, 56, 2);
-  // rivets
-  ctx.fillStyle = rivet;
-  for (const [x, y] of [[8, 8], [54, 8], [8, 56], [54, 56], [8, 38], [54, 38]]) {
-    ctx.fillRect(x, y, 2, 2);
+  // brushed-metal directional shading
+  const sg = ctx.createLinearGradient(0, 0, 64, 0);
+  sg.addColorStop(0, 'rgba(255,255,255,0.07)'); sg.addColorStop(0.5, 'rgba(0,0,0,0)'); sg.addColorStop(1, 'rgba(0,0,0,0.20)');
+  ctx.fillStyle = sg; ctx.fillRect(0, 0, 64, 64);
+  // two recessed panels with full bevels
+  for (const py of [5, 35]) {
+    ctx.fillStyle = panel; ctx.fillRect(5, py, 54, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.13)'; ctx.fillRect(5, py, 54, 2); ctx.fillRect(5, py, 2, 24);
+    ctx.fillStyle = 'rgba(0,0,0,0.42)'; ctx.fillRect(5, py + 22, 54, 2); ctx.fillRect(57, py, 2, 24);
   }
-  noiseOverlay(ctx, 64, 64, rng, 26);
+  // recessed indicator-light strip + tiny status lights
+  const lights = ['#e85038', '#46e070', '#f0c030', '#40a8ff'];
+  for (const py of [11, 41]) {
+    ctx.fillStyle = '#222a30'; ctx.fillRect(40, py, 14, 8);
+    for (let k = 0; k < 4; k++) { ctx.fillStyle = lights[(k + seed) & 3]; ctx.fillRect(41 + k * 3, py + 3, 2, 2); }
+  }
+  // rivets with a touch of shadow
+  for (const [x, y] of [[9, 9], [55, 9], [9, 56], [55, 56], [9, 39], [55, 39]]) {
+    ctx.fillStyle = rivet; ctx.fillRect(x, y, 2, 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(x + 2, y + 2, 1, 1);
+  }
+  // grime drips
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  for (let i = 0; i < 4; i++) { const x = 8 + (rng() * 48 | 0); ctx.fillRect(x, 30 + (rng() * 6 | 0), 1, 18 + (rng() * 10 | 0)); }
+  noiseOverlay(ctx, 64, 64, rng, 22);
   return texFrom(c, ctx);
 }
 
@@ -201,16 +228,32 @@ function exitWall(seed) {
 function floorTex(seed, base = [60, 58, 54]) {
   const { c, ctx } = makeCanvas(64, 64);
   const rng = mulberry32(seed);
-  ctx.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`; ctx.fillRect(0, 0, 64, 64);
-  for (let i = 0; i < 700; i++) {
-    const x = (rng() * 64) | 0, y = (rng() * 64) | 0;
-    const v = (rng() - 0.5) * 50;
-    ctx.fillStyle = `rgba(${base[0] + v | 0},${base[1] + v | 0},${base[2] + v | 0},0.6)`;
+  const [r, g, b] = base;
+  ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0, 0, 64, 64);
+  // large soft blotches for big-scale variation
+  for (let i = 0; i < 9; i++) {
+    const x = rng() * 64, y = rng() * 64, rad = 8 + rng() * 16, v = (rng() - 0.5) * 34;
+    const gg = ctx.createRadialGradient(x, y, 1, x, y, rad);
+    gg.addColorStop(0, `rgba(${r + v | 0},${g + v | 0},${b + v | 0},0.5)`);
+    gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, rad, 0, 7); ctx.fill();
+  }
+  // fine grain
+  for (let i = 0; i < 480; i++) {
+    const x = (rng() * 64) | 0, y = (rng() * 64) | 0, v = (rng() - 0.5) * 46;
+    ctx.fillStyle = `rgba(${r + v | 0},${g + v | 0},${b + v | 0},0.55)`;
     ctx.fillRect(x, y, 1, 1);
   }
-  // subtle tiling grid
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-  ctx.strokeRect(0.5, 0.5, 63, 63);
+  // cracks
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 2; i++) {
+    let x = rng() * 64, y = rng() * 64; ctx.beginPath(); ctx.moveTo(x, y);
+    for (let s = 0; s < 5; s++) { x += (rng() - 0.5) * 18; y += (rng() - 0.5) * 18; ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  // tile seam + lit top-left edge
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.strokeRect(0.5, 0.5, 63, 63);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0, 0, 64, 1); ctx.fillRect(0, 0, 1, 64);
   return texFrom(c, ctx);
 }
 
@@ -227,87 +270,90 @@ function shadowEllipse(ctx, cx, cy, rx, ry) {
 // ----- enemy: former human (zombie soldier) -------------------------------
 
 function zombie(frame) {
-  const { c, ctx } = makeCanvas(48, 56);
-  const armOut = frame === 'attack';
-  const leg = frame === 'walk1' ? 4 : 0;
-  shadowEllipse(ctx, 24, 53, 14, 4);
-  // legs
-  ctx.fillStyle = '#3a4a2f';
-  ctx.fillRect(18 - leg, 38, 6, 14); ctx.fillRect(24 + leg, 38, 6, 14);
-  ctx.fillStyle = '#23170f';
-  ctx.fillRect(17 - leg, 50, 8, 4); ctx.fillRect(24 + leg, 50, 8, 4);
-  // torso (tattered uniform)
-  ctx.fillStyle = '#586b3d'; ctx.fillRect(15, 22, 18, 18);
-  ctx.fillStyle = '#3f4d2c'; ctx.fillRect(15, 22, 18, 4);
-  ctx.fillStyle = '#7a2222'; ctx.fillRect(20, 30, 6, 8); // blood stain
-  // arms / weapon
-  ctx.fillStyle = '#586b3d';
-  if (armOut) {
-    ctx.fillRect(31, 24, 14, 5);   // raised arm
-    ctx.fillStyle = '#222'; ctx.fillRect(43, 22, 5, 8); // gun
-    ctx.fillStyle = '#ff0'; ctx.fillRect(46, 24, 3, 3); // muzzle flash
+  const { c, ctx } = makeCanvas(56, 68);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 4 : 0;
+  // legs + boots
+  ctx.fillStyle = '#2f3b24';
+  ctx.fillRect(22 - sw, 46, 7, 16); ctx.fillRect(29 + sw, 46, 7, 16);
+  ctx.fillStyle = '#171c10'; ctx.fillRect(20 - sw, 60, 10, 4); ctx.fillRect(29 + sw, 60, 10, 4);
+  // torso uniform (lit from the right)
+  const tg = ctx.createLinearGradient(18, 0, 40, 0);
+  tg.addColorStop(0, '#374527'); tg.addColorStop(0.55, '#566a39'); tg.addColorStop(1, '#3c4a29');
+  ctx.fillStyle = tg; ctx.fillRect(18, 26, 22, 22);
+  ctx.fillStyle = '#2c3620'; ctx.fillRect(18, 26, 22, 5);          // collar
+  ctx.fillStyle = '#7a1c1c'; ctx.beginPath(); ctx.ellipse(28, 37, 5, 6, 0, 0, 7); ctx.fill(); // wound
+  ctx.fillStyle = '#a82828'; ctx.fillRect(26, 39, 3, 8);
+  // arms / pistol
+  const skin = '#93a07a';
+  if (attack) {
+    ctx.fillStyle = '#445428'; ctx.fillRect(36, 28, 15, 6);
+    ctx.fillStyle = skin; ctx.fillRect(49, 28, 5, 6);
+    ctx.fillStyle = '#222'; ctx.fillRect(50, 27, 6, 8);
+    muzzleFlash(ctx, 56, 31, 7);
   } else {
-    ctx.fillRect(12, 24, 4, 14); ctx.fillRect(32, 24, 4, 14);
+    ctx.fillStyle = '#445428'; ctx.fillRect(14, 28, 5, 15); ctx.fillRect(39, 28, 5, 15);
+    ctx.fillStyle = skin; ctx.fillRect(14, 41, 5, 5); ctx.fillRect(39, 41, 5, 5);
   }
   // head
-  ctx.fillStyle = '#9aa17e'; ctx.beginPath(); ctx.ellipse(24, 16, 7, 8, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#11140d'; ctx.fillRect(20, 14, 3, 3); ctx.fillRect(26, 14, 3, 3); // eyes
-  ctx.fillStyle = '#5a1414'; ctx.fillRect(21, 20, 7, 2); // grimace
+  const hg = ctx.createRadialGradient(25, 14, 2, 29, 18, 12);
+  hg.addColorStop(0, '#aab797'); hg.addColorStop(1, '#6f7c58');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(29, 18, 9, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#241c14'; ctx.fillRect(20, 8, 18, 5); ctx.fillRect(20, 8, 4, 8); ctx.fillRect(34, 9, 4, 7); // hair
+  ctx.fillStyle = '#171c10'; ctx.fillRect(24, 16, 4, 4); ctx.fillRect(31, 16, 4, 4);  // eye sockets
+  ctx.fillStyle = '#cad860'; ctx.fillRect(25, 17, 2, 2); ctx.fillRect(32, 17, 2, 2);  // dull glow
+  ctx.fillStyle = '#3a1414'; ctx.fillRect(25, 24, 9, 2);
+  ctx.fillStyle = '#cfcabb'; ctx.fillRect(26, 24, 1, 2); ctx.fillRect(29, 24, 1, 2); ctx.fillRect(32, 24, 1, 2);
   return texFrom(c, ctx);
 }
 
-function zombieDie(stage) {
-  const { c, ctx } = makeCanvas(48, 56);
-  shadowEllipse(ctx, 24, 53, 16, 4);
-  const squash = stage; // 0..3 progressively flatter
-  const top = 30 + squash * 6;
-  ctx.fillStyle = '#586b3d';
-  ctx.fillRect(8, top, 32, 52 - top);
-  ctx.fillStyle = '#7a2222';
-  ctx.fillRect(8, 50, 32, 4);
-  if (stage >= 2) { ctx.fillStyle = '#9a2a2a'; ctx.fillRect(4, 51, 40, 3); }
-  if (stage < 2) { // head still visible early
-    ctx.fillStyle = '#9aa17e'; ctx.beginPath(); ctx.ellipse(24, top - 4, 6, 6, 0, 0, 7); ctx.fill();
-  }
-  return texFrom(c, ctx);
-}
+function zombieDie(stage) { return genericDie(stage, '#566a39', '#2c3620'); }
 
 // ----- enemy: imp ---------------------------------------------------------
 
 function imp(frame) {
-  const { c, ctx } = makeCanvas(48, 58);
-  const leg = frame === 'walk1' ? 4 : 0;
+  const { c, ctx } = makeCanvas(56, 66);
   const attack = frame === 'attack';
-  shadowEllipse(ctx, 24, 55, 15, 4);
-  // legs
-  ctx.fillStyle = '#6b3b22';
-  ctx.fillRect(17 - leg, 40, 7, 14); ctx.fillRect(24 + leg, 40, 7, 14);
-  // body
-  ctx.fillStyle = '#8a4a28'; ctx.beginPath(); ctx.ellipse(24, 30, 12, 14, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#6b3b22'; ctx.fillRect(14, 26, 20, 3);
-  // spikes on shoulders
-  ctx.fillStyle = '#d8c8a0';
-  ctx.beginPath(); ctx.moveTo(12, 22); ctx.lineTo(8, 14); ctx.lineTo(16, 20); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(36, 22); ctx.lineTo(40, 14); ctx.lineTo(32, 20); ctx.fill();
+  const sw = frame === 'walk1' ? 4 : 0;
+  // digitigrade legs + clawed feet
+  ctx.fillStyle = '#5a3219';
+  ctx.fillRect(20 - sw, 44, 8, 14); ctx.fillRect(30 + sw, 44, 8, 14);
+  ctx.fillStyle = '#3a200f'; ctx.fillRect(17 - sw, 56, 12, 5); ctx.fillRect(29 + sw, 56, 12, 5);
+  // body volume
+  const bg = ctx.createRadialGradient(22, 26, 3, 29, 33, 19);
+  bg.addColorStop(0, '#ad632f'); bg.addColorStop(1, '#6c391b');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(28, 33, 14, 16, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(28, 24); ctx.lineTo(28, 45); ctx.stroke();
+  // shoulder + back spikes
+  ctx.fillStyle = '#e3d5ab';
+  ctx.beginPath(); ctx.moveTo(14, 30); ctx.lineTo(8, 18); ctx.lineTo(18, 28); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(42, 30); ctx.lineTo(48, 18); ctx.lineTo(38, 28); ctx.fill();
+  ctx.fillStyle = '#cabd95';
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(15 + i * 3, 30 + i * 4); ctx.lineTo(10, 28 + i * 4); ctx.lineTo(15 + i * 3, 34 + i * 4); ctx.fill(); }
   // arms
-  ctx.fillStyle = '#8a4a28';
+  ctx.fillStyle = '#8a4a26';
   if (attack) {
-    ctx.fillRect(30, 20, 14, 5);
-    // fireball charge
-    const g = ctx.createRadialGradient(44, 20, 1, 44, 20, 7);
-    g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#fc6'); g.addColorStop(1, 'rgba(200,40,0,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(44, 20, 7, 0, 7); ctx.fill();
+    ctx.fillRect(34, 24, 16, 6);
+    ctx.fillStyle = '#5a3219'; ctx.fillRect(48, 22, 6, 9);
+    const g = ctx.createRadialGradient(53, 26, 1, 53, 26, 11);
+    g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#ffd24a'); g.addColorStop(0.7, '#e8400f'); g.addColorStop(1, 'rgba(180,20,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(53, 26, 11, 0, 7); ctx.fill();
   } else {
-    ctx.fillRect(11, 24, 5, 16); ctx.fillRect(32, 24, 5, 16);
+    ctx.fillRect(12, 28, 6, 16); ctx.fillRect(38, 28, 6, 16);
+    ctx.fillStyle = '#5a3219'; ctx.fillRect(11, 42, 7, 5); ctx.fillRect(38, 42, 7, 5);
   }
   // head
-  ctx.fillStyle = '#8a4a28'; ctx.beginPath(); ctx.ellipse(24, 14, 8, 8, 0, 0, 7); ctx.fill();
-  // horns
-  ctx.fillStyle = '#d8c8a0';
-  ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(14, 0); ctx.lineTo(21, 6); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(30, 8); ctx.lineTo(34, 0); ctx.lineTo(27, 6); ctx.fill();
-  ctx.fillStyle = '#ffcc33'; ctx.fillRect(19, 12, 4, 3); ctx.fillRect(25, 12, 4, 3); // eyes
-  ctx.fillStyle = '#3a1a0a'; ctx.fillRect(20, 18, 8, 2);
+  const hg = ctx.createRadialGradient(24, 12, 2, 28, 16, 11);
+  hg.addColorStop(0, '#ad632f'); hg.addColorStop(1, '#6c391b');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(28, 16, 10, 9, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e3d5ab';
+  ctx.beginPath(); ctx.moveTo(20, 9); ctx.lineTo(15, 0); ctx.lineTo(24, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(36, 9); ctx.lineTo(41, 0); ctx.lineTo(32, 7); ctx.fill();
+  ctx.fillStyle = '#1a0c04'; ctx.fillRect(22, 14, 5, 4); ctx.fillRect(30, 14, 5, 4);
+  ctx.fillStyle = '#ffd23a'; ctx.fillRect(23, 15, 3, 2); ctx.fillRect(31, 15, 3, 2);
+  ctx.fillStyle = '#2a1206'; ctx.fillRect(23, 21, 10, 3);
+  ctx.fillStyle = '#d8c8a0'; ctx.fillRect(24, 21, 1, 3); ctx.fillRect(31, 21, 1, 3);
   return texFrom(c, ctx);
 }
 
@@ -316,31 +362,37 @@ function impDie(stage) { return genericDie(stage, '#8a4a28', '#3a1a0a'); }
 // ----- enemy: demon (pinky) ----------------------------------------------
 
 function demon(frame) {
-  const { c, ctx } = makeCanvas(56, 48);
+  const { c, ctx } = makeCanvas(64, 54);
   const open = frame === 'attack';
-  const leg = frame === 'walk1' ? 4 : 0;
-  shadowEllipse(ctx, 28, 45, 20, 5);
-  // legs
-  ctx.fillStyle = '#b06a78';
-  ctx.fillRect(10, 34, 8, 12); ctx.fillRect(38 - leg, 34, 8, 12);
-  ctx.fillRect(20 + leg, 36, 7, 10);
+  const sw = frame === 'walk1' ? 4 : 0;
+  // stubby legs
+  ctx.fillStyle = '#9a4f5e';
+  ctx.fillRect(12, 40, 9, 12); ctx.fillRect(43, 40, 9, 12);
+  ctx.fillRect(24 + sw, 42, 8, 10); ctx.fillRect(34 - sw, 42, 8, 10);
   // body
-  ctx.fillStyle = '#d98aa0'; ctx.beginPath(); ctx.ellipse(28, 26, 22, 16, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#b06a78'; ctx.beginPath(); ctx.ellipse(28, 30, 22, 12, 0, 0, 7); ctx.fill();
-  // head/mouth
-  ctx.fillStyle = '#d98aa0'; ctx.beginPath(); ctx.ellipse(28, 18, 16, 12, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#7a1f2f';
-  if (open) { ctx.beginPath(); ctx.ellipse(28, 22, 12, 9, 0, 0, 7); ctx.fill(); }
-  else { ctx.fillRect(16, 22, 24, 4); }
-  // teeth
-  ctx.fillStyle = '#fff';
-  for (let x = 17; x < 40; x += 5) { ctx.beginPath(); ctx.moveTo(x, open ? 16 : 22); ctx.lineTo(x + 2, open ? 22 : 26); ctx.lineTo(x + 4, open ? 16 : 22); ctx.fill(); }
+  const bg = ctx.createRadialGradient(26, 18, 4, 32, 28, 28);
+  bg.addColorStop(0, '#e79bb0'); bg.addColorStop(1, '#a85368');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(32, 28, 26, 18, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(45, 24, 12, 9, 0, 0, 7); ctx.fill();
+  // head
+  const hg = ctx.createRadialGradient(22, 12, 2, 26, 20, 18);
+  hg.addColorStop(0, '#eaa6ba'); hg.addColorStop(1, '#bf6076');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(25, 21, 18, 14, 0, 0, 7); ctx.fill();
+  // maw
+  ctx.fillStyle = '#5a1424';
+  if (open) { ctx.beginPath(); ctx.ellipse(21, 26, 15, 11, 0, 0, 7); ctx.fill(); }
+  else { ctx.fillRect(7, 24, 30, 5); }
+  // fangs
+  ctx.fillStyle = '#f4ecd8';
+  const my = open ? 16 : 22;
+  for (let x = 8; x < 37; x += 5) { ctx.beginPath(); ctx.moveTo(x, my); ctx.lineTo(x + 2, my + 6); ctx.lineTo(x + 4, my); ctx.fill(); }
+  if (open) for (let x = 10; x < 35; x += 5) { ctx.beginPath(); ctx.moveTo(x, 36); ctx.lineTo(x + 2, 30); ctx.lineTo(x + 4, 36); ctx.fill(); }
   // eyes + horns
-  ctx.fillStyle = '#ffe'; ctx.fillRect(18, 10, 5, 4); ctx.fillRect(33, 10, 5, 4);
-  ctx.fillStyle = '#000'; ctx.fillRect(20, 11, 2, 2); ctx.fillRect(35, 11, 2, 2);
-  ctx.fillStyle = '#e8e0c8';
-  ctx.beginPath(); ctx.moveTo(14, 8); ctx.lineTo(8, 0); ctx.lineTo(18, 6); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(42, 8); ctx.lineTo(48, 0); ctx.lineTo(38, 6); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.fillRect(15, 9, 6, 5); ctx.fillRect(29, 9, 6, 5);
+  ctx.fillStyle = '#c00'; ctx.fillRect(17, 10, 3, 3); ctx.fillRect(31, 10, 3, 3);
+  ctx.fillStyle = '#efe6cf';
+  ctx.beginPath(); ctx.moveTo(11, 8); ctx.lineTo(4, 0); ctx.lineTo(16, 6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(39, 8); ctx.lineTo(46, 0); ctx.lineTo(34, 6); ctx.fill();
   return texFrom(c, ctx);
 }
 
@@ -349,47 +401,55 @@ function demonDie(stage) { return genericDie(stage, '#d98aa0', '#7a1f2f'); }
 // ----- enemy: cacodemon (floating ranged) ---------------------------------
 
 function caco(frame) {
-  const { c, ctx } = makeCanvas(56, 56);
+  const { c, ctx } = makeCanvas(60, 60);
   const attack = frame === 'attack';
-  // floating: no ground shadow but a faint one far below
-  shadowEllipse(ctx, 28, 53, 12, 3);
-  const g = ctx.createRadialGradient(22, 22, 4, 28, 28, 26);
-  g.addColorStop(0, '#d05a5a'); g.addColorStop(1, '#7a1f1f');
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(28, 26, 24, 0, 7); ctx.fill();
-  // little horns / nubs
-  ctx.fillStyle = '#9a2a2a';
-  for (const a of [-1.4, -0.5, 0.5, 1.4]) {
-    const x = 28 + Math.cos(a - 1.6) * 24, y = 26 + Math.sin(a - 1.6) * 24;
-    ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
+  const g = ctx.createRadialGradient(22, 20, 4, 30, 30, 30);
+  g.addColorStop(0, '#e06a64'); g.addColorStop(0.6, '#b23a3a'); g.addColorStop(1, '#6e1818');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(30, 30, 27, 0, 7); ctx.fill();
+  // bumpy nubs around the rim
+  ctx.fillStyle = '#8a2222';
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    ctx.beginPath(); ctx.arc(30 + Math.cos(a) * 27, 30 + Math.sin(a) * 27, 2.4, 0, 7); ctx.fill();
   }
+  // horns
+  ctx.fillStyle = '#e6dcc0';
+  ctx.beginPath(); ctx.moveTo(18, 8); ctx.lineTo(13, -1); ctx.lineTo(23, 6); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(42, 8); ctx.lineTo(47, -1); ctx.lineTo(37, 6); ctx.fill();
+  // brow vein
+  ctx.strokeStyle = 'rgba(90,10,10,0.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(18, 16); ctx.quadraticCurveTo(30, 12, 42, 16); ctx.stroke();
   // big eye
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(28, 22, 9, 7, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = attack ? '#39f' : '#136'; ctx.beginPath(); ctx.arc(28, 22, 4, 0, 7); ctx.fill();
-  // mouth
-  ctx.fillStyle = '#2a0a0a'; ctx.beginPath(); ctx.ellipse(28, 38, attack ? 12 : 9, attack ? 8 : 4, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff';
-  for (let x = 20; x < 37; x += 4) ctx.fillRect(x, 34, 2, 3);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(30, 23, 10, 8, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = attack ? '#3aa0ff' : '#1a4f8a'; ctx.beginPath(); ctx.arc(30, 23, 4.5, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(28, 21, 1.6, 0, 7); ctx.fill();
+  // jagged mouth
+  ctx.fillStyle = '#2a0808'; ctx.beginPath(); ctx.ellipse(30, 42, attack ? 13 : 10, attack ? 9 : 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f4ecd8';
+  for (let x = 21; x < 40; x += 4) { ctx.beginPath(); ctx.moveTo(x, 38); ctx.lineTo(x + 2, 42); ctx.lineTo(x + 4, 38); ctx.fill(); }
   if (attack) {
-    const fg = ctx.createRadialGradient(28, 44, 1, 28, 44, 8);
-    fg.addColorStop(0, '#cff'); fg.addColorStop(0.5, '#39f'); fg.addColorStop(1, 'rgba(0,80,255,0)');
-    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(28, 46, 8, 0, 7); ctx.fill();
+    const fg = ctx.createRadialGradient(30, 50, 1, 30, 50, 10);
+    fg.addColorStop(0, '#dff'); fg.addColorStop(0.5, '#3aa0ff'); fg.addColorStop(1, 'rgba(0,80,255,0)');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(30, 50, 10, 0, 7); ctx.fill();
   }
   return texFrom(c, ctx);
 }
 
 function cacoDie(stage) { return genericDie(stage, '#b04040', '#2a0a0a'); }
 
-// Generic gib/melt death used by several monsters.
+// Generic collapse-into-gibs death used by all monsters.
 function genericDie(stage, body, dark) {
-  const { c, ctx } = makeCanvas(56, 56);
-  shadowEllipse(ctx, 28, 53, 18, 4);
-  const top = 28 + stage * 6;
-  ctx.fillStyle = body; ctx.fillRect(10, top, 36, 54 - top);
-  ctx.fillStyle = dark; ctx.fillRect(10, 50, 36, 4);
-  ctx.fillStyle = '#9a2a2a'; ctx.fillRect(6, 51, 44, 3);
+  const { c, ctx } = makeCanvas(64, 60);
+  const top = 30 + stage * 7;
+  ctx.fillStyle = 'rgba(120,20,20,0.8)'; ctx.beginPath(); ctx.ellipse(32, 56, 22, 5, 0, 0, 7); ctx.fill();
+  const g = ctx.createLinearGradient(0, top, 0, 58);
+  g.addColorStop(0, body); g.addColorStop(1, dark);
+  ctx.fillStyle = g; ctx.fillRect(12, top, 40, 58 - top);
+  ctx.fillStyle = dark; ctx.fillRect(12, 54, 40, 4);
   if (stage >= 2) {
-    ctx.fillStyle = '#c33';
-    for (let i = 0; i < 8; i++) ctx.fillRect(6 + i * 6, 49 + ((i % 2) ? 2 : 0), 3, 3);
+    ctx.fillStyle = '#9a2424';
+    for (let i = 0; i < 10; i++) ctx.fillRect(8 + i * 5, 50 + (i % 3) * 3, 3, 3);
+    ctx.fillStyle = '#c43a3a'; ctx.fillRect(20, 52, 5, 4); ctx.fillRect(38, 51, 5, 4);
   }
   return texFrom(c, ctx);
 }
@@ -568,89 +628,160 @@ function weaponPickup(kind) {
 // ----- first-person weapon views -----------------------------------------
 // Drawn centered in a 200x130 sprite, bottom-anchored.
 
+// vertical metallic gradient block
+function metalGrad(ctx, x, y, w, h, c0, c1, c2) {
+  const g = ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, c0); g.addColorStop(0.5, c1); g.addColorStop(1, c2);
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+}
+
+// a gloved hand block with finger seams + a top highlight
+function glove(ctx, x, y, w, h) {
+  metalGrad(ctx, x, y, w, h, '#9c7848', '#7a5a34', '#46341c');
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  for (let i = 1; i < 4; i++) ctx.fillRect(x + (w / 4) * i, y, 1, h);
+  ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x, y, w, 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(x, y + h - 2, w, 2);
+}
+
+// classic spiky muzzle flash; warm (orange) or cold (plasma blue)
+function muzzleFlash(ctx, cx, cy, r, warm = true) {
+  const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.35, warm ? '#ffe98a' : '#cfeaff');
+  g.addColorStop(0.7, warm ? '#ff9a2e' : '#4aa0ff');
+  g.addColorStop(1, warm ? 'rgba(255,110,0,0)' : 'rgba(40,90,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const rr = (i % 2 === 0) ? r : r * 0.46;
+    const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, r * 0.3, 0, 7); ctx.fill();
+}
+
 function fpFist(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  const x = fire ? 70 : 120, y = fire ? 30 : 60;
-  ctx.fillStyle = '#caa07a';
-  ctx.fillRect(x, y, 56, 70);          // forearm
-  ctx.fillStyle = '#b88a64';
-  ctx.beginPath(); ctx.ellipse(x + 28, y, 30, 26, 0, 0, 7); ctx.fill(); // fist
-  ctx.fillStyle = '#9a6a44';
-  for (let i = 0; i < 4; i++) ctx.fillRect(x + 6 + i * 13, y - 18, 10, 12); // knuckles
+  const ox = fire ? -34 : 0, oy = fire ? -36 : 0;
+  const x = 112 + ox, y = 58 + oy;
+  // armored forearm sleeve
+  metalGrad(ctx, x, y + 30, 52, 72, '#3f5a3a', '#2c4129', '#18261a');
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(x, y + 46, 52, 2); ctx.fillRect(x, y + 66, 52, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x, y + 30, 52, 2);
+  // wrist
+  glove(ctx, x + 2, y + 14, 48, 20);
+  // fist mass
+  ctx.fillStyle = '#6f5230'; ctx.beginPath(); ctx.ellipse(x + 26, y + 8, 28, 22, 0, 0, 7); ctx.fill();
+  // knuckle row
+  metalGrad(ctx, x - 2, y - 8, 56, 22, '#a67c48', '#7a5a34', '#4a3318');
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  for (let i = 0; i < 4; i++) ctx.fillRect(x + 1 + i * 13, y - 8, 1, 22);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(x + 7 + i * 13, y - 4, 4, 0, 7); ctx.fill(); }
+  // thumb
+  ctx.fillStyle = '#6a4d2c'; ctx.beginPath(); ctx.ellipse(x + 49, y + 10, 8, 12, 0.35, 0, 7); ctx.fill();
   return texFrom(c, ctx);
 }
 
 function fpPistol(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  ctx.fillStyle = '#caa07a'; ctx.fillRect(86, 78, 30, 52); // hand
-  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(92, 40, 18, 50); // grip/body
-  ctx.fillStyle = '#444'; ctx.fillRect(92, 36, 28, 12);    // slide
-  ctx.fillStyle = '#111'; ctx.fillRect(116, 38, 8, 6);     // barrel
-  if (fire) {
-    const g = ctx.createRadialGradient(120, 41, 1, 120, 41, 22);
-    g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#fe6'); g.addColorStop(1, 'rgba(255,120,0,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(124, 41, 22, 0, 7); ctx.fill();
-  }
+  const recoil = fire ? -7 : 0;
+  const bx = 96, by = 46 + recoil;
+  // grip
+  metalGrad(ctx, bx, by + 16, 22, 58, '#3a3e44', '#2a2d33', '#191b1f');
+  // trigger guard
+  ctx.strokeStyle = '#2a2d33'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(bx + 8, by + 30, 9, 0.1, 3.1); ctx.stroke();
+  // hand on grip
+  glove(ctx, bx - 7, by + 40, 38, 42);
+  ctx.fillStyle = '#15171a'; ctx.fillRect(bx - 7, by + 53, 38, 3);
+  // slide / body
+  metalGrad(ctx, bx - 4, by, 54, 18, '#737b85', '#454b53', '#23272c');
+  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(bx - 4, by, 54, 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bx - 4, by + 16, 54, 2);
+  // ejection port + barrel
+  ctx.fillStyle = '#1a1c20'; ctx.fillRect(bx + 28, by + 4, 8, 5);
+  ctx.fillStyle = '#15171a'; ctx.fillRect(bx + 40, by + 5, 14, 8);
+  // sights
+  ctx.fillStyle = '#111'; ctx.fillRect(bx - 2, by - 3, 4, 3); ctx.fillRect(bx + 44, by - 3, 4, 3);
+  if (fire) muzzleFlash(ctx, bx + 58, by + 9, 22);
   return texFrom(c, ctx);
 }
 
 function fpShotgun(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  ctx.fillStyle = '#6b4a26'; ctx.fillRect(60, 60, 90, 16);    // stock/pump
-  ctx.fillStyle = '#333'; ctx.fillRect(60, 48, 110, 12);      // barrel
-  ctx.fillStyle = '#222'; ctx.fillRect(150, 50, 24, 8);       // muzzle
-  ctx.fillStyle = '#caa07a'; ctx.fillRect(78, 72, 26, 40); ctx.fillRect(120, 70, 26, 40); // hands
-  if (fire) {
-    const g = ctx.createRadialGradient(176, 54, 1, 176, 54, 30);
-    g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#fe6'); g.addColorStop(1, 'rgba(255,120,0,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(178, 54, 28, 0, 7); ctx.fill();
-  }
+  const recoil = fire ? -8 : 0;
+  const y = 54 + recoil;
+  metalGrad(ctx, 40, y, 132, 12, '#6a727c', '#3c424a', '#23272c');   // barrel
+  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(40, y, 132, 2);
+  ctx.fillStyle = '#15171a'; ctx.fillRect(166, y + 1, 12, 10);        // muzzle
+  metalGrad(ctx, 40, y + 12, 112, 6, '#4a505a', '#2e333a', '#191b1f'); // mag tube
+  metalGrad(ctx, 70, y + 16, 48, 18, '#a4702f', '#714a22', '#46300f'); // wood pump
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; for (let i = 0; i < 7; i++) ctx.fillRect(73 + i * 6, y + 16, 1, 18);
+  ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(70, y + 16, 48, 2);
+  metalGrad(ctx, 118, y + 8, 42, 26, '#4a505a', '#33383f', '#1c1f24'); // receiver
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(126, y + 18, 26, 4);
+  glove(ctx, 78, y + 30, 32, 32);   // front hand on pump
+  glove(ctx, 128, y + 28, 30, 36);  // rear hand on receiver
+  if (fire) muzzleFlash(ctx, 178, y + 6, 30);
   return texFrom(c, ctx);
 }
 
 function fpSuper(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  ctx.fillStyle = '#5a3a1a'; ctx.fillRect(54, 64, 80, 20);
-  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(54, 44, 120, 10);
-  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(54, 56, 120, 10);
-  ctx.fillStyle = '#222'; ctx.fillRect(168, 44, 16, 22);
-  ctx.fillStyle = '#caa07a'; ctx.fillRect(70, 80, 28, 40); ctx.fillRect(112, 78, 28, 40);
-  if (fire) {
-    for (const cy of [49, 61]) {
-      const g = ctx.createRadialGradient(184, cy, 1, 184, cy, 30);
-      g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#fe8'); g.addColorStop(1, 'rgba(255,120,0,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(186, cy, 26, 0, 7); ctx.fill();
-    }
-  }
+  const recoil = fire ? -11 : 0;
+  const y = 46 + recoil;
+  metalGrad(ctx, 50, y, 124, 11, '#6a727c', '#3c424a', '#23272c');
+  metalGrad(ctx, 50, y + 12, 124, 11, '#6a727c', '#3c424a', '#23272c');
+  ctx.fillStyle = '#9aa2ac'; ctx.fillRect(50, y, 124, 1); ctx.fillRect(50, y + 12, 124, 1);
+  ctx.fillStyle = '#15171a'; ctx.fillRect(166, y, 14, 23);            // muzzles
+  ctx.fillStyle = '#2a2d33'; ctx.fillRect(166, y + 10, 14, 3);
+  metalGrad(ctx, 40, y + 5, 22, 30, '#4a505a', '#33383f', '#1c1f24'); // hinge/receiver
+  metalGrad(ctx, 28, y + 24, 40, 24, '#a4702f', '#714a22', '#46300f'); // wood grip
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; for (let i = 0; i < 5; i++) ctx.fillRect(32 + i * 7, y + 24, 1, 24);
+  glove(ctx, 56, y + 28, 32, 32);
+  glove(ctx, 100, y + 30, 30, 32);
+  if (fire) { muzzleFlash(ctx, 188, y + 4, 27); muzzleFlash(ctx, 188, y + 18, 27); }
   return texFrom(c, ctx);
 }
 
 function fpChaingun(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(70, 50, 30, 40);
-  ctx.fillStyle = '#555';
-  for (let i = 0; i < 4; i++) ctx.fillRect(100, 50 + i * 9, 70, 6); // barrels
-  ctx.fillStyle = '#caa07a'; ctx.fillRect(64, 86, 26, 38); ctx.fillRect(96, 86, 24, 38);
-  if (fire) {
-    const yy = 52 + (Math.floor(Math.random() * 4)) * 9;
-    const g = ctx.createRadialGradient(172, yy, 1, 172, yy, 20);
-    g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#fe6'); g.addColorStop(1, 'rgba(255,120,0,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(174, yy, 18, 0, 7); ctx.fill();
+  const y = 48;
+  metalGrad(ctx, 58, y, 46, 48, '#5a626c', '#3a4048', '#1d2127');     // housing
+  ctx.fillStyle = '#23272c'; ctx.fillRect(58, y + 22, 46, 4);
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(58, y, 46, 2);
+  for (let i = 0; i < 5; i++) {                                       // barrel cluster
+    const yy = y + 5 + i * 8;
+    metalGrad(ctx, 104, yy, 74, 6, '#828a94', '#4a505a', '#2a2e34');
+    ctx.fillStyle = '#15171a'; ctx.fillRect(172, yy + 1, 6, 4);
   }
+  ctx.fillStyle = '#33383f'; ctx.beginPath(); ctx.ellipse(104, y + 25, 7, 25, 0, 0, 7); ctx.fill(); // rotor
+  ctx.fillStyle = '#1c1f24'; ctx.beginPath(); ctx.arc(104, y + 25, 4, 0, 7); ctx.fill();
+  glove(ctx, 54, y + 42, 32, 34);
+  glove(ctx, 92, y + 44, 26, 32);
+  if (fire) muzzleFlash(ctx, 182, y + 9 + (Math.floor(Math.random() * 5)) * 8, 18);
   return texFrom(c, ctx);
 }
 
 function fpRocket(fire) {
   const { c, ctx } = makeCanvas(200, 130);
-  ctx.fillStyle = '#2a3a2a'; ctx.fillRect(50, 56, 130, 22);   // tube
-  ctx.fillStyle = '#1a2a1a'; ctx.fillRect(170, 54, 16, 26);
-  ctx.fillStyle = '#444'; ctx.fillRect(96, 50, 30, 8);        // sight
-  ctx.fillStyle = '#caa07a'; ctx.fillRect(76, 74, 28, 44); ctx.fillRect(120, 74, 26, 44);
-  if (fire) {
-    const g = ctx.createRadialGradient(120, 67, 1, 120, 67, 30);
-    g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#fd6'); g.addColorStop(1, 'rgba(255,120,0,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(120, 78, 28, 0, 7); ctx.fill();
-  }
+  const y = 54;
+  metalGrad(ctx, 42, y, 142, 26, '#3f5a3a', '#2c4129', '#16241a');    // tube
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(42, y, 142, 3);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(42, y + 23, 142, 3);
+  ctx.fillStyle = '#11180f'; ctx.fillRect(176, y + 1, 10, 24);        // muzzle ring
+  ctx.fillStyle = '#0c130a'; ctx.beginPath(); ctx.ellipse(185, y + 13, 4, 12, 0, 0, 7); ctx.fill();
+  metalGrad(ctx, 92, y - 11, 34, 12, '#4a505a', '#33383f', '#1c1f24'); // sight rail
+  ctx.fillStyle = '#222'; ctx.fillRect(104, y - 15, 4, 6);
+  ctx.fillStyle = '#b33'; ctx.beginPath(); ctx.ellipse(56, y + 13, 5, 9, 0, 0, 7); ctx.fill(); // warhead
+  ctx.fillStyle = '#ddd'; ctx.fillRect(50, y + 10, 4, 6);
+  glove(ctx, 74, y + 22, 30, 42);
+  glove(ctx, 120, y + 22, 28, 42);
+  if (fire) muzzleFlash(ctx, 58, y + 13, 26);                         // back-blast
   return texFrom(c, ctx);
 }
 
@@ -882,4 +1013,11 @@ export function buildAssets() {
   SPR.fp_super = fpSuper(false); SPR.fp_super_fire = fpSuper(true);
   SPR.fp_chaingun = fpChaingun(false); SPR.fp_chaingun_fire = fpChaingun(true);
   SPR.fp_rocket = fpRocket(false); SPR.fp_rocket_fire = fpRocket(true);
+
+  // crisp dark outline on monsters + world pickups so they pop against the fog
+  for (const k of Object.keys(SPR)) {
+    if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion')) continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket') continue;
+    SPR[k] = outlineTex(SPR[k]);
+  }
 }

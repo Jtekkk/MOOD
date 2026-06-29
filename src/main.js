@@ -5,7 +5,7 @@ import { Input } from './input.js';
 import { AudioEngine } from './audio.js';
 import { Game } from './game.js';
 import {
-  blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints,
+  blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette,
   drawTitle, drawPause, drawDead, drawIntermission, drawVictory,
 } from './hud.js';
 
@@ -70,6 +70,7 @@ function render() {
   renderer.renderWorld(game);
   blitWeapon(renderer, game);
   const ctx = renderer.beginOverlay();
+  drawVignette(ctx);
   drawTints(ctx, game);
   if (game.state === 'playing') drawCrosshair(ctx);
   drawStatusBar(ctx, game);

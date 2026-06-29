@@ -48,8 +48,15 @@ find the matching keycard.
 
 - **Raycasting engine** rendering at a chunky 320×200 internal buffer, scaled up
   with crisp nearest-neighbour pixels. Textured walls, per-row floor/ceiling
-  casting, diminishing distance lighting, and a depth buffer so sprites clip
-  correctly behind walls.
+  casting, and a depth buffer so sprites clip correctly behind walls.
+- **Atmosphere:** diminishing distance lighting plus a distance **fog** that
+  fades the world toward each level's mood colour, a screen **vignette**, and a
+  baked dark **outline** on every monster and pickup so they read against the
+  gloom. All hand-drawn procedurally — shaded weapons, volume-lit demons,
+  panelled tech walls with blinking status lights, cracked grimy floors.
+
+  ![The arsenal](docs/screens/arsenal.png)
+  ![The bestiary](docs/screens/bestiary.png)
 - **Wolfenstein-style sliding doors** computed as a mid-cell plane intersection
   during the DDA — they slide, block sight/bullets when closed, and re-open if
   something is standing in the doorway.
