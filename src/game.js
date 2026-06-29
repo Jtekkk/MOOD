@@ -18,6 +18,7 @@ export class Game {
     this.audio = audio;
     this.state = 'title';
     this.levelIndex = 0;
+    this.showMap = false;
     this.messages = [];
     this.timer = 0;
     this.player = this._freshPlayer();

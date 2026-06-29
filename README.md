@@ -36,6 +36,7 @@ Then open **http://localhost:8080** and click the screen.
 | Use door / switch | `E` / `Space` / `F`                   |
 | Run               | `Shift`                               |
 | Select weapon     | `1`–`6` (`Q` cycles)                  |
+| Automap           | `Tab`                                 |
 | Pause             | `Esc`                                 |
 | Mute              | `M`                                   |
 
@@ -72,6 +73,10 @@ find the matching keycard.
   crossfire turns on it — `target` retargeting), **alerting** (gunfire and a
   monster spotting you rouse nearby sleepers), and monsters that **shove
   unlocked doors open** to chase you through.
+- **Directional monster sprites:** while walking, each monster shows a front,
+  side, or back view based on its facing — you see them turn and flee.
+- **Automap** (`Tab`): a top-down overlay of the level with the player, doors,
+  the exit, monsters, items, and barrels.
 - **Pickups:** stimpacks, medikits, health/armor bonuses, MegaArmor, MegaSphere,
   ammo of every type, weapons, and three colored keycards.
 - **Explosive barrels** with chain-reaction splash damage.

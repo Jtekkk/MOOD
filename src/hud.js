@@ -5,6 +5,7 @@
 import { SPR } from './assets.js';
 import { WEAPONS, AMMO_MAX } from './data/weapons.js';
 import { RENDER_W, RENDER_H } from './raycaster.js';
+import { SOLID, DOORS } from './data/levels.js';
 
 const BAR_H = 32;
 const BAR_Y = RENDER_H - BAR_H;     // 168
@@ -77,6 +78,45 @@ export function drawTints(ctx, game) {
     ctx.fillStyle = `rgba(220,200,80,${Math.min(0.28, p.pickupFlash * 0.28)})`;
     ctx.fillRect(0, 0, RENDER_W, BAR_Y);
   }
+}
+
+// ---- automap (top-down overlay, toggled with Tab) -------------------------
+export function drawAutomap(ctx, game) {
+  const map = game.map, W = map.W, H = map.H;
+  const s = Math.min((RENDER_W - 10) / W, (BAR_Y - 16) / H);
+  const ox = (RENDER_W - W * s) / 2, oy = (BAR_Y - H * s) / 2 + 4;
+  ctx.fillStyle = 'rgba(2,4,6,0.88)'; ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+
+  const cell = Math.ceil(s);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const ch = map.cellChar[y * W + x];
+    let col = null;
+    if (DOORS.has(ch)) col = '#caa030';
+    else if (ch === '+') col = '#5be05b';
+    else if (SOLID.has(ch)) col = '#6f6150';
+    if (col) { ctx.fillStyle = col; ctx.fillRect(ox + x * s, oy + y * s, cell, cell); }
+  }
+  // entities
+  for (const e of game.entities) {
+    let col = null;
+    if (e.kind === 'item') col = '#d6d630';
+    else if (e.kind === 'enemy' && e.alive) col = (e.state === 'idle') ? '#a23' : '#f44';
+    else if (e.kind === 'barrel' && e.alive) col = '#2a8a2a';
+    if (col) { ctx.fillStyle = col; ctx.fillRect(ox + e.x * s - 1, oy + e.y * s - 1, 2, 2); }
+  }
+  // player arrow
+  const px = ox + game.player.x * s, py = oy + game.player.y * s, a = game.player.angle;
+  ctx.strokeStyle = '#6cff6c'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(px + Math.cos(a) * 5, py + Math.sin(a) * 5);
+  ctx.lineTo(px + Math.cos(a + 2.5) * 4, py + Math.sin(a + 2.5) * 4);
+  ctx.lineTo(px + Math.cos(a - 2.5) * 4, py + Math.sin(a - 2.5) * 4);
+  ctx.closePath(); ctx.stroke();
+
+  ctx.fillStyle = '#9fd6a0'; ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('AUTOMAP — ' + map.name, RENDER_W / 2, 4);
+  ctx.fillStyle = '#778'; ctx.font = '6px monospace';
+  ctx.fillText('TAB to close', RENDER_W / 2, BAR_Y - 9);
 }
 
 // ---- crosshair ------------------------------------------------------------
@@ -231,7 +271,7 @@ export function drawTitle(ctx, t) {
 
   ctx.font = '7px monospace'; ctx.fillStyle = '#998';
   ctx.fillText('WASD move   MOUSE look   CLICK fire   1-6 weapons', RENDER_W / 2, 150);
-  ctx.fillText('E/SPACE use doors & switches   SHIFT run   M mute', RENDER_W / 2, 162);
+  ctx.fillText('E/SPACE use   SHIFT run   TAB map   M mute', RENDER_W / 2, 162);
   ctx.fillText('Reach the EXIT switch. Kill everything that moves.', RENDER_W / 2, 178);
 }
 

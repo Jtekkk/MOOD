@@ -5,7 +5,7 @@ import { Input } from './input.js';
 import { AudioEngine } from './audio.js';
 import { Game } from './game.js';
 import {
-  blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette,
+  blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette, drawAutomap,
   drawTitle, drawPause, drawDead, drawIntermission, drawVictory,
 } from './hud.js';
 
@@ -54,6 +54,7 @@ document.addEventListener('pointerlockchange', () => {
 window.addEventListener('keydown', (e) => {
   ensureAudio();
   if (e.code === 'KeyM') { const on = audio.toggleMute(); game.message(on ? 'sound on' : 'sound off'); }
+  if (e.code === 'Tab' && (game.state === 'playing' || game.state === 'paused')) game.showMap = !game.showMap;
   if (e.code === 'Escape' && game.state === 'playing') { game.state = 'paused'; input.exitLock(); }
 });
 
@@ -72,7 +73,8 @@ function render() {
   const ctx = renderer.beginOverlay();
   drawVignette(ctx);
   drawTints(ctx, game);
-  if (game.state === 'playing') drawCrosshair(ctx);
+  if (game.showMap) drawAutomap(ctx, game);
+  else if (game.state === 'playing') drawCrosshair(ctx);
   drawStatusBar(ctx, game);
   drawMessages(ctx, game);
   if (game.state === 'paused') drawPause(ctx);
