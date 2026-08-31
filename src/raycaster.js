@@ -53,11 +53,64 @@ export class Renderer {
     const horizon = ((HALF_H + p.pitch) + (sh > 0 ? (Math.random() - 0.5) * sh * 13 : 0)) | 0;
     this._fog = hexToPacked(game.map.skyTint || '#15171c');
     this._time = game.timer || 0;
+    this._gatherLights(game);
     this._buildSky(horizon);
     this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
     this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
     this._sprites(game, p, dirX, dirY, planeX, planeY, horizon);
     this._particles(game, p, dirX, dirY, planeX, planeY, horizon);
+  }
+
+  // Collect the active point lights for this frame into flat typed arrays:
+  // static lamps + glowing projectiles + explosion effects + the muzzle flash.
+  _gatherLights(game) {
+    const p = game.player, t = this._time;
+    const MAX = 24;
+    if (!this._lx) {
+      this._lx = new Float32Array(MAX); this._ly = new Float32Array(MAX);
+      this._lr = new Float32Array(MAX); this._lg = new Float32Array(MAX); this._lb = new Float32Array(MAX);
+      this._lrad2 = new Float32Array(MAX); this._lint = new Float32Array(MAX);
+      this._lc = [0, 0, 0];
+    }
+    const raw = this._rawLights || (this._rawLights = []);
+    raw.length = 0;
+    for (const e of game.entities) {
+      if (e.light && (e.kind === 'lamp' || e.kind === 'proj')) {
+        const L = e.light;
+        let inten = L.intensity;
+        if (L.flicker) inten *= 1 + L.flicker * Math.sin(t * 9 + (L.phase || 0));
+        raw.push({ x: e.x, y: e.y, r: L.r, g: L.g, b: L.b, rad: L.radius, int: inten });
+      } else if (e.kind === 'effect') {
+        const k = e.dur > 0 ? 1 - e.time / e.dur : 0;   // fades as it dies
+        if (k > 0) raw.push({ x: e.x, y: e.y, r: 1.0, g: 0.62, b: 0.28, rad: (e.small ? 3 : 6) * (0.5 + 0.5 * k), int: 2.4 * k });
+      }
+    }
+    if (p.weaponFlash > 0 && p.muzzle) {
+      const k = p.weaponFlash / 0.09;
+      raw.push({ x: p.x, y: p.y, r: p.muzzle[0], g: p.muzzle[1], b: p.muzzle[2], rad: 5.5, int: 2.6 * k });
+    }
+    if (raw.length > MAX) {
+      raw.sort((a, b) => ((a.x - p.x) ** 2 + (a.y - p.y) ** 2) - ((b.x - p.x) ** 2 + (b.y - p.y) ** 2));
+      raw.length = MAX;
+    }
+    const n = raw.length;
+    for (let i = 0; i < n; i++) {
+      const L = raw[i];
+      this._lx[i] = L.x; this._ly[i] = L.y; this._lr[i] = L.r; this._lg[i] = L.g; this._lb[i] = L.b;
+      this._lrad2[i] = L.rad * L.rad; this._lint[i] = L.int;
+    }
+    this._ln = n;
+  }
+
+  // Accumulate light colour at world point (wx,wy) into out[3]. Quadratic falloff.
+  _lightAt(wx, wy, out) {
+    let r = 0, g = 0, b = 0;
+    const n = this._ln, lx = this._lx, ly = this._ly, lr = this._lr, lg = this._lg, lb = this._lb, lrad2 = this._lrad2, lint = this._lint;
+    for (let i = 0; i < n; i++) {
+      const dx = wx - lx[i], dy = wy - ly[i], d2 = dx * dx + dy * dy, rr = lrad2[i];
+      if (d2 < rr) { let a = 1 - d2 / rr; a *= a * lint[i]; r += lr[i] * a; g += lg[i] * a; b += lb[i] * a; }
+    }
+    out[0] = r; out[1] = g; out[2] = b;
   }
 
   // Precompute a per-row sky gradient (used by open-air ceiling cells).
@@ -92,6 +145,7 @@ export class Renderer {
     const hasTerrain = map.hasTerrain;
     const sky = this._sky;
     const t = this._time;
+    const nLights = this._ln, lc = this._lc;
     // animated ripple offsets for water (whole-texel shimmer)
     const rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
 
@@ -123,12 +177,16 @@ export class Renderer {
           let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0;
           let ty = (fy + roy - Math.floor(fy + roy)) * ww | 0;
           if (tx < 0) tx += ww; if (ty < 0) ty += ww;
-          buf[rowOff + x] = shadeFog(wp[(ty * ww + tx) | 0], light, fog, ft);
+          const c = wp[(ty * ww + tx) | 0];
+          if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
+          else buf[rowOff + x] = shadeFog(c, light, fog, ft);
         } else {
           let tx = (fx - Math.floor(fx)) * tw | 0;
           let ty = (fy - Math.floor(fy)) * tw | 0;
           if (tx < 0) tx += tw; if (ty < 0) ty += tw;
-          buf[rowOff + x] = shadeFog(tex[(ty * tw + tx) | 0], light, fog, ft);
+          const c = tex[(ty * tw + tx) | 0];
+          if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
+          else buf[rowOff + x] = shadeFog(c, light, fog, ft);
         }
         fx += stepX; fy += stepY;
       }
@@ -207,10 +265,17 @@ export class Renderer {
       const texCol = texX;
       const stepTex = th / lineH;
       let texPos = (y0 - drawStart) * stepTex;
+      // dynamic light at the wall-face hit point (constant down the column)
+      let lr = 0, lg = 0, lb = 0;
+      if (this._ln) {
+        this._lightAt(p.x + perpDist * rayDirX, p.y + perpDist * rayDirY, this._lc);
+        lr = this._lc[0]; lg = this._lc[1]; lb = this._lc[2];
+      }
+      const lit = (lr + lg + lb) > 0.0001;
       for (let y = y0; y <= y1; y++) {
         let ty = texPos | 0; if (ty >= th) ty = th - 1;
         const c = tex.pixels[ty * tw + texCol];
-        buf[y * RENDER_W + x] = shadeFog(c, light, fog, ft);
+        buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
         texPos += stepTex;
       }
     }
@@ -251,6 +316,13 @@ export class Renderer {
       const light = e.fullbright ? 1 : lightFor(tY);
       const ft = e.fullbright ? 0 : fogT(tY) * 0.55, fog = this._fog;
       const flash = (e.kind === 'enemy' && e.flash > 0) ? 0.78 : 0;   // white hit-flash
+      // dynamic light on the sprite (emitters/fullbright ignore it)
+      let lr = 0, lg = 0, lb = 0;
+      if (this._ln && !e.fullbright) {
+        this._lightAt(e.x, e.y, this._lc);
+        lr = this._lc[0]; lg = this._lc[1]; lb = this._lc[2];
+      }
+      const lit = (lr + lg + lb) > 0.0001;
       const tw = sprite.w, th = sprite.h, px = sprite.pixels;
       for (let x = x0; x <= x1; x++) {
         if (tY >= this.zbuf[x]) continue;             // behind a wall
@@ -262,7 +334,8 @@ export class Renderer {
           if (texY < 0 || texY >= th) continue;
           const c = px[texY * tw + texX];
           if ((c >>> 24) < 128) continue;             // transparent / soft edge
-          let out = (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
+          let out = lit ? shadeLit(c, light, fog, ft, lr, lg, lb)
+            : (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
           if (flash) out = whiten(out, flash);
           buf[y * RENDER_W + x] = out;
         }
@@ -317,6 +390,17 @@ function shadePacked(c, f) {
   const g = ((c >>> 8) & 0xff) * f & 0xff;
   const b = ((c >>> 16) & 0xff) * f & 0xff;
   return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+}
+
+// Like shadeFog, but adds per-channel dynamic light (lr,lg,lb) before fog.
+function shadeLit(c, f, fog, t, lr, lg, lb) {
+  let r = (c & 0xff) * (f + lr), g = ((c >>> 8) & 0xff) * (f + lg), b = ((c >>> 16) & 0xff) * (f + lb);
+  if (t > 0) {
+    const fr = fog & 0xff, fg = (fog >>> 8) & 0xff, fb = (fog >>> 16) & 0xff;
+    r += (fr - r) * t; g += (fg - g) * t; b += (fb - b) * t;
+  }
+  if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
 }
 
 // Shade by light factor `f`, then blend toward fog colour by `t`.

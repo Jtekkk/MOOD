@@ -118,6 +118,12 @@ find the matching keycard.
 - **Raycasting engine** rendering at a chunky 320×200 internal buffer, scaled up
   with crisp nearest-neighbour pixels. Textured walls, per-row floor/ceiling
   casting, and a depth buffer so sprites clip correctly behind walls.
+- **Dynamic coloured lighting:** real point lights spill onto floors, walls, and
+  monsters — lit **braziers** (warm, flickering), glowing **projectiles** (blue
+  plasma, orange fireballs, green BFG bolts), **muzzle flashes** that light the
+  room when you fire, and **explosions** that flash bright. Per-pixel on the
+  floors/ceilings, with quadratic falloff and per-light colour, composited under
+  the fog.
 - **Atmosphere:** diminishing distance lighting plus a distance **fog** that
   fades the world toward each level's mood colour, a screen **vignette**, and a
   baked dark **outline** on every monster and pickup so they read against the

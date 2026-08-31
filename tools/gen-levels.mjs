@@ -26,27 +26,27 @@ const KEY = { red: { key: 'R', door: 'r' }, blue: { key: 'U', door: 'b' }, yello
 const CONFIGS = [
   { name: 'LEVEL 3: REFINERY', w: 34, h: 24, rooms: 8, key: 'red',
     theme: { primary: '#', accents: ['C', 'L', 'M', 'P'] }, floor: 'floor', ceil: 'ceil', sky: '#20242c',
-    enemies: { z: 6, i: 5, d: 2, c: 0 }, water: { ponds: 1, streams: 1 }, weapons: ['2'], barrels: 4,
+    enemies: { z: 6, i: 5, d: 2, c: 0 }, water: { ponds: 1, streams: 1 }, weapons: ['2'], barrels: 4, lamps: 5,
     items: { h: 4, H: 2, p: 3, a: 1, l: 3, L: 2, s: 3, S: 1 } },
   { name: 'LEVEL 4: FOUNDRY', w: 36, h: 24, rooms: 9, key: 'blue',
     theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
-    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5,
+    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5, lamps: 6,
     items: { h: 4, H: 2, p: 3, a: 1, A: 1, l: 2, L: 3, s: 2, S: 2 } },
   { name: 'LEVEL 5: THE WOUND', w: 36, h: 26, rooms: 9, key: 'yellow',
     theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
-    enemies: { z: 3, i: 6, d: 4, c: 2, f: 3 }, outdoor: 1, weapons: ['3'], barrels: 4,
+    enemies: { z: 3, i: 6, d: 4, c: 2, f: 3 }, outdoor: 1, weapons: ['3'], barrels: 4, lamps: 7,
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, g: 1, s: 3, S: 2, r: 1, e: 2 } },
   { name: 'LEVEL 6: RUSTWORKS', w: 38, h: 26, rooms: 10, key: 'red',
     theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
-    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6,
+    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6, lamps: 8,
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 2, e: 2 } },
   { name: 'LEVEL 7: CRYPTWORKS', w: 38, h: 28, rooms: 11, key: 'blue',
     theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
-    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4, B: 1 }, outdoor: 1, weapons: ['6'], barrels: 5,
+    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4, B: 1 }, outdoor: 1, weapons: ['6'], barrels: 5, lamps: 9,
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 8: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, boss: 'G', outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8,
+    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3 }, boss: 'G', outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 10,
     items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 
@@ -199,6 +199,7 @@ function genLevel(cfg, seed) {
   for (const [ch, n] of Object.entries(cfg.enemies)) scatter(ch, n);
   for (const w of cfg.weapons) place(w);
   scatter('o', cfg.barrels);
+  scatter('!', cfg.lamps || 0);      // lit braziers (dynamic point lights)
   for (const [ch, n] of Object.entries(cfg.items)) scatter(ch, n);
 
   return {

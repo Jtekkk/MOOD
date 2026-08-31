@@ -22,6 +22,11 @@ const BLOOD = [rgba(150, 22, 22), rgba(110, 14, 14), rgba(90, 6, 6), rgba(180, 4
 const SPARKS = [rgba(255, 224, 130), rgba(255, 170, 50), rgba(220, 220, 230)];
 const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(60, 50, 45)];
 const WATER = [rgba(150, 220, 255), rgba(90, 170, 220), rgba(210, 240, 255), rgba(120, 195, 235)];
+// glow colour [r,g,b] emitted by projectiles in flight (dynamic lighting)
+const PROJ_LIGHT = {
+  fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
+  baronball: [0.4, 1.0, 0.4], bfgball: [0.5, 1.0, 0.55], jugball: [1.0, 0.45, 0.75],
+};
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
 
@@ -181,6 +186,12 @@ export class Game {
         });
       } else if (ch === 'o') {
         this.entities.push({ kind: 'barrel', x, y, hp: 20, radius: 0.33, spriteH: 0.85, vOffset: 0, alive: true, sprite: SPR.barrel });
+      } else if (ch === '!') {
+        // a lit brazier/lamp: a fullbright sprite plus a warm point light
+        this.entities.push({
+          kind: 'lamp', x, y, radius: 0.28, spriteH: 0.95, vOffset: 0, alive: true, fullbright: true, sprite: SPR.lamp,
+          light: { r: 1.0, g: 0.72, b: 0.34, radius: 5.0, intensity: 1.5, flicker: 0.16, phase: Math.random() * 6.28 },
+        });
       } else if (ITEMS[ch]) {
         const def = ITEMS[ch];
         this.entities.push({ kind: 'item', ch, def, x, y, spriteH: def.spriteH, vOffset: 0, alive: true, sprite: SPR[def.sprite], bob: Math.random() * 6 });
@@ -454,6 +465,7 @@ export class Game {
     if (w.ammo) p.ammo[w.ammo] -= w.useAmmo;
     p.fireCD = w.cooldown;
     p.weaponFlash = 0.09;
+    p.muzzle = w.flash;
     p.recoil = 1;
     p.faceMood = (p.health <= 35 ? 'angry' : 'excited'); p.faceTimer = 0.35; p.calmT = 0;
     this.audio.play(w.sound);
@@ -506,12 +518,14 @@ export class Game {
   _spawnProjectile(x, y, angle, w, owner = 'player') {
     const dx = Math.cos(angle), dy = Math.sin(angle);
     const sprite = SPR[w.proj] || SPR.fireball;
+    const glow = PROJ_LIGHT[w.proj];
     this.entities.push({
       kind: 'proj', x: x + dx * 0.4, y: y + dy * 0.4,
       vx: dx * w.projSpeed, vy: dy * w.projSpeed,
       dmg: Array.isArray(w.dmg) ? irnd(w.dmg[0], w.dmg[1]) : w.dmg,
       splash: w.splash || 0, owner, sprite, spriteH: w.projH || 0.4, vOffset: 0.45,
       fullbright: true, alive: true, life: 6,
+      light: glow ? { r: glow[0], g: glow[1], b: glow[2], radius: w.splash > 1 ? 4 : 3, intensity: 1.5 } : null,
     });
   }
 

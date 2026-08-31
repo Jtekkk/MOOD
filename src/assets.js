@@ -1738,6 +1738,28 @@ function tileFloor(seed) {
   return texFrom(c, ctx);
 }
 
+// ----- a lit brazier (light source) ---------------------------------------
+function lamp() {
+  const { c, ctx } = makeCanvas(40, 60);
+  // tripod stand
+  ctx.strokeStyle = '#241d19'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(20, 30); ctx.lineTo(10, 58); ctx.moveTo(20, 30); ctx.lineTo(30, 58); ctx.moveTo(20, 30); ctx.lineTo(20, 58); ctx.stroke();
+  ctx.strokeStyle = '#3a322c'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(20, 30); ctx.lineTo(10, 58); ctx.moveTo(20, 30); ctx.lineTo(30, 58); ctx.stroke();
+  // bowl
+  ctx.fillStyle = '#332b26'; ctx.beginPath(); ctx.ellipse(20, 31, 12, 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#4c4139'; ctx.beginPath(); ctx.ellipse(20, 29, 12, 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1c1713'; ctx.beginPath(); ctx.ellipse(20, 29, 9, 2.5, 0, 0, 7); ctx.fill();
+  // flame (tight, mostly opaque so it reads through the sprite alpha cutoff)
+  const fl = ctx.createRadialGradient(20, 20, 1, 20, 22, 13);
+  fl.addColorStop(0, '#ffffff'); fl.addColorStop(0.28, '#ffe784'); fl.addColorStop(0.62, '#ff9226'); fl.addColorStop(0.9, '#e2541a'); fl.addColorStop(1, 'rgba(210,60,10,0.35)');
+  ctx.fillStyle = fl;
+  ctx.beginPath(); ctx.moveTo(20, 3); ctx.quadraticCurveTo(33, 18, 20, 30); ctx.quadraticCurveTo(7, 18, 20, 3); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,220,0.95)';
+  ctx.beginPath(); ctx.moveTo(20, 11); ctx.quadraticCurveTo(26, 19, 20, 28); ctx.quadraticCurveTo(14, 19, 20, 11); ctx.fill();
+  return texFrom(c, ctx);
+}
+
 // ----- build everything ---------------------------------------------------
 
 export function buildAssets() {
@@ -1836,6 +1858,7 @@ export function buildAssets() {
   SPR.keyBlue = keycard('#36c', '#6af');
   SPR.keyYellow = keycard('#cc2', '#ff6');
   SPR.barrel = barrel(0);
+  SPR.lamp = lamp();
   SPR.pickup_shotgun = weaponPickup('shotgun');
   SPR.pickup_sshotgun = weaponPickup('sshotgun');
   SPR.pickup_chaingun = weaponPickup('chaingun');
@@ -1901,7 +1924,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }
