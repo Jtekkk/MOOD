@@ -127,7 +127,7 @@ export class Game {
       fireCD: 0, weaponFlash: 0, recoil: 0,
       bobPhase: 0, bobAmt: 0,
       damageFlash: 0, pickupFlash: 0, powerFlash: 0,
-      invuln: 0, berserk: false, visor: 0, z: 0,
+      invuln: 0, berserk: false, visor: 0, z: 0, hurtT: 0, hurtDir: 0,
       kills: 0, totalKills: 0, secrets: 0,
       dead: false, deathTime: 0,
       faceTimer: 0, faceMood: 'happy', calmT: 0, idleMoveT: 0, killStreak: 0, lastKillStamp: -99,
@@ -309,6 +309,7 @@ export class Game {
     p.damageFlash = Math.max(0, p.damageFlash - dt * 2);
     p.pickupFlash = Math.max(0, p.pickupFlash - dt * 3);
     p.powerFlash = Math.max(0, p.powerFlash - dt * 2);
+    if (p.hurtT > 0) p.hurtT = Math.max(0, p.hurtT - dt * 1.4);
     if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
     if (p.visor > 0) p.visor = Math.max(0, p.visor - dt);
     this._updateFace(dt);
@@ -542,7 +543,7 @@ export class Game {
       }
       if (!isPlayer && (x - this.player.x) ** 2 + (y - this.player.y) ** 2 < PLAYER_R * PLAYER_R) {
         this._applyKnock(this.player, dx, dy, knock * 0.7);
-        this._damagePlayer(dmg); return;
+        this._damagePlayer(dmg, ox, oy); return;
       }
     }
   }
@@ -587,7 +588,7 @@ export class Game {
     if (pr.splash > 0) {
       this._explode(pr.x, pr.y, pr.splash, pr.dmg, pr.owner);
     } else {
-      if (target === 'player') { this._applyKnock(this.player, pr.vx, pr.vy, 3); this._damagePlayer(pr.dmg); }
+      if (target === 'player') { this._applyKnock(this.player, pr.vx, pr.vy, 3); this._damagePlayer(pr.dmg, pr.x - pr.vx, pr.y - pr.vy); }
       else if (target && target.kind === 'enemy') { this._applyKnock(target, pr.vx, pr.vy, 4); this._damageEnemy(target, pr.dmg, pr.owner); }
       else if (target && target.kind === 'barrel') this._damageBarrel(target, pr.dmg, pr.owner);
       this._spawnEffect(pr.x, pr.y, 0.5);
@@ -617,7 +618,7 @@ export class Game {
     if (dp < radius + PLAYER_R) {
       const f = 1 - dp / (radius + PLAYER_R);
       this._applyKnock(this.player, this.player.x - x, this.player.y - y, 7 * f);
-      this._damagePlayer(Math.round(dmg * f));
+      this._damagePlayer(Math.round(dmg * f), x, y);
     }
   }
 
@@ -679,7 +680,7 @@ export class Game {
     if (Math.random() < e.def.painChance) { e.state = 'pain'; e.stateTime = 0; this.audio.play('pain'); }
   }
 
-  _damagePlayer(dmg) {
+  _damagePlayer(dmg, srcX, srcY) {
     const p = this.player;
     if (p.dead || p.invuln > 0) return;   // invulnerability sphere shrugs it off
     dmg = Math.max(1, Math.round(dmg * (this.skill ? this.skill.dmgTaken : 1)));
@@ -689,6 +690,8 @@ export class Game {
       p.armor -= absorbed; dealt = dmg - absorbed;
     }
     p.health -= dealt;
+    // remember which way the hit came from (screen-relative) for the HUD marker
+    if (srcX !== undefined) { p.hurtDir = normalizeAngle(Math.atan2(srcY - p.y, srcX - p.x) - p.angle); p.hurtT = 1; }
     p.damageFlash = Math.min(1, p.damageFlash + dmg / 30);
     this.addShake(Math.min(0.7, 0.18 + dmg * 0.02));
     const panic = dmg > 20 || p.health <= 20;
@@ -840,7 +843,7 @@ export class Game {
     if (e.def.attack === 'melee') {
       if (dist(e.x, e.y, tp.x, tp.y) <= e.def.range + 0.2) {
         if (tp.ent) { this._applyKnock(tp.ent, tp.x - e.x, tp.y - e.y, 3); this._damageEnemy(tp.ent, dmg, e); }
-        else { this._applyKnock(this.player, this.player.x - e.x, this.player.y - e.y, 3); this._damagePlayer(dmg); }
+        else { this._applyKnock(this.player, this.player.x - e.x, this.player.y - e.y, 3); this._damagePlayer(dmg, e.x, e.y); }
       }
     } else if (e.def.attack === 'hitscan') {
       this._hitscan(e.x, e.y, ang + rnd(-0.06, 0.06), dmg, e.def.range + 2, e);

@@ -90,6 +90,18 @@ export function drawTints(ctx, game) {
     ctx.fillStyle = `rgba(255,225,120,${pulse * fade})`;
     ctx.fillRect(0, 0, RENDER_W, BAR_Y);
   }
+  if (p.hurtT > 0) {        // directional damage marker: a red arc toward the hit
+    const cx = RENDER_W / 2, cy = BAR_Y / 2, R = RENDER_W * 0.42;
+    // screen angle: 0 = ahead (top). hurtDir is relative to facing (0 = front).
+    const a = p.hurtDir - Math.PI / 2;   // rotate so "front" points up
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.8, p.hurtT);
+    ctx.strokeStyle = '#e83030'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(cx, cy, R, a - 0.34, a + 0.34); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,120,120,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, R, a - 0.34, a + 0.34); ctx.stroke();
+    ctx.restore();
+  }
 }
 
 // ---- automap (top-down overlay, toggled with Tab) -------------------------
