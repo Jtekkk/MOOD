@@ -118,6 +118,11 @@ find the matching keycard.
 - **Raycasting engine** rendering at a chunky 320×200 internal buffer, scaled up
   with crisp nearest-neighbour pixels. Textured walls, per-row floor/ceiling
   casting, and a depth buffer so sprites clip correctly behind walls.
+- **Height / elevation engine:** a per-column renderer (kept separate from the
+  flat path) gives real **stairs, raised platforms, ledges, and catwalks** — the
+  camera rides at your standing height, you climb one step at a time, tall ledges
+  block you (take the stairs), and you can drop off edges. Monsters stand up on
+  the ledges. Showcased in **LEVEL 3: THE ASCENT**.
 - **Dynamic coloured lighting:** real point lights spill onto floors, walls, and
   monsters — lit **braziers** (warm, flickering), glowing **projectiles** (blue
   plasma, orange fireballs, green BFG bolts), **muzzle flashes** that light the
@@ -183,7 +188,7 @@ find the matching keycard.
   panic, complete with a wire cage and a swarm, when you're nearly dead.
 
   ![The nine moods](docs/screens/faces.png)
-- **Eight levels** — two hand-authored (Entryway, Underhalls) plus six
+- **Nine levels** — three hand-authored (Entryway, Underhalls, The Ascent) plus six
   procedurally generated (`tools/gen-levels.mjs`): rooms-and-corridors layouts,
   each with its own surface theme, a key-gated exit, and a rising
   enemy/difficulty curve. A title screen, level-complete intermission (kills /

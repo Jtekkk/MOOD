@@ -2,7 +2,7 @@
 // 6 procedurally built, fully-validated levels (3..8).
 export const GEN_LEVELS = [
   {
-    name: 'LEVEL 3: REFINERY',
+    name: 'LEVEL 4: REFINERY',
     floor: 'floor', ceil: 'ceil', skyTint: '#20242c',
     startAngle: 0,
     walls: [
@@ -85,7 +85,7 @@ export const GEN_LEVELS = [
     ],
   },
   {
-    name: 'LEVEL 4: FOUNDRY',
+    name: 'LEVEL 5: FOUNDRY',
     floor: 'grate', ceil: 'ceil', skyTint: '#23201a',
     startAngle: 0,
     walls: [
@@ -168,7 +168,7 @@ export const GEN_LEVELS = [
     ],
   },
   {
-    name: 'LEVEL 5: THE WOUND',
+    name: 'LEVEL 6: THE WOUND',
     floor: 'blood', ceil: 'ceil', skyTint: '#2a1414',
     startAngle: 0,
     walls: [
@@ -257,7 +257,7 @@ export const GEN_LEVELS = [
     ],
   },
   {
-    name: 'LEVEL 6: RUSTWORKS',
+    name: 'LEVEL 7: RUSTWORKS',
     floor: 'floor2', ceil: 'ceil', skyTint: '#1e1a18',
     startAngle: 0,
     walls: [
@@ -346,7 +346,7 @@ export const GEN_LEVELS = [
     ],
   },
   {
-    name: 'LEVEL 7: CRYPTWORKS',
+    name: 'LEVEL 8: CRYPTWORKS',
     floor: 'floor2', ceil: 'ceil', skyTint: '#1c1d24',
     startAngle: 0,
     walls: [
@@ -441,7 +441,7 @@ export const GEN_LEVELS = [
     ],
   },
   {
-    name: 'LEVEL 8: ICON',
+    name: 'LEVEL 9: ICON',
     floor: 'tile', ceil: 'ceil', skyTint: '#241a2a',
     startAngle: 0,
     walls: [
