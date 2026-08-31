@@ -338,7 +338,8 @@ export class Renderer {
     const fp = floorTex.pixels, cp = ceilTex.pixels, fw = floorTex.w, ch = ceilTex.w, wp = waterTex.pixels, ww = waterTex.w;
     const rayDirX0 = dirX - planeX, rayDirY0 = dirY - planeY, rayDirX1 = dirX + planeX, rayDirY1 = dirY + planeY;
     const buf = this.buf, nLights = this._ln, lc = this._lc;
-    const fType = map.floorType, hasTerrain = map.hasTerrain, W = map.W, Hh = map.H;
+    const fType = map.floorType, cType = map.ceilType, hasTerrain = map.hasTerrain, W = map.W, Hh = map.H;
+    const sky = this._sky;
     const t = this._time, rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
     for (let y = 0; y < RENDER_H; y++) {
       const isFloor = y > horizon;
@@ -353,7 +354,13 @@ export class Renderer {
       const tex = isFloor ? fp : cp, tw = isFloor ? fw : ch;
       for (let x = 0; x < RENDER_W; x++) {
         let water = false;
-        if (isFloor && hasTerrain) { const cx = Math.floor(fx), cy = Math.floor(fy); if (cx >= 0 && cy >= 0 && cx < W && cy < Hh && fType[cy * W + cx]) water = true; }
+        if (hasTerrain) {
+          const cx = Math.floor(fx), cy = Math.floor(fy);
+          if (cx >= 0 && cy >= 0 && cx < W && cy < Hh) {
+            if (isFloor) { if (fType[cy * W + cx]) water = true; }
+            else if (cType[cy * W + cx]) { buf[rowOff + x] = sky[y]; fx += stepX; fy += stepY; continue; }  // open sky
+          }
+        }
         let c;
         if (water) {
           let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0, ty = (fy + roy - Math.floor(fy + roy)) * ww | 0;
