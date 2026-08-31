@@ -126,7 +126,8 @@ export class Game {
       keys: { red: false, blue: false, yellow: false },
       fireCD: 0, weaponFlash: 0, recoil: 0,
       bobPhase: 0, bobAmt: 0,
-      damageFlash: 0, pickupFlash: 0,
+      damageFlash: 0, pickupFlash: 0, powerFlash: 0,
+      invuln: 0, berserk: false, visor: 0, z: 0,
       kills: 0, totalKills: 0, secrets: 0,
       dead: false, deathTime: 0,
       faceTimer: 0, faceMood: 'happy', calmT: 0, idleMoveT: 0, killStreak: 0, lastKillStamp: -99,
@@ -307,6 +308,9 @@ export class Game {
     // --- timers/flashes ---
     p.damageFlash = Math.max(0, p.damageFlash - dt * 2);
     p.pickupFlash = Math.max(0, p.pickupFlash - dt * 3);
+    p.powerFlash = Math.max(0, p.powerFlash - dt * 2);
+    if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
+    if (p.visor > 0) p.visor = Math.max(0, p.visor - dt);
     this._updateFace(dt);
 
     if (p.health <= 0 && !p.dead) this._killPlayer();
@@ -501,9 +505,10 @@ export class Game {
       this._spawnProjectile(p.x, p.y, p.angle, w);
     } else {
       const pellets = w.pellets || 1;
+      const berserkMul = (p.berserk && w.kind === 'melee') ? 10 : 1;   // berserk fist wrecks
       for (let i = 0; i < pellets; i++) {
         const a = p.angle + rnd(-w.spread, w.spread);
-        this._hitscan(p.x, p.y, a, irnd(w.dmg[0], w.dmg[1]), w.range, 'player');
+        this._hitscan(p.x, p.y, a, irnd(w.dmg[0], w.dmg[1]) * berserkMul, w.range, 'player');
       }
     }
     if (w.name !== 'FIST') this._alertNearby(p.x, p.y, 6);  // the noise draws monsters
@@ -676,7 +681,7 @@ export class Game {
 
   _damagePlayer(dmg) {
     const p = this.player;
-    if (p.dead) return;
+    if (p.dead || p.invuln > 0) return;   // invulnerability sphere shrugs it off
     dmg = Math.max(1, Math.round(dmg * (this.skill ? this.skill.dmgTaken : 1)));
     let dealt = dmg;
     if (p.armor > 0) {

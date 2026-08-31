@@ -139,6 +139,11 @@ export class Renderer {
       const k = p.weaponFlash / 0.09;
       raw.push({ x: p.x, y: p.y, r: p.muzzle[0], g: p.muzzle[1], b: p.muzzle[2], rad: 5.5, int: 2.6 * k });
     }
+    // light-amplification visor: a broad soft glow around the player
+    if (p.visor > 0) {
+      const fade = p.visor < 3 ? p.visor / 3 : 1;   // ease out in the last seconds
+      raw.push({ x: p.x, y: p.y, r: 0.7, g: 0.85, b: 0.7, rad: 30, int: 0.85 * fade });
+    }
     if (raw.length > MAX) {
       raw.sort((a, b) => ((a.x - p.x) ** 2 + (a.y - p.y) ** 2) - ((b.x - p.x) ** 2 + (b.y - p.y) ** 2));
       raw.length = MAX;

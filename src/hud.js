@@ -80,6 +80,16 @@ export function drawTints(ctx, game) {
     ctx.fillStyle = `rgba(220,200,80,${Math.min(0.28, p.pickupFlash * 0.28)})`;
     ctx.fillRect(0, 0, RENDER_W, BAR_Y);
   }
+  if (p.powerFlash > 0) {   // bright flash when a powerup is grabbed
+    ctx.fillStyle = `rgba(255,255,255,${Math.min(0.45, p.powerFlash * 0.45)})`;
+    ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  }
+  if (p.invuln > 0) {       // pulsing golden sheen while invulnerable
+    const pulse = 0.10 + 0.06 * Math.sin(game.timer * 8);
+    const fade = p.invuln < 3 ? p.invuln / 3 : 1;
+    ctx.fillStyle = `rgba(255,225,120,${pulse * fade})`;
+    ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  }
 }
 
 // ---- automap (top-down overlay, toggled with Tab) -------------------------

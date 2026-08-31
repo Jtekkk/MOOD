@@ -1738,6 +1738,31 @@ function tileFloor(seed) {
   return texFrom(c, ctx);
 }
 
+// ----- powerups -----------------------------------------------------------
+function powerSphere(cA, cB, ring) {
+  const { c, ctx } = makeCanvas(30, 30);
+  const g = ctx.createRadialGradient(12, 11, 2, 15, 15, 15);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.4, cA); g.addColorStop(1, cB);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(15, 15, 14, 0, 7); ctx.fill();
+  ctx.strokeStyle = ring; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(15, 15, 13, 6, 0, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(15, 15, 6, 13, 0, 0, 7); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(11, 10, 3, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+function visorGoggles() {
+  const { c, ctx } = makeCanvas(30, 22);
+  ctx.fillStyle = '#1a2a1a'; ctx.fillRect(2, 6, 26, 10);           // frame
+  ctx.fillStyle = '#0c140c'; ctx.fillRect(3, 7, 11, 8); ctx.fillRect(16, 7, 11, 8);
+  const g = ctx.createLinearGradient(0, 7, 0, 15);
+  g.addColorStop(0, '#8dff9e'); g.addColorStop(1, '#127a2a');
+  ctx.fillStyle = g; ctx.fillRect(4, 8, 9, 6); ctx.fillRect(17, 8, 9, 6);   // green lenses
+  ctx.fillStyle = 'rgba(220,255,220,0.7)'; ctx.fillRect(5, 9, 4, 2); ctx.fillRect(18, 9, 4, 2);
+  ctx.fillStyle = '#2a3a2a'; ctx.fillRect(13, 9, 4, 3);           // bridge
+  ctx.fillStyle = '#243424'; ctx.fillRect(1, 9, 2, 4); ctx.fillRect(27, 9, 2, 4);
+  return texFrom(c, ctx);
+}
+
 // ----- a lit brazier (light source) ---------------------------------------
 function lamp() {
   const { c, ctx } = makeCanvas(40, 60);
@@ -1859,6 +1884,9 @@ export function buildAssets() {
   SPR.keyYellow = keycard('#cc2', '#ff6');
   SPR.barrel = barrel(0);
   SPR.lamp = lamp();
+  SPR.invuln = powerSphere('#7affa0', '#0e8a3a', 'rgba(210,255,220,0.85)');   // green globe
+  SPR.berserk = powerSphere('#ff6a4a', '#8a1408', 'rgba(255,180,150,0.85)');  // red globe
+  SPR.visor = visorGoggles();
   SPR.pickup_shotgun = weaponPickup('shotgun');
   SPR.pickup_sshotgun = weaponPickup('sshotgun');
   SPR.pickup_chaingun = weaponPickup('chaingun');
