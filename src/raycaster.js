@@ -8,6 +8,7 @@ export const RENDER_W = 320;
 export const RENDER_H = 200;
 const HALF_H = RENDER_H / 2;
 const PLANE = 0.66;            // camera plane length → ~66° FOV
+const CEIL_H = 2.4;           // ceiling height for height-mapped levels (tall rooms)
 
 export class Renderer {
   constructor(displayCanvas) {
@@ -55,9 +56,15 @@ export class Renderer {
     this._time = game.timer || 0;
     this._gatherLights(game);
     this._buildSky(horizon);
-    this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
-    this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
-    this._sprites(game, p, dirX, dirY, planeX, planeY, horizon);
+    const camZ = 0.5 + (p.z || 0);
+    if (game.map.hasHeights) {
+      this._floorCeilH(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
+      this._renderHeights(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
+    } else {
+      this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
+      this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
+    }
+    this._sprites(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
     this._particles(game, p, dirX, dirY, planeX, planeY, horizon);
     this._bloom();
   }
@@ -324,8 +331,148 @@ export class Renderer {
     }
   }
 
+  // ---- base floor (z=0) + ceiling (z=CEIL_H) for height levels, camZ-aware --
+  _floorCeilH(game, p, dirX, dirY, planeX, planeY, horizon, camZ) {
+    const map = game.map;
+    const floorTex = TEX[map.floor] || TEX.floor, ceilTex = TEX[map.ceil] || TEX.ceil;
+    const fp = floorTex.pixels, cp = ceilTex.pixels, fw = floorTex.w, ch = ceilTex.w;
+    const rayDirX0 = dirX - planeX, rayDirY0 = dirY - planeY, rayDirX1 = dirX + planeX, rayDirY1 = dirY + planeY;
+    const buf = this.buf, nLights = this._ln, lc = this._lc;
+    for (let y = 0; y < RENDER_H; y++) {
+      const isFloor = y > horizon;
+      const pRow = isFloor ? (y - horizon) : (horizon - y);
+      if (pRow <= 0) continue;
+      const rowDist = (isFloor ? camZ : (CEIL_H - camZ)) * RENDER_H / pRow;
+      if (rowDist <= 0) continue;
+      const stepX = rowDist * (rayDirX1 - rayDirX0) / RENDER_W, stepY = rowDist * (rayDirY1 - rayDirY0) / RENDER_W;
+      let fx = p.x + rowDist * rayDirX0, fy = p.y + rowDist * rayDirY0;
+      const light = lightFor(rowDist) * (isFloor ? 1 : 0.74);
+      const ft = fogT(rowDist), fog = this._fog, rowOff = y * RENDER_W;
+      const tex = isFloor ? fp : cp, tw = isFloor ? fw : ch;
+      for (let x = 0; x < RENDER_W; x++) {
+        let tx = (fx - Math.floor(fx)) * tw | 0, ty = (fy - Math.floor(fy)) * tw | 0;
+        if (tx < 0) tx += tw; if (ty < 0) ty += tw;
+        const c = tex[(ty * tw + tx) | 0];
+        if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
+        else buf[rowOff + x] = shadeFog(c, light, fog, ft);
+        fx += stepX; fy += stepY;
+      }
+    }
+  }
+
+  // ---- height pass: full walls + raised walkable blocks (steps/platforms) ---
+  // Per column: DDA collecting blocks until a full wall; then paint far→near
+  // (wall, then blocks) so nearer geometry overdraws farther. Blocks get a
+  // textured front face (z=0..h) and, if below eye, a textured top at z=h.
+  _renderHeights(game, p, dirX, dirY, planeX, planeY, horizon, camZ) {
+    const map = game.map, buf = this.buf, W = map.W, H = map.H, blockH = map.blockH;
+    const cellChar = map.cellChar, RH = RENDER_H, fog = this._fog, nLights = this._ln, lc = this._lc;
+    const sideTex = TEX.stone || TEX.tech, topTex = TEX.metal || TEX.floor2 || TEX.floor;
+    const bD = this._hbD || (this._hbD = new Float32Array(64));
+    const bDx = this._hbDx || (this._hbDx = new Float32Array(64));
+    const bH = this._hbH || (this._hbH = new Float32Array(64));
+    const bS = this._hbS || (this._hbS = new Int8Array(64));
+    const bU = this._hbU || (this._hbU = new Float32Array(64));
+
+    for (let x = 0; x < RENDER_W; x++) {
+      const cameraX = 2 * x / RENDER_W - 1;
+      const rayDirX = dirX + planeX * cameraX, rayDirY = dirY + planeY * cameraX;
+      let mapX = Math.floor(p.x), mapY = Math.floor(p.y);
+      const deltaX = Math.abs(1 / rayDirX), deltaY = Math.abs(1 / rayDirY);
+      let stepX, stepY, sideX, sideY;
+      if (rayDirX < 0) { stepX = -1; sideX = (p.x - mapX) * deltaX; } else { stepX = 1; sideX = (mapX + 1 - p.x) * deltaX; }
+      if (rayDirY < 0) { stepY = -1; sideY = (p.y - mapY) * deltaY; } else { stepY = 1; sideY = (mapY + 1 - p.y) * deltaY; }
+
+      let nb = 0, wallDist = 1e9, wallU = 0, wallSide = 0, wallTex = null;
+      for (let guard = 0; guard < 160; guard++) {
+        let side;
+        if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; } else { sideY += deltaY; mapY += stepY; side = 1; }
+        if (mapX < 0 || mapY < 0 || mapX >= W || mapY >= H) break;
+        const d = (side === 0) ? (sideX - deltaX) : (sideY - deltaY);
+        if (d > 26) break;
+        const idx = mapY * W + mapX, cell = cellChar[idx];
+        if (cell !== '.' && cell !== ' ' && cell !== '@') {
+          wallDist = d; wallSide = side; wallTex = TEX[wallTexName(cell)] || TEX.tech;
+          let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u; wallU = u;
+          break;
+        }
+        const h = blockH[idx];
+        if (h > 0 && nb < 64) {
+          let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u;
+          bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; nb++;
+        }
+      }
+      this.zbuf[x] = wallDist;
+      for (let i = 0; i < nb; i++) bDx[i] = (i + 1 < nb) ? bD[i + 1] : (wallDist < 1e8 ? wallDist : bD[i] + 1.0);
+
+      // full wall (farthest opaque) — draw first
+      if (wallDist < 1e8) {
+        const d = wallDist, tex = wallTex, th = tex.h, tw = tex.w;
+        let texX = (wallU * tw) | 0; if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
+        const yTopF = horizon + (camZ - CEIL_H) * RH / d, yBotF = horizon + camZ * RH / d;
+        const light = lightFor(d) * (wallSide === 1 ? 0.70 : 1.0), ft = fogT(d);
+        let lr = 0, lg = 0, lb = 0;
+        if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
+        const lit = (lr + lg + lb) > 1e-4;
+        const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(RH - 1, Math.floor(yBotF));
+        const invSpan = RH / d;   // pixels per world unit at this distance
+        for (let y = y0; y <= y1; y++) {
+          const worldZ = camZ - (y - horizon) / invSpan;             // CEIL_H..0 down the wall
+          let v = worldZ - Math.floor(worldZ);                        // tile every 1 unit
+          let ty = (v * th) | 0; if (ty < 0) ty += th; if (ty >= th) ty = th - 1;
+          const c = tex.pixels[ty * tw + texX];
+          buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+        }
+      }
+
+      // blocks, far → near
+      for (let i = nb - 1; i >= 0; i--) {
+        const d = bD[i], h = bH[i], dEx = bDx[i];
+        const light = lightFor(d) * (bS[i] === 1 ? 0.70 : 1.0), ft = fogT(d);
+        let lr = 0, lg = 0, lb = 0;
+        if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
+        const lit = (lr + lg + lb) > 1e-4;
+        const invSpan = RH / d;
+        // front face z=0..h
+        const yTopF = horizon + (camZ - h) * RH / d, yBotF = horizon + camZ * RH / d;
+        const th = sideTex.h, tw = sideTex.w;
+        let texX = (bU[i] * tw) | 0; if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
+        const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(RH - 1, Math.floor(yBotF));
+        for (let y = y0; y <= y1; y++) {
+          const worldZ = camZ - (y - horizon) / invSpan;             // h..0
+          let v = worldZ - Math.floor(worldZ);
+          let ty = (v * th) | 0; if (ty < 0) ty += th; if (ty >= th) ty = th - 1;
+          const c = sideTex.pixels[ty * tw + texX];
+          buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+        }
+        // top face z=h (only visible when below the eye)
+        if (h < camZ - 0.02) {
+          const ttw = topTex.w, tpx = topTex.pixels;
+          const yFar = horizon + (camZ - h) * RH / dEx, yNear = horizon + (camZ - h) * RH / d;
+          const yy0 = Math.max(0, Math.ceil(yFar)), yy1 = Math.min(RH - 1, Math.floor(yNear));
+          for (let y = yy0; y <= yy1; y++) {
+            if (y <= horizon) continue;
+            const dRow = (camZ - h) * RH / (y - horizon);
+            if (dRow < d - 0.03 || dRow > dEx + 0.03) continue;
+            const wx = p.x + dRow * rayDirX, wy = p.y + dRow * rayDirY;
+            let tx = (wx - Math.floor(wx)) * ttw | 0, ty = (wy - Math.floor(wy)) * ttw | 0;
+            if (tx < 0) tx += ttw; if (ty < 0) ty += ttw;
+            const c = tpx[(ty * ttw + tx) | 0];
+            const l2 = lightFor(dRow), f2 = fogT(dRow);
+            if (nLights) { this._lightAt(wx, wy, lc); buf[y * RENDER_W + x] = shadeLit(c, l2, fog, f2, lc[0], lc[1], lc[2]); }
+            else buf[y * RENDER_W + x] = shadeFog(c, l2, fog, f2);
+          }
+        }
+      }
+    }
+  }
+
   // ---- billboarded sprites ----------------------------------------------
-  _sprites(game, p, dirX, dirY, planeX, planeY, horizon) {
+  _sprites(game, p, dirX, dirY, planeX, planeY, horizon, camZ = 0.5) {
+    const map = game.map;
+    const bh = map.hasHeights ? map.blockH : null;
     const ents = game.entities;
     const list = [];
     for (const e of ents) {
@@ -351,7 +498,10 @@ export class Renderer {
       const drawW = (drawH * (sprite.w / sprite.h)) | 0;
       const vOff = (e.vOffset || 0) * lineH;
       const screenX = ((RENDER_W / 2) * (1 + tX / tY)) | 0;
-      const baseY = horizon + (lineH / 2) - vOff;     // feet rest on floor
+      // feet rest on whatever floor/block height is under the sprite
+      let feetZ = 0;
+      if (bh) { const cx = Math.floor(e.x), cy = Math.floor(e.y); if (cx >= 0 && cy >= 0 && cx < map.W && cy < map.H) feetZ = bh[cy * map.W + cx]; }
+      const baseY = horizon + (camZ - feetZ) * lineH - vOff;
       const drawBottom = baseY | 0;
       const drawTop = (baseY - drawH) | 0;
       const x0 = Math.max(0, screenX - (drawW >> 1));

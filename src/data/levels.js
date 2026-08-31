@@ -143,6 +143,66 @@ const E1M2 = {
 
 import { GEN_LEVELS } from './levels.gen.js';
 
+// A development sandbox for the height renderer: a 5-step staircase rising to
+// a raised platform, plus a narrow raised walkway (a "bridge"). Not in the
+// campaign — loaded by tools/heightshot.mjs.
+export const HEIGHTS_LAB = {
+  name: 'HEIGHTS LAB',
+  floor: 'floor', ceil: 'ceil', skyTint: '#20242c',
+  startAngle: -Math.PI / 2,
+  walls: [
+    '######################',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '#....................#',
+    '######################',
+  ],
+  things: [
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '......................',
+    '..........@...........',
+    '......................',
+    '......................',
+  ],
+  heights: [
+    '......................',
+    '......................',
+    '.......5555555........',
+    '.......5555555........',
+    '.......5555555........',
+    '.......5555555........',
+    '........44444.........',
+    '........33333.........',
+    '........22222.........',
+    '........11111.........',
+    '......................',
+    '...3333333............',
+    '......................',
+    '......................',
+    '......................',
+  ],
+};
+
 export const LEVELS = [E1M1, E1M2, ...GEN_LEVELS];
 
 // Parse a level definition into a runtime map object.
@@ -169,6 +229,19 @@ export function parseLevel(def) {
         const i = y * W + x;
         if (tc === '~' || tc === 'O') { floorType[i] = 1; hasTerrain = true; }   // water (~ pond/stream, O outdoor pond)
         if (tc === '^' || tc === 'O') { ceilType[i] = 1; hasTerrain = true; }    // open sky overhead
+      }
+    }
+  }
+  // optional per-cell block height (raised platforms / steps you can climb and
+  // stand on). Chars '1'..'9' → 0.1..0.9 world units; '.'/space → base (0).
+  const heightRows = def.heights ? pad(def.heights, '.') : null;
+  const blockH = new Float32Array(W * H);
+  let hasHeights = false;
+  if (heightRows) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const hc = heightRows[y][x];
+        if (hc >= '1' && hc <= '9') { blockH[y * W + x] = (hc.charCodeAt(0) - 48) * 0.2; hasHeights = true; }
       }
     }
   }
@@ -217,7 +290,7 @@ export function parseLevel(def) {
   }
 
   return {
-    name: def.name, W, H, cells, cellChar, doors, things, floorType, ceilType, hasTerrain,
+    name: def.name, W, H, cells, cellChar, doors, things, floorType, ceilType, hasTerrain, blockH, hasHeights,
     floor: def.floor, ceil: def.ceil, skyTint: def.skyTint || '#1a1d24',
     start: start || { x: 1.5, y: 1.5 }, startAngle: def.startAngle || 0,
   };

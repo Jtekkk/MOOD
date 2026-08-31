@@ -159,6 +159,7 @@ export class Game {
     this.player.x = map.start.x;
     this.player.y = map.start.y;
     this.player.angle = map.startAngle;
+    this.player.z = map.hasHeights ? map.blockH[Math.floor(map.start.y) * map.W + Math.floor(map.start.x)] : 0;
     this.player.keys = { red: false, blue: false, yellow: false };
     this.player.kills = 0;
     this._spawnThings(map);
@@ -313,8 +314,33 @@ export class Game {
   // ---- player movement & collision --------------------------------------
   _movePlayer(mvx, mvy) {
     const p = this.player;
-    if (!this._blocked(p.x + mvx, p.y, PLAYER_R, true)) p.x += mvx;
-    if (!this._blocked(p.x, p.y + mvy, PLAYER_R, true)) p.y += mvy;
+    const z = p.z || 0;
+    if (!this._blocked(p.x + mvx, p.y, PLAYER_R, true) && !this._ledgeBlocks(p.x + mvx, p.y, z)) p.x += mvx;
+    if (!this._blocked(p.x, p.y + mvy, PLAYER_R, true) && !this._ledgeBlocks(p.x, p.y + mvy, z)) p.y += mvy;
+    // stand on whatever block is under us now (snap; steps are small)
+    if (this.map.hasHeights) {
+      const cx = Math.floor(p.x), cy = Math.floor(p.y);
+      p.z = (cx >= 0 && cy >= 0 && cx < this.map.W && cy < this.map.H) ? this.map.blockH[cy * this.map.W + cx] : 0;
+    }
+  }
+
+  // A raised block more than one step above `fromZ` acts as a wall (you must
+  // take the stairs). Lower blocks are free to step/drop onto.
+  _ledgeBlocks(x, y, fromZ) {
+    const map = this.map;
+    if (!map.hasHeights) return false;
+    const r = PLAYER_R, STEP = 0.28;
+    const x0 = Math.floor(x - r), x1 = Math.floor(x + r), y0 = Math.floor(y - r), y1 = Math.floor(y + r);
+    for (let cy = y0; cy <= y1; cy++) {
+      for (let cx = x0; cx <= x1; cx++) {
+        if (cx < 0 || cy < 0 || cx >= map.W || cy >= map.H) continue;
+        if (map.blockH[cy * map.W + cx] > fromZ + STEP) {
+          const nx = clamp(x, cx, cx + 1), ny = clamp(y, cy, cy + 1);
+          if ((x - nx) ** 2 + (y - ny) ** 2 < r * r) return true;
+        }
+      }
+    }
+    return false;
   }
 
   // Circle-vs-grid collision; optionally also collide with solid entities.
