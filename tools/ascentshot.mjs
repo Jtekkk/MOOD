@@ -17,7 +17,8 @@ try {
   const views = [
     { x: 3.5, y: 15.5, a: -Math.PI / 2, z: 0, tag: 'start' },          // looking up the stairs
     { x: 11.5, y: 11.5, a: -Math.PI / 2, z: 0.4, tag: 'stairs' },       // partway up
-    { x: 11.5, y: 8.0, a: 0, z: 1.0, tag: 'platform' },                 // on platform, look along the catwalk to exit
+    { x: 11.5, y: 8.0, a: 0, z: 1.0, tag: 'platform' },
+    { x: 3.5, y: 7.5, a: -Math.PI/2, z: 0, tag: 'waterfall' },                 // on platform, look along the catwalk to exit
   ];
   let i = 0;
   const climb = await page.evaluate(() => {

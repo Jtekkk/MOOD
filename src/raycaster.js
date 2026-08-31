@@ -334,10 +334,12 @@ export class Renderer {
   // ---- base floor (z=0) + ceiling (z=CEIL_H) for height levels, camZ-aware --
   _floorCeilH(game, p, dirX, dirY, planeX, planeY, horizon, camZ) {
     const map = game.map;
-    const floorTex = TEX[map.floor] || TEX.floor, ceilTex = TEX[map.ceil] || TEX.ceil;
-    const fp = floorTex.pixels, cp = ceilTex.pixels, fw = floorTex.w, ch = ceilTex.w;
+    const floorTex = TEX[map.floor] || TEX.floor, ceilTex = TEX[map.ceil] || TEX.ceil, waterTex = TEX.water || floorTex;
+    const fp = floorTex.pixels, cp = ceilTex.pixels, fw = floorTex.w, ch = ceilTex.w, wp = waterTex.pixels, ww = waterTex.w;
     const rayDirX0 = dirX - planeX, rayDirY0 = dirY - planeY, rayDirX1 = dirX + planeX, rayDirY1 = dirY + planeY;
     const buf = this.buf, nLights = this._ln, lc = this._lc;
+    const fType = map.floorType, hasTerrain = map.hasTerrain, W = map.W, Hh = map.H;
+    const t = this._time, rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
     for (let y = 0; y < RENDER_H; y++) {
       const isFloor = y > horizon;
       const pRow = isFloor ? (y - horizon) : (horizon - y);
@@ -350,9 +352,16 @@ export class Renderer {
       const ft = fogT(rowDist), fog = this._fog, rowOff = y * RENDER_W;
       const tex = isFloor ? fp : cp, tw = isFloor ? fw : ch;
       for (let x = 0; x < RENDER_W; x++) {
-        let tx = (fx - Math.floor(fx)) * tw | 0, ty = (fy - Math.floor(fy)) * tw | 0;
-        if (tx < 0) tx += tw; if (ty < 0) ty += tw;
-        const c = tex[(ty * tw + tx) | 0];
+        let water = false;
+        if (isFloor && hasTerrain) { const cx = Math.floor(fx), cy = Math.floor(fy); if (cx >= 0 && cy >= 0 && cx < W && cy < Hh && fType[cy * W + cx]) water = true; }
+        let c;
+        if (water) {
+          let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0, ty = (fy + roy - Math.floor(fy + roy)) * ww | 0;
+          if (tx < 0) tx += ww; if (ty < 0) ty += ww; c = wp[(ty * ww + tx) | 0];
+        } else {
+          let tx = (fx - Math.floor(fx)) * tw | 0, ty = (fy - Math.floor(fy)) * tw | 0;
+          if (tx < 0) tx += tw; if (ty < 0) ty += tw; c = tex[(ty * tw + tx) | 0];
+        }
         if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
         else buf[rowOff + x] = shadeFog(c, light, fog, ft);
         fx += stepX; fy += stepY;
@@ -368,11 +377,14 @@ export class Renderer {
     const map = game.map, buf = this.buf, W = map.W, H = map.H, blockH = map.blockH;
     const cellChar = map.cellChar, RH = RENDER_H, fog = this._fog, nLights = this._ln, lc = this._lc;
     const sideTex = TEX.stone || TEX.tech, topTex = TEX.metal || TEX.floor2 || TEX.floor;
+    const waterTex = TEX.water || sideTex, fType = map.floorType, tNow = this._time;
+    const wfall = (tNow * 1.6) % 1;   // waterfall scroll phase (rows/sec down the riser)
     const bD = this._hbD || (this._hbD = new Float32Array(64));
     const bDx = this._hbDx || (this._hbDx = new Float32Array(64));
     const bH = this._hbH || (this._hbH = new Float32Array(64));
     const bS = this._hbS || (this._hbS = new Int8Array(64));
     const bU = this._hbU || (this._hbU = new Float32Array(64));
+    const bW = this._hbW || (this._hbW = new Uint8Array(64));
 
     for (let x = 0; x < RENDER_W; x++) {
       const cameraX = 2 * x / RENDER_W - 1;
@@ -401,7 +413,7 @@ export class Renderer {
         if (h > 0 && nb < 64) {
           let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
           if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u;
-          bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; nb++;
+          bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; bW[nb] = (fType && fType[idx]) ? 1 : 0; nb++;
         }
       }
       this.zbuf[x] = wallDist;
@@ -435,21 +447,25 @@ export class Renderer {
         if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
         const lit = (lr + lg + lb) > 1e-4;
         const invSpan = RH / d;
-        // front face z=0..h
+        const isWater = bW[i] === 1;
+        // front face z=0..h — flowing water for waterfall blocks, else stone
+        const faceTex = isWater ? waterTex : sideTex;
         const yTopF = horizon + (camZ - h) * RH / d, yBotF = horizon + camZ * RH / d;
-        const th = sideTex.h, tw = sideTex.w;
+        const th = faceTex.h, tw = faceTex.w, fpx = faceTex.pixels;
         let texX = (bU[i] * tw) | 0; if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
         const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(RH - 1, Math.floor(yBotF));
         for (let y = y0; y <= y1; y++) {
           const worldZ = camZ - (y - horizon) / invSpan;             // h..0
-          let v = worldZ - Math.floor(worldZ);
+          let v = isWater ? ((-worldZ * 1.5 - wfall) % 1) : (worldZ - Math.floor(worldZ));
+          if (v < 0) v += 1;
           let ty = (v * th) | 0; if (ty < 0) ty += th; if (ty >= th) ty = th - 1;
-          const c = sideTex.pixels[ty * tw + texX];
+          const c = fpx[ty * tw + texX];
           buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
         }
         // top face z=h (only visible when below the eye)
         if (h < camZ - 0.02) {
-          const ttw = topTex.w, tpx = topTex.pixels;
+          const tt = isWater ? waterTex : topTex, ttw = tt.w, tpx = tt.pixels;
+          const wox = isWater ? Math.sin(tNow * 1.7) * 3 : 0, woy = isWater ? Math.cos(tNow * 1.3) * 3 : 0;
           const yFar = horizon + (camZ - h) * RH / dEx, yNear = horizon + (camZ - h) * RH / d;
           const yy0 = Math.max(0, Math.ceil(yFar)), yy1 = Math.min(RH - 1, Math.floor(yNear));
           for (let y = yy0; y <= yy1; y++) {
@@ -457,7 +473,7 @@ export class Renderer {
             const dRow = (camZ - h) * RH / (y - horizon);
             if (dRow < d - 0.03 || dRow > dEx + 0.03) continue;
             const wx = p.x + dRow * rayDirX, wy = p.y + dRow * rayDirY;
-            let tx = (wx - Math.floor(wx)) * ttw | 0, ty = (wy - Math.floor(wy)) * ttw | 0;
+            let tx = (wx + wox - Math.floor(wx + wox)) * ttw | 0, ty = (wy + woy - Math.floor(wy + woy)) * ttw | 0;
             if (tx < 0) tx += ttw; if (ty < 0) ty += ttw;
             const c = tpx[(ty * ttw + tx) | 0];
             const l2 = lightFor(dRow), f2 = fogT(dRow);
