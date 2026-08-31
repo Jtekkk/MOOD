@@ -59,6 +59,49 @@ export class Renderer {
     this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
     this._sprites(game, p, dirX, dirY, planeX, planeY, horizon);
     this._particles(game, p, dirX, dirY, planeX, planeY, horizon);
+    this._bloom();
+  }
+
+  // Light bloom: bright pixels (lamps, plasma, explosions, muzzle) bleed a soft
+  // glow. Bright-pass at half res, separable blur, add back — additive.
+  _bloom() {
+    const W = RENDER_W, H = RENDER_H, BW = W >> 1, BH = H >> 1, N = BW * BH;
+    if (!this._blR) { this._blR = new Float32Array(N); this._blG = new Float32Array(N); this._blB = new Float32Array(N); this._blT = new Float32Array(N); }
+    const br = this._blR, bg = this._blG, bb = this._blB, tmp = this._blT, buf = this.buf;
+    const TH = 164;                         // brightness threshold
+    // 1) bright-pass + 2x2 downsample
+    for (let by = 0; by < BH; by++) {
+      const sy = by << 1, drow = by * BW;
+      for (let bx = 0; bx < BW; bx++) {
+        const sx = bx << 1;
+        const c0 = buf[sy * W + sx], c1 = buf[sy * W + sx + 1], c2 = buf[(sy + 1) * W + sx], c3 = buf[(sy + 1) * W + sx + 1];
+        const r = ((c0 & 0xff) + (c1 & 0xff) + (c2 & 0xff) + (c3 & 0xff)) * 0.25;
+        const g = (((c0 >>> 8) & 0xff) + ((c1 >>> 8) & 0xff) + ((c2 >>> 8) & 0xff) + ((c3 >>> 8) & 0xff)) * 0.25;
+        const b = (((c0 >>> 16) & 0xff) + ((c1 >>> 16) & 0xff) + ((c2 >>> 16) & 0xff) + ((c3 >>> 16) & 0xff)) * 0.25;
+        const lum = 0.3 * r + 0.6 * g + 0.1 * b, i = drow + bx;
+        if (lum > TH) { const f = (lum - TH) / lum; br[i] = r * f; bg[i] = g * f; bb[i] = b * f; }
+        else { br[i] = 0; bg[i] = 0; bb[i] = 0; }
+      }
+    }
+    // 2) separable box blur (two passes → soft gaussian-ish glow)
+    for (let pass = 0; pass < 2; pass++) {
+      boxBlurH(br, tmp, BW, BH, 2); boxBlurV(br, tmp, BW, BH, 2);
+      boxBlurH(bg, tmp, BW, BH, 2); boxBlurV(bg, tmp, BW, BH, 2);
+      boxBlurH(bb, tmp, BW, BH, 2); boxBlurV(bb, tmp, BW, BH, 2);
+    }
+    // 3) add back at full res (nearest upsample), additive with clamp
+    const K = 1.3;
+    for (let y = 0; y < H; y++) {
+      const srow = (y >> 1) * BW, drow = y * W;
+      for (let x = 0; x < W; x++) {
+        const bi = srow + (x >> 1), addR = br[bi] * K;
+        if (addR < 1.2 && bg[bi] * K < 1.2 && bb[bi] * K < 1.2) continue;
+        const c = buf[drow + x];
+        let r = (c & 0xff) + addR, g = ((c >>> 8) & 0xff) + bg[bi] * K, b = ((c >>> 16) & 0xff) + bb[bi] * K;
+        if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+        buf[drow + x] = (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+      }
+    }
   }
 
   // Collect the active point lights for this frame into flat typed arrays:
@@ -390,6 +433,31 @@ function shadePacked(c, f) {
   const g = ((c >>> 8) & 0xff) * f & 0xff;
   const b = ((c >>> 16) & 0xff) * f & 0xff;
   return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+}
+
+// Separable box blur over a Float32 plane (used by the bloom pass).
+function boxBlurH(src, tmp, W, H, R) {
+  const inv = 1 / (2 * R + 1);
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    for (let x = 0; x < W; x++) {
+      let s = 0;
+      for (let k = -R; k <= R; k++) { let xx = x + k; if (xx < 0) xx = 0; else if (xx >= W) xx = W - 1; s += src[row + xx]; }
+      tmp[row + x] = s * inv;
+    }
+  }
+  src.set(tmp);
+}
+function boxBlurV(src, tmp, W, H, R) {
+  const inv = 1 / (2 * R + 1);
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) {
+      let s = 0;
+      for (let k = -R; k <= R; k++) { let yy = y + k; if (yy < 0) yy = 0; else if (yy >= H) yy = H - 1; s += src[yy * W + x]; }
+      tmp[y * W + x] = s * inv;
+    }
+  }
+  src.set(tmp);
 }
 
 // Like shadeFog, but adds per-channel dynamic light (lr,lg,lb) before fog.
