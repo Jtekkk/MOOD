@@ -179,6 +179,7 @@ export class Game {
         const def = ENEMY_TYPES[type];
         this.entities.push({
           kind: 'enemy', type, def, x, y, angle: 0,
+          z: map.hasHeights ? map.blockH[Math.floor(y) * map.W + Math.floor(x)] : 0,
           hp: def.hp, radius: def.radius, spriteH: def.spriteH, vOffset: def.vOffset || 0,
           fullbright: def.fullbright || false,
           mass: def.mass || 1, kx: 0, ky: 0, target: 'player',
@@ -859,17 +860,25 @@ export class Game {
     if (!this._blockedEnemy(e, e.x + mvx, e.y, e.radius)) e.x += mvx;
     else if (!this._blockedEnemy(e, e.x + mvx, e.y + (mvy >= 0 ? e.radius : -e.radius) * 0.3, e.radius)) e.x += mvx * 0.5;
     if (!this._blockedEnemy(e, e.x, e.y + mvy, e.radius)) e.y += mvy;
+    if (this.map.hasHeights) {
+      const cx = Math.floor(e.x), cy = Math.floor(e.y);
+      e.z = (cx >= 0 && cy >= 0 && cx < this.map.W && cy < this.map.H) ? this.map.blockH[cy * this.map.W + cx] : 0;
+    }
   }
 
   _blockedEnemy(self, x, y, r) {
+    const map = this.map;
     const x0 = Math.floor(x - r), x1 = Math.floor(x + r);
     const y0 = Math.floor(y - r), y1 = Math.floor(y + r);
+    const climb = (self.z || 0) + 0.28;
     for (let cy = y0; cy <= y1; cy++)
-      for (let cx = x0; cx <= x1; cx++)
-        if (this._cellBlocks(cx, cy)) {
+      for (let cx = x0; cx <= x1; cx++) {
+        const tall = map.hasHeights && cx >= 0 && cy >= 0 && cx < map.W && cy < map.H && map.blockH[cy * map.W + cx] > climb;
+        if (this._cellBlocks(cx, cy) || tall) {
           const nx = clamp(x, cx, cx + 1), ny = clamp(y, cy, cy + 1);
           if ((x - nx) ** 2 + (y - ny) ** 2 < r * r) return true;
         }
+      }
     // avoid overlapping other monsters / barrels / player
     for (const o of this.entities) {
       if (o === self || !o.alive) continue;
