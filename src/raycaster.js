@@ -544,6 +544,9 @@ export class Renderer {
         lr = this._lc[0]; lg = this._lc[1]; lb = this._lc[2];
       }
       const lit = (lr + lg + lb) > 0.0001;
+      // Spectre: a shimmering, near-invisible fuzz — a moving dither that shows
+      // only a fraction of pixels, darkened, so it reads as a heat-haze shadow.
+      const fuzz = e.fuzz ? ((this._time * 30) | 0) : 0;
       const tw = sprite.w, th = sprite.h, px = sprite.pixels;
       for (let x = x0; x <= x1; x++) {
         if (tY >= this.zbuf[x]) continue;             // behind a wall
@@ -555,8 +558,10 @@ export class Renderer {
           if (texY < 0 || texY >= th) continue;
           const c = px[texY * tw + texX];
           if ((c >>> 24) < 128) continue;             // transparent / soft edge
+          if (e.fuzz && (((x * 5 + y * 3 + fuzz) & 3) !== 0)) continue;   // sparse shimmer
           let out = lit ? shadeLit(c, light, fog, ft, lr, lg, lb)
             : (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
+          if (e.fuzz) out = shadePacked(out, 0.5);
           if (flash) out = whiten(out, flash);
           buf[y * RENDER_W + x] = out;
         }

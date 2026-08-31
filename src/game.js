@@ -182,7 +182,7 @@ export class Game {
           kind: 'enemy', type, def, x, y, angle: 0,
           z: map.hasHeights ? map.blockH[Math.floor(y) * map.W + Math.floor(x)] : 0,
           hp: def.hp, radius: def.radius, spriteH: def.spriteH, vOffset: def.vOffset || 0,
-          fullbright: def.fullbright || false,
+          fullbright: def.fullbright || false, fuzz: def.fuzz || false,
           mass: def.mass || 1, kx: 0, ky: 0, target: 'player',
           state: 'idle', stateTime: 0, walkTime: 0, cooldownTimer: 0,
           attackTime: 0, didAttack: false, alive: true, sprite: SPR[def.prefix + '_walk0'],

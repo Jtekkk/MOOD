@@ -144,6 +144,9 @@ find the matching keycard.
   launcher, plasma rifle, and the BFG 9000 — hitscan with pellet spread, plus
   splash-damage, rapid-energy, and a screen-shaking BFG blast, across four
   ammo types.
+- **The Spectre** — a near-invisible Demon that reads as a shimmering heat-haze
+  (a moving dither over the demon silhouette), fast and melee, lurking in the
+  later levels.
 - **Six enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull

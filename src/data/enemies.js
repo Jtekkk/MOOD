@@ -21,6 +21,12 @@ export const ENEMY_TYPES = {
     attack: 'melee', range: 1.1, dmg: [4, 16], cooldown: 0.8,
     painChance: 0.35,
   },
+  spectre: {
+    name: 'SPECTRE', prefix: 'demon', fuzz: true,
+    hp: 150, speed: 3.5, radius: 0.40, spriteH: 1.0, mass: 2.2,
+    attack: 'melee', range: 1.1, dmg: [4, 18], cooldown: 0.75,
+    painChance: 0.3,
+  },
   caco: {
     name: 'CACODEMON', prefix: 'caco',
     hp: 250, speed: 1.5, radius: 0.46, spriteH: 1.35, vOffset: 0.45, float: true, mass: 2.8,
@@ -47,7 +53,7 @@ export const ENEMY_TYPES = {
   },
 };
 
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).
