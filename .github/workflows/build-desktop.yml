@@ -63,7 +63,9 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    # publish on tags (a versioned release) AND on dev-branch pushes (a rolling
+    # "dev-latest" prerelease), so there's always a one-click installer link.
+    if: ${{ needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -76,9 +78,18 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            artifacts/**/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "MOOD ${GITHUB_REF_NAME}" \
-            --notes "Automated desktop builds (Windows .exe, macOS .dmg, Linux AppImage)."
+          set -e
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"; TITLE="MOOD ${GITHUB_REF_NAME}"; PRE=""
+          else
+            TAG="dev-latest"; TITLE="MOOD — latest dev build"; PRE="--prerelease"
+            gh release delete "$TAG" --cleanup-tag --yes --repo "$REPO" || true
+          fi
+          gh release create "$TAG" artifacts/*/* \
+            --repo "$REPO" \
+            --target "$SHA" \
+            --title "$TITLE" $PRE \
+            --notes "Automated desktop builds — Windows installer + portable .exe, macOS .dmg, Linux AppImage. Built from commit ${SHA:0:7}. Unsigned, so Windows SmartScreen / macOS Gatekeeper will warn on first launch (More info → Run anyway)."
