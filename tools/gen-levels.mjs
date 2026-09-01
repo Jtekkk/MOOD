@@ -24,29 +24,29 @@ function overlap(a, b, gap) {
 const KEY = { red: { key: 'R', door: 'r' }, blue: { key: 'U', door: 'b' }, yellow: { key: 'Y', door: 'y' } };
 
 const CONFIGS = [
-  { name: 'LEVEL 4: REFINERY', w: 34, h: 24, rooms: 8, key: 'red',
+  { name: 'LEVEL 4: REFINERY', w: 46, h: 32, rooms: 11, key: 'red',
     theme: { primary: '#', accents: ['C', 'L', 'M', 'P'] }, floor: 'floor', ceil: 'ceil', sky: '#20242c',
-    enemies: { z: 6, i: 5, d: 2, c: 0 }, water: { ponds: 1, streams: 1 }, weapons: ['2'], barrels: 4, lamps: 5,
+    enemies: { z: 4, i: 3, d: 1, c: 0 }, water: { ponds: 1, streams: 1 }, weapons: ['2'], barrels: 4, lamps: 9,
     items: { h: 4, H: 2, p: 3, a: 1, l: 3, L: 2, s: 3, S: 1 } },
-  { name: 'LEVEL 5: FOUNDRY', w: 36, h: 24, rooms: 9, key: 'blue',
+  { name: 'LEVEL 5: FOUNDRY', w: 48, h: 32, rooms: 12, key: 'blue',
     theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
-    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5, lamps: 6, secret: 1, secretReward: 'g',
+    enemies: { z: 3, i: 4, d: 2, c: 1, f: 1 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5, lamps: 10, secret: 1, secretReward: 'g',
     items: { h: 4, H: 2, p: 3, a: 1, A: 1, l: 2, L: 3, s: 2, S: 2 } },
-  { name: 'LEVEL 6: THE WOUND', w: 36, h: 26, rooms: 9, key: 'yellow',
+  { name: 'LEVEL 6: THE WOUND', w: 48, h: 34, rooms: 12, key: 'yellow',
     theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
-    enemies: { z: 3, i: 6, d: 4, c: 2, f: 3 }, outdoor: 1, weapons: ['3'], barrels: 4, lamps: 7, dais: 1,
+    enemies: { z: 2, i: 4, d: 2, c: 1, f: 2 }, outdoor: 1, weapons: ['3'], barrels: 4, lamps: 11, dais: 1, ceils: 1,
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, g: 1, s: 3, S: 2, r: 1, e: 2 } },
-  { name: 'LEVEL 7: RUSTWORKS', w: 38, h: 26, rooms: 10, key: 'red',
+  { name: 'LEVEL 7: RUSTWORKS', w: 50, h: 34, rooms: 13, key: 'red',
     theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
-    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6, lamps: 8, secret: 1, secretReward: 'V',
+    enemies: { z: 3, i: 4, d: 2, c: 2, f: 2 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6, lamps: 12, secret: 1, secretReward: 'V',
     items: { v: 1, h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 2, e: 2 } },
-  { name: 'LEVEL 8: CRYPTWORKS', w: 38, h: 28, rooms: 11, key: 'blue',
+  { name: 'LEVEL 8: CRYPTWORKS', w: 52, h: 36, rooms: 14, key: 'blue',
     theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
-    enemies: { z: 5, i: 8, d: 5, c: 3, f: 4, B: 1, x: 2, P: 1, j: 1 }, outdoor: 1, weapons: ['6'], barrels: 5, lamps: 9, dais: 1,
+    enemies: { z: 3, i: 5, d: 3, c: 2, f: 2, B: 1, x: 1, P: 1, j: 1 }, outdoor: 1, weapons: ['6'], barrels: 5, lamps: 13, dais: 1, ceils: 1,
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
-  { name: 'LEVEL 9: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
+  { name: 'LEVEL 9: ICON', w: 54, h: 38, rooms: 15, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3, x: 3, P: 2, j: 2 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 10, dais: 1, secret: 1, secretReward: '7',
+    enemies: { z: 3, i: 5, d: 3, c: 3, f: 3, B: 2, x: 2, P: 1, j: 2 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 14, dais: 1, ceils: 1, secret: 1, secretReward: '7',
     items: { V: 1, k: 1, v: 1, h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 
@@ -218,6 +218,20 @@ function genLevel(cfg, seed) {
     }
   }
 
+  // ----- ceilings: passages sit lower than rooms, and the two largest rooms
+  // soar into halls — multi-elevation architecture spread across the level -----
+  const cg = Array.from({ length: H }, () => Array(W).fill('.'));
+  if (cfg.ceils) {
+    const inRoom = (x, y) => rooms.some((r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      if (g[y][x] === '.' && !inRoom(x, y)) cg[y][x] = '3';   // corridor / passage → 2.1
+    }
+    const big = rooms.slice().sort((a, b) => (b.w * b.h) - (a.w * a.h)).slice(0, 2);
+    for (const r of big) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) {
+      if (g[y][x] === '.') cg[y][x] = '8';                    // soaring hall → 3.6
+    }
+  }
+
   // ----- a secret closet: a hidden reward behind a disguised '%' door -----
   if (cfg.secret) {
     const solidWall = (x, y) => g[y] && g[y][x] && g[y][x] !== '.' && g[y][x] !== '+' && !'Dry b%~^O'.includes(g[y][x]);
@@ -250,6 +264,7 @@ function genLevel(cfg, seed) {
     name: cfg.name, floor: cfg.floor, ceil: cfg.ceil, sky: cfg.sky, startAngle: 0,
     walls: g.map((row) => row.join('')), things: t.map((row) => row.join('')),
     terrain: tr.map((row) => row.join('')), heights: hg.map((row) => row.join('')),
+    ceils: cg.map((row) => row.join('')),
   };
 }
 
@@ -308,7 +323,7 @@ let src = `// AUTO-GENERATED by tools/gen-levels.mjs — do not edit by hand; re
 // 6 procedurally built, fully-validated levels (3..8).
 export const GEN_LEVELS = [\n`;
 for (const lv of levels) {
-  src += `  {\n    name: '${lv.name}',\n    floor: '${lv.floor}', ceil: '${lv.ceil}', skyTint: '${lv.sky}',\n    startAngle: ${lv.startAngle},\n    walls: [\n${esc(lv.walls)},\n    ],\n    things: [\n${esc(lv.things)},\n    ],\n    terrain: [\n${esc(lv.terrain)},\n    ],\n    heights: [\n${esc(lv.heights)},\n    ],\n  },\n`;
+  src += `  {\n    name: '${lv.name}',\n    floor: '${lv.floor}', ceil: '${lv.ceil}', skyTint: '${lv.sky}',\n    startAngle: ${lv.startAngle},\n    walls: [\n${esc(lv.walls)},\n    ],\n    things: [\n${esc(lv.things)},\n    ],\n    terrain: [\n${esc(lv.terrain)},\n    ],\n    heights: [\n${esc(lv.heights)},\n    ],\n    ceils: [\n${esc(lv.ceils)},\n    ],\n  },\n`;
 }
 src += `];\n`;
 writeFileSync(new URL('../src/data/levels.gen.js', import.meta.url), src);
