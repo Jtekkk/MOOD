@@ -38,7 +38,7 @@ export const WALL_TEX = {
 // every non-door wall glyph (the 6 originals + the 12 new surfaces)
 export const SOLID = new Set(['#', 'B', 'M', 'S', 'A', '+',
   'C', 'H', 'V', 'P', 'W', 'K', 'T', 'L', 'Z', 'X', 'Q', 'N']);
-export const DOORS = new Set(['D', 'r', 'b', 'y']);
+export const DOORS = new Set(['D', 'r', 'b', 'y', '%']);   // '%' = disguised secret door
 export const DOOR_LOCK = { 'r': 'red', 'b': 'blue', 'y': 'yellow' };
 
 const E1M1 = {
@@ -359,11 +359,21 @@ export function parseLevel(def) {
       // axis 'h' (slides along x, blocks N-S) when E/W neighbours are walls.
       const ewWalls = isWall(x - 1, y) && isWall(x + 1, y);
       const axis = ewWalls ? 'h' : 'v';
+      const secret = ch === '%';
+      // a secret door wears a neighbouring wall's texture so it hides in plain sight
+      let tex = WALL_TEX[ch];
+      if (secret) {
+        tex = 'brick';
+        for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+          const nc = cellChar[ny * W + nx];
+          if (nc && SOLID.has(nc) && WALL_TEX[nc]) { tex = WALL_TEX[nc]; break; }
+        }
+      }
       doors.push({
         x, y, axis,
         open: 0, state: 'closed', timer: 0,
-        lock: DOOR_LOCK[ch] || null,
-        tex: WALL_TEX[ch],
+        lock: DOOR_LOCK[ch] || null, secret, found: false,
+        tex,
       });
     }
   }
@@ -380,6 +390,7 @@ export function parseLevel(def) {
 
   return {
     name: def.name, W, H, cells, cellChar, doors, things, floorType, ceilType, hasTerrain, blockH, hasHeights,
+    totalSecrets: doors.reduce((n, d) => n + (d.secret ? 1 : 0), 0),
     floor: def.floor, ceil: def.ceil, skyTint: def.skyTint || '#1a1d24',
     start: start || { x: 1.5, y: 1.5 }, startAngle: def.startAngle || 0,
   };

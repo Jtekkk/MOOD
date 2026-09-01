@@ -30,7 +30,7 @@ const CONFIGS = [
     items: { h: 4, H: 2, p: 3, a: 1, l: 3, L: 2, s: 3, S: 1 } },
   { name: 'LEVEL 5: FOUNDRY', w: 36, h: 24, rooms: 9, key: 'blue',
     theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
-    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5, lamps: 6,
+    enemies: { z: 5, i: 6, d: 3, c: 1, f: 2 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5, lamps: 6, secret: 1, secretReward: 'g',
     items: { h: 4, H: 2, p: 3, a: 1, A: 1, l: 2, L: 3, s: 2, S: 2 } },
   { name: 'LEVEL 6: THE WOUND', w: 36, h: 26, rooms: 9, key: 'yellow',
     theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
@@ -38,7 +38,7 @@ const CONFIGS = [
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, g: 1, s: 3, S: 2, r: 1, e: 2 } },
   { name: 'LEVEL 7: RUSTWORKS', w: 38, h: 26, rooms: 10, key: 'red',
     theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
-    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6, lamps: 8,
+    enemies: { z: 5, i: 7, d: 4, c: 3, f: 3 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6, lamps: 8, secret: 1, secretReward: 'V',
     items: { v: 1, h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 2, e: 2 } },
   { name: 'LEVEL 8: CRYPTWORKS', w: 38, h: 28, rooms: 11, key: 'blue',
     theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
@@ -46,7 +46,7 @@ const CONFIGS = [
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 9: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3, x: 3, P: 2 }, boss: 'G', outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 10, dais: 1,
+    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3, x: 3, P: 2 }, boss: 'G', outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 10, dais: 1, secret: 1, secretReward: '7',
     items: { V: 1, k: 1, v: 1, h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 
@@ -215,6 +215,34 @@ function genLevel(cfg, seed) {
         const step = Math.min(ring, 3);
         if (step >= 1) hg[y][x] = String(step);   // '1'..'3' → 0.2 / 0.4 / 0.6
       }
+    }
+  }
+
+  // ----- a secret closet: a hidden reward behind a disguised '%' door -----
+  if (cfg.secret) {
+    const solidWall = (x, y) => g[y] && g[y][x] && g[y][x] !== '.' && g[y][x] !== '+' && !'Dry b%~^O'.includes(g[y][x]);
+    const cand = rooms.slice(1, rooms.length - 1);
+    for (let i = cand.length - 1; i > 0; i--) { const j = irnd(rng, i + 1); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    let placed = false;
+    for (const r of cand) {
+      const my = r.y + (r.h >> 1), mx = r.x + (r.w >> 1);
+      const sides = [{ ix: r.x, iy: my, dx: -1, dy: 0 }, { ix: r.x + r.w - 1, iy: my, dx: 1, dy: 0 },
+        { ix: mx, iy: r.y, dx: 0, dy: -1 }, { ix: mx, iy: r.y + r.h - 1, dx: 0, dy: 1 }];
+      for (const s of sides) {
+        const dX = s.ix + s.dx, dY = s.iy + s.dy;         // door (a wall cell → '%')
+        const cX = dX + s.dx, cY = dY + s.dy;             // closet floor
+        const bX = cX + s.dx, bY = cY + s.dy;             // must stay solid behind
+        if (cX <= 1 || cY <= 1 || cX >= W - 2 || cY >= H - 2) continue;
+        if (g[s.iy][s.ix] !== '.') continue;
+        if (!solidWall(dX, dY) || !solidWall(cX, cY)) continue;
+        const perp = s.dx === 0 ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]];
+        if (!solidWall(cX + perp[0][0], cY + perp[0][1]) || !solidWall(cX + perp[1][0], cY + perp[1][1])) continue;
+        if (!solidWall(bX, bY)) continue;
+        if (!solidWall(dX + perp[0][0], dY + perp[0][1]) || !solidWall(dX + perp[1][0], dY + perp[1][1])) continue;
+        g[dY][dX] = '%'; g[cY][cX] = '.'; t[cY][cX] = cfg.secretReward || 'g';
+        placed = true; break;
+      }
+      if (placed) break;
     }
   }
 

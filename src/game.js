@@ -169,6 +169,8 @@ export class Game {
     this.levelStartT = this.timer;
     this.totalItems = this.entities.filter((e) => e.kind === 'item').length;
     this.itemsTaken = 0;
+    this.player.secrets = 0;
+    this.totalSecrets = map.totalSecrets || 0;
     this.audio.playTrack(index);     // per-level background music
     this.message(def.name);
   }
@@ -411,6 +413,7 @@ export class Game {
           this.message(`You need a ${door.lock} keycard.`);
         } else if (door.state === 'closed' || door.state === 'closing') {
           door.state = 'opening'; this.audio.play('door');
+          if (door.secret && !door.found) { door.found = true; p.secrets++; this.message('A SECRET IS REVEALED!'); }
         }
         return;
       }
@@ -965,6 +968,7 @@ export class Game {
       level: LEVELS[this.levelIndex].name,
       kills: this.player.kills, total: this.player.totalKills,
       items: this.itemsTaken || 0, totalItems: this.totalItems || 0,
+      secrets: this.player.secrets || 0, totalSecrets: this.totalSecrets || 0,
       time: Math.max(0, this.timer - (this.levelStartT || 0)),
       next: this.levelIndex + 1 < LEVELS.length,
     };

@@ -368,17 +368,17 @@ export function drawIntermission(ctx, game) {
   const tstr = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   ctx.textAlign = 'left'; ctx.font = '10px monospace';
   const lx = RENDER_W / 2 - 56;
-  ctx.fillStyle = '#d83030'; ctx.fillText('KILLS', lx, 80);
-  ctx.fillStyle = '#3a9adf'; ctx.fillText('ITEMS', lx, 96);
-  ctx.fillStyle = '#cfcf40'; ctx.fillText('TIME', lx, 112);
-  ctx.textAlign = 'right'; const rx = RENDER_W / 2 + 60;
-  ctx.fillStyle = '#eaeaea';
-  ctx.fillText(`${tally.kills} / ${tally.total}   ${kpct}%`, rx, 80);
-  ctx.fillText(`${tally.items} / ${tally.totalItems}   ${ipct}%`, rx, 96);
-  ctx.fillText(tstr, rx, 112);
+  const rx = RENDER_W / 2 + 60;
+  const showSecret = (tally.totalSecrets || 0) > 0;
+  let ry = 80;
+  const row = (label, col, value) => { ctx.textAlign = 'left'; ctx.fillStyle = col; ctx.fillText(label, lx, ry); ctx.textAlign = 'right'; ctx.fillStyle = '#eaeaea'; ctx.fillText(value, rx, ry); ry += 16; };
+  row('KILLS', '#d83030', `${tally.kills} / ${tally.total}   ${kpct}%`);
+  row('ITEMS', '#3a9adf', `${tally.items} / ${tally.totalItems}   ${ipct}%`);
+  if (showSecret) { const spct = Math.round((tally.secrets / tally.totalSecrets) * 100); row('SECRETS', '#40c060', `${tally.secrets} / ${tally.totalSecrets}   ${spct}%`); }
+  row('TIME', '#cfcf40', tstr);
   ctx.textAlign = 'center'; ctx.font = '8px monospace';
   ctx.fillStyle = (Math.sin(game.timer * 4) > 0) ? '#ffd040' : '#998';
-  ctx.fillText(tally.next ? 'press ENTER for the next level' : 'press ENTER', RENDER_W / 2, 138);
+  ctx.fillText(tally.next ? 'press ENTER for the next level' : 'press ENTER', RENDER_W / 2, ry + 8);
 }
 
 export function drawVictory(ctx, t) {

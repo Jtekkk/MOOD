@@ -152,7 +152,7 @@ find the matching keycard.
 - **Gibbing:** overkill hits (rockets, the BFG, point-blank shells) burst a
   monster into a spray of gore and snap it straight to its final gib frame,
   with a wet splat.
-- **Six enemy types** with a real AI state machine (idle → chase → attack →
+- **Eight enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
   charger), and the Baron of Hell (600-HP green-fireball boss). Ranged monsters
@@ -202,8 +202,8 @@ find the matching keycard.
 - **Nine levels** — three hand-authored (Entryway, Underhalls, The Ascent) plus six
   procedurally generated (`tools/gen-levels.mjs`): rooms-and-corridors layouts,
   each with its own surface theme, a key-gated exit, and a rising
-  enemy/difficulty curve. A title screen, level-complete intermission (kills /
-  items / time tally), death/respawn, and a final victory screen tie them
+  enemy/difficulty curve. A title screen, level-complete intermission (kills / items /
+  secrets / time tally), death/respawn, and a final victory screen tie them
   together.
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
