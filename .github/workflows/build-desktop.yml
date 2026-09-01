@@ -1,8 +1,11 @@
 name: Build desktop apps
 
 # Builds the Electron desktop bundles on each OS's native runner — so the
-# Windows runner produces a real .exe (installer + portable). Artifacts are
-# uploaded to the run; pushing a v* tag also publishes them to a Release.
+# Windows runner produces a real .exe (installer + portable). Windows + Linux
+# are the required builds and gate the release; macOS runs in parallel as a
+# best-effort extra so its (often slow / queued) free-tier runner never holds
+# up the Windows installer. On every dev-branch push the release job refreshes
+# a rolling "dev-latest" prerelease; a v* tag cuts a versioned release.
 on:
   workflow_dispatch:        # manual "Run workflow" button (once on the default branch)
   push:
@@ -15,6 +18,8 @@ permissions:
   contents: write           # needed for the release job (uses the built-in token)
 
 jobs:
+  # Required builds: Windows (.exe installer + portable) and Linux (AppImage).
+  # These are fast and reliable, and the release waits only on them.
   build:
     strategy:
       fail-fast: false
@@ -23,15 +28,10 @@ jobs:
           - os: windows-latest
             args: --win --x64
             artifact: MOOD-windows
-          - os: macos-latest
-            args: --mac
-            artifact: MOOD-macos
           - os: ubuntu-latest
             args: --linux
             artifact: MOOD-linux
     runs-on: ${{ matrix.os }}
-    # Don't let a macOS/Linux hiccup block the Windows .exe or the release.
-    continue-on-error: ${{ matrix.os != 'windows-latest' }}
     env:
       CSC_IDENTITY_AUTODISCOVERY: false   # don't try to code-sign (no certs in CI)
     steps:
@@ -58,11 +58,34 @@ jobs:
           if-no-files-found: ignore
           path: |
             dist-electron/*.exe
-            dist-electron/*.dmg
             dist-electron/*.AppImage
 
+  # Best-effort macOS build — NOT required by the release, so a queued/slow
+  # macOS runner can't delay the Windows installer. Its .dmg is picked up by
+  # whichever release run happens to find it ready.
+  macos:
+    runs-on: macos-latest
+    continue-on-error: true
+    env:
+      CSC_IDENTITY_AUTODISCOVERY: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build desktop bundle
+        run: npx --no-install electron-builder --mac --publish never
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOOD-macos
+          if-no-files-found: ignore
+          path: dist-electron/*.dmg
+
   release:
-    needs: build
+    needs: build              # only the required Windows + Linux builds
     # publish on tags (a versioned release) AND on dev-branch pushes (a rolling
     # "dev-latest" prerelease), so there's always a one-click installer link.
     if: ${{ needs.build.result == 'success' }}
@@ -70,10 +93,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download all build artifacts
+      - name: Download available build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          # grab whatever has finished — macOS may still be building, that's fine
 
       - name: Publish GitHub Release
         env:
@@ -92,4 +116,4 @@ jobs:
             --repo "$REPO" \
             --target "$SHA" \
             --title "$TITLE" $PRE \
-            --notes "Automated desktop builds — Windows installer + portable .exe, macOS .dmg, Linux AppImage. Built from commit ${SHA:0:7}. Unsigned, so Windows SmartScreen / macOS Gatekeeper will warn on first launch (More info → Run anyway)."
+            --notes "Automated desktop builds — Windows installer + portable .exe and Linux AppImage (macOS .dmg included when its build finishes in time). Built from commit ${SHA:0:7}. Unsigned, so Windows SmartScreen / macOS Gatekeeper will warn on first launch (More info → Run anyway)."
