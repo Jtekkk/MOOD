@@ -147,6 +147,11 @@ find the matching keycard.
 - **The Spectre** — a near-invisible Demon that reads as a shimmering heat-haze
   (a moving dither over the demon silhouette), fast and melee, lurking in the
   later levels.
+- **The Pain Elemental** — a floating maw that belches **Lost Souls** at you
+  (capped so the swarm can't run away), turning any fight into a spawn-camp.
+- **Gibbing:** overkill hits (rockets, the BFG, point-blank shells) burst a
+  monster into a spray of gore and snap it straight to its final gib frame,
+  with a wet splat.
 - **Six enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull

@@ -22,6 +22,7 @@ const BLOOD = [rgba(150, 22, 22), rgba(110, 14, 14), rgba(90, 6, 6), rgba(180, 4
 const SPARKS = [rgba(255, 224, 130), rgba(255, 170, 50), rgba(220, 220, 230)];
 const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(60, 50, 45)];
 const WATER = [rgba(150, 220, 255), rgba(90, 170, 220), rgba(210, 240, 255), rgba(120, 195, 235)];
+const GIB = [rgba(190, 40, 40), rgba(140, 20, 24), rgba(220, 120, 120), rgba(90, 10, 12), rgba(200, 80, 70)];
 // glow colour [r,g,b] emitted by projectiles in flight (dynamic lighting)
 const PROJ_LIGHT = {
   fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
@@ -658,7 +659,15 @@ export class Game {
 
     if (e.hp <= 0) {
       e.state = 'dying'; e.stateTime = 0; e.alive = false;
-      this._spawnParticles(e.x, e.y, (e.vOffset || 0) + 0.5, 14, { speed: 3.5, up: 3, life: 0.7, colors: BLOOD });
+      // overkill (rockets / BFG / point-blank super shotgun) gibs the monster
+      const gib = !e.def.boss && (dmg > 100 || -e.hp >= e.def.hp * 0.75);
+      const zc = (e.vOffset || 0) + 0.5;
+      this._spawnParticles(e.x, e.y, zc, gib ? 30 : 14, { speed: gib ? 5 : 3.5, up: gib ? 4.6 : 3, life: gib ? 0.95 : 0.7, colors: BLOOD });
+      if (gib) {
+        this._spawnParticles(e.x, e.y, zc, 12, { speed: 4.6, up: 5.6, life: 1.25, colors: GIB });
+        this.audio.play('gib');
+        e.stateTime = 0.36;   // snap straight to the final gore frame (obliterated)
+      }
       this.audio.play('monster_death');
       if (e.def.boss) {
         this.message('THE GUMBIRD TAKES A FINAL BOW.');
@@ -847,11 +856,34 @@ export class Game {
       }
     } else if (e.def.attack === 'hitscan') {
       this._hitscan(e.x, e.y, ang + rnd(-0.06, 0.06), dmg, e.def.range + 2, e);
+    } else if (e.def.attack === 'spawn') {
+      this._spawnLostSoul(e, ang);          // pain elemental belches a Lost Soul
     } else {
       this._spawnProjectile(e.x, e.y, ang, {
         proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
       }, e);
     }
+  }
+
+  // Pain Elemental: launch a Lost Soul toward the target, capped so the swarm
+  // can't run away, and counted into the level tally so kills stay ≤ total.
+  _spawnLostSoul(pe, ang) {
+    let live = 0;
+    for (const x of this.entities) if (x.kind === 'enemy' && x.type === 'lostsoul' && x.alive) live++;
+    if (live >= 14) return;
+    const x = pe.x + Math.cos(ang) * 0.9, y = pe.y + Math.sin(ang) * 0.9;
+    if (this._rayBlocked(Math.floor(x), Math.floor(y))) return;
+    const def = ENEMY_TYPES.lostsoul;
+    this.entities.push({
+      kind: 'enemy', type: 'lostsoul', def, x, y, angle: ang, z: pe.z || 0,
+      hp: def.hp, radius: def.radius, spriteH: def.spriteH, vOffset: def.vOffset || 0,
+      fullbright: def.fullbright || false, fuzz: false, mass: def.mass || 1,
+      kx: Math.cos(ang) * 6, ky: Math.sin(ang) * 6, target: pe.target,
+      state: 'chase', stateTime: 0, walkTime: 0, cooldownTimer: 0.3,
+      attackTime: 0, didAttack: false, alive: true, sprite: SPR.lostsoul_walk0,
+    });
+    this.player.totalKills++;
+    this.audio.play('monster_attack');
   }
 
   // Monsters shove unlocked doors open to pursue their target.

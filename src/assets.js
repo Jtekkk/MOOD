@@ -445,6 +445,42 @@ function caco(frame) {
 
 function cacoDie(stage) { return cacoDeath(stage); }
 
+// Pain Elemental — a floating meat-sphere with a gaping fanged maw it belches
+// Lost Souls from. Distinct from the caco: pale/tan, two beady red eyes.
+function painElemental(frame) {
+  const { c, ctx } = makeCanvas(60, 60);
+  const attack = frame === 'attack';
+  const g = ctx.createRadialGradient(24, 20, 4, 30, 32, 30);
+  g.addColorStop(0, '#d8c9b0'); g.addColorStop(0.6, '#9c8468'); g.addColorStop(1, '#5c4634');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(30, 30, 27, 0, 7); ctx.fill();
+  ctx.fillStyle = '#6e5238';
+  for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; ctx.beginPath(); ctx.arc(30 + Math.cos(a) * 27, 30 + Math.sin(a) * 27, 2.2, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#efe6cf';
+  ctx.beginPath(); ctx.moveTo(16, 10); ctx.lineTo(9, -2); ctx.lineTo(22, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(44, 10); ctx.lineTo(51, -2); ctx.lineTo(38, 7); ctx.fill();
+  ctx.strokeStyle = '#6e5238'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(6, 34); ctx.lineTo(-2, 30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(54, 34); ctx.lineTo(62, 30); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(22, 22, 5, 4, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(38, 22, 5, 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#c01818';
+  ctx.beginPath(); ctx.arc(23, 22, 2.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(37, 22, 2.2, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(16, 17); ctx.lineTo(26, 20); ctx.moveTo(44, 17); ctx.lineTo(34, 20); ctx.stroke();
+  const mw = attack ? 18 : 13, mh = attack ? 15 : 10;
+  ctx.fillStyle = '#1c0c06'; ctx.beginPath(); ctx.ellipse(30, 44, mw, mh, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#efe6cf';
+  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; ctx.beginPath(); ctx.arc(30 + Math.cos(a) * mw * 0.86, 44 + Math.sin(a) * mh * 0.86, 1.7, 0, 7); ctx.fill(); }
+  if (attack) {
+    const fg = ctx.createRadialGradient(30, 44, 1, 30, 44, mw);
+    fg.addColorStop(0, '#fff'); fg.addColorStop(0.4, '#ff9a3a'); fg.addColorStop(1, 'rgba(255,80,0,0)');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(30, 44, mw * 0.9, 0, 7); ctx.fill();
+  }
+  return texFrom(c, ctx);
+}
+
 // Generic collapse-into-gibs death used by all monsters.
 function genericDie(stage, body, dark) {
   const { c, ctx } = makeCanvas(64, 60);
@@ -1847,6 +1883,11 @@ export function buildAssets() {
   SPR.caco_attack = caco('attack');
   SPR.caco_pain = caco('walk0');
   for (let i = 0; i < 4; i++) SPR['caco_die' + i] = cacoDie(i);
+
+  // pain elemental (floating; single view reused for all directions)
+  SPR.painel_walk0 = painElemental('walk0'); SPR.painel_walk1 = painElemental('walk0');
+  SPR.painel_attack = painElemental('attack'); SPR.painel_pain = painElemental('walk0');
+  for (let i = 0; i < 4; i++) SPR['painel_die' + i] = humanoidDeath(60, 60, i, '#9c8468', '#5c4634', '#d8c9b0', true);
 
   // directional walk rotations (front / side / back; side mirrored for L+R)
   const sideFns = { zombie: zombieSide, imp: impSide, demon: demonSide, caco: cacoSide };
