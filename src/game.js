@@ -8,6 +8,7 @@ import { ITEMS } from './data/items.js';
 import { clamp, normalizeAngle, dist, rgba, TAU } from './math.js';
 
 const PLAYER_R = 0.22;
+const STEP_UP = 0.34;   // tallest step the player can climb onto in one move (stairs are 0.2)
 export const SKILLS = [
   { name: 'EASY', dmgTaken: 0.5, atkCooldown: 1.4 },
   { name: 'NORMAL', dmgTaken: 1.0, atkCooldown: 1.0 },
@@ -351,36 +352,34 @@ export class Game {
     }
   }
 
-  // A raised block more than one step above `fromZ` acts as a wall (you must
-  // take the stairs). Lower blocks are free to step/drop onto.
+  // Can the player STAND where their centre would land? Decided by the single
+  // destination cell — not the player radius — so climbing stairs/daises at an
+  // angle never wedges on a step one cell away (that used to feel like "falling
+  // into" the stairs). Tall blocks you can't clip into are handled by _blocked.
   _ledgeBlocks(x, y, fromZ) {
     const map = this.map;
     if (!map.hasHeights && !map.hasCeils) return false;
-    const r = PLAYER_R, STEP = 0.28, HEAD = 1.0;   // need HEAD units of headroom to fit
-    const bh = map.blockH, ch = map.ceilH;
-    const x0 = Math.floor(x - r), x1 = Math.floor(x + r), y0 = Math.floor(y - r), y1 = Math.floor(y + r);
-    for (let cy = y0; cy <= y1; cy++) {
-      for (let cx = x0; cx <= x1; cx++) {
-        if (cx < 0 || cy < 0 || cx >= map.W || cy >= map.H) continue;
-        const idx = cy * map.W + cx, fz = bh[idx];
-        const tooHigh = fz > fromZ + STEP;               // a ledge you must take the stairs to
-        const tooLow = ch ? (ch[idx] - fz < HEAD) : false;  // ceiling too low to squeeze under here
-        if (tooHigh || tooLow) {
-          const nx = clamp(x, cx, cx + 1), ny = clamp(y, cy, cy + 1);
-          if ((x - nx) ** 2 + (y - ny) ** 2 < r * r) return true;
-        }
-      }
-    }
+    const cx = Math.floor(x), cy = Math.floor(y);
+    if (cx < 0 || cy < 0 || cx >= map.W || cy >= map.H) return false;
+    const idx = cy * map.W + cx;
+    const fz = map.hasHeights ? map.blockH[idx] : 0;
+    if (fz > fromZ + STEP_UP) return true;                        // too tall to step onto — take the stairs
+    if (map.ceilH && (map.ceilH[idx] - fz) < 1.0) return true;    // ceiling too low to fit under here
     return false;
   }
 
   // Circle-vs-grid collision; optionally also collide with solid entities.
   _blocked(x, y, r, vsEntities) {
+    const map = this.map;
     const x0 = Math.floor(x - r), x1 = Math.floor(x + r);
     const y0 = Math.floor(y - r), y1 = Math.floor(y + r);
+    const bh = map.hasHeights ? map.blockH : null, pz = this.player.z || 0;
     for (let cy = y0; cy <= y1; cy++) {
       for (let cx = x0; cx <= x1; cx++) {
-        if (this._cellBlocks(cx, cy)) {
+        // a wall, or a raised block too tall to step onto from here — either way
+        // the player's body can't enter it, but slides along it (nearest-point).
+        if (this._cellBlocks(cx, cy) ||
+            (bh && cx >= 0 && cy >= 0 && cx < map.W && cy < map.H && bh[cy * map.W + cx] - pz > STEP_UP)) {
           const nx = clamp(x, cx, cx + 1), ny = clamp(y, cy, cy + 1);
           if ((x - nx) ** 2 + (y - ny) ** 2 < r * r) return true;
         }
