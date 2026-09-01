@@ -55,14 +55,21 @@ Installers land in `dist-electron/` (e.g. `MOOD Setup 0.1.0.exe` plus a portable
 is most reliable *on Windows*. The game itself stays a zero-dependency browser
 app; Electron is only used for packaging.
 
-**Don't have a Windows PC?** A GitHub Actions workflow
-(`.github/workflows/build-desktop.yml`) builds the `.exe` for you on GitHub's
-**Windows runner** — no local toolchain needed:
+**Don't have a Windows PC? Just download the installer.** A GitHub Actions
+workflow (`.github/workflows/build-desktop.yml`) builds the apps for you on
+GitHub's native runners — no local toolchain needed:
 
-- It runs automatically on every push to the dev branch; grab the `MOOD-windows`
-  artifact from the **Actions** tab of the run.
-- Or push a tag (`git tag v0.1.0 && git push --tags`) and it attaches the
-  Windows `.exe`, macOS `.dmg`, and Linux `AppImage` to a **GitHub Release**.
+- **One-click:** every push to the dev branch publishes a rolling
+  [**`dev-latest` release**](https://github.com/Jtekkk/MOOD/releases/tag/dev-latest)
+  with the Windows installer (`MOOD Setup 0.1.0.exe`) + portable `MOOD 0.1.0.exe`,
+  the macOS `.dmg`, and the Linux `AppImage` attached — download and run.
+- Or push a version tag (`git tag v0.1.0 && git push --tags`) to cut a permanent
+  versioned **Release** with the same three installers.
+- Raw per-OS build artifacts are also on the **Actions** tab of each run.
+
+The builds are **unsigned**, so Windows SmartScreen (*More info → Run anyway*)
+and macOS Gatekeeper (*right-click → Open*) warn on first launch — expected for
+a hobby build.
 
 ### Host it on the web (Porkbun / Netlify / GitHub Pages / any static host)
 
