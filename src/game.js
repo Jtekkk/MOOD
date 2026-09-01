@@ -390,6 +390,7 @@ export class Game {
       for (const e of this.entities) {
         if (!e.alive) continue;
         if (e.kind === 'enemy' && e.state !== 'dead' && e.state !== 'dying') {
+          if (Math.abs((e.z || 0) - (this.player.z || 0)) > 0.7) continue;  // on a different level — walk under/over it
           const rr = r + e.radius;
           if ((x - e.x) ** 2 + (y - e.y) ** 2 < rr * rr) return true;
         } else if (e.kind === 'barrel') {

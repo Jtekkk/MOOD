@@ -400,6 +400,7 @@ export class Renderer {
     const bS = this._hbS || (this._hbS = new Int8Array(64));
     const bU = this._hbU || (this._hbU = new Float32Array(64));
     const bW = this._hbW || (this._hbW = new Uint8Array(64));
+    const bEx = this._hbEx || (this._hbEx = new Float32Array(64));   // each block's far edge
     // per-cell ceilings: soaring halls + low tunnels, drawn as undersides + risers
     const hasCeils = map.hasCeils, ceilArr = map.ceilH, ceilTop = hasCeils ? CEIL_MAX : CEIL_H;
     const ceilTex = TEX[map.ceil] || TEX.ceil || topTex;
@@ -409,6 +410,10 @@ export class Renderer {
     const cPrevA = this._cPrevA || (this._cPrevA = new Float32Array(64));
     const cS = this._cS || (this._cS = new Int8Array(64));
     const cU = this._cU || (this._cU = new Float32Array(64));
+    // per-column floor-occlusion: screen row of the nearest raised block's top
+    // edge, so sprites behind stairs/platforms get clipped (no see-through).
+    const colMaxH = this._colMaxH || (this._colMaxH = new Float32Array(RENDER_W));
+    const colFarD = this._colFarD || (this._colFarD = new Float32Array(RENDER_W));
 
     for (let x = 0; x < RENDER_W; x++) {
       const cameraX = 2 * x / RENDER_W - 1;
@@ -443,7 +448,8 @@ export class Renderer {
         if (h > 0 && nb < 64) {
           let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
           if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u;
-          bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; bW[nb] = (fType && fType[idx]) ? 1 : 0; nb++;
+          bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; bW[nb] = (fType && fType[idx]) ? 1 : 0;
+          bEx[nb] = (sideX < sideY ? sideX : sideY); nb++;
         }
         if (hasCeils && nc < 64) {
           const dEx = sideX < sideY ? sideX : sideY;   // distance where the ray leaves this cell
@@ -455,6 +461,13 @@ export class Renderer {
       }
       this.zbuf[x] = wallDist;
       for (let i = 0; i < nb; i++) bDx[i] = (i + 1 < nb) ? bD[i + 1] : (wallDist < 1e8 ? wallDist : bD[i] + 1.0);
+      // per-column floor-occlusion: the tallest raised block in this column and
+      // the far edge of the farthest cell at that height, so a sprite standing
+      // beyond it has its lower body clipped (no seeing enemies through
+      // stairs / platforms).
+      { let mh = 0; for (let i = 0; i < nb; i++) if (bH[i] > mh) mh = bH[i];
+        let mfd = 0; for (let i = 0; i < nb; i++) if (bH[i] >= mh - 0.001 && bEx[i] > mfd) mfd = bEx[i];
+        colMaxH[x] = mh; colFarD[x] = mfd; }
 
       // full wall (farthest opaque) — draw first
       if (wallDist < 1e8) {
@@ -617,12 +630,20 @@ export class Renderer {
       // only a fraction of pixels, darkened, so it reads as a heat-haze shadow.
       const fuzz = e.fuzz ? ((this._time * 30) | 0) : 0;
       const tw = sprite.w, th = sprite.h, px = sprite.pixels;
+      const heightLvl = !!bh;
       for (let x = x0; x <= x1; x++) {
         if (tY >= this.zbuf[x]) continue;             // behind a wall
+        // standing behind a taller raised block? clip the part below its top.
+        let clipY = RENDER_H;
+        if (heightLvl) {
+          const mh = this._colMaxH[x];
+          if (mh > feetZ + 0.05 && tY > this._colFarD[x] + 0.1) clipY = horizon + (camZ - mh) * lineH;
+        }
         let texX = (((x - (screenX - (drawW >> 1))) * tw) / drawW) | 0;
         if (texX < 0 || texX >= tw) continue;
         const y0 = Math.max(0, drawTop), y1 = Math.min(RENDER_H - 1, drawBottom);
         for (let y = y0; y <= y1; y++) {
+          if (y >= clipY) continue;                   // occluded by the block in front
           let texY = (((y - drawTop) * th) / drawH) | 0;
           if (texY < 0 || texY >= th) continue;
           const c = px[texY * tw + texX];
