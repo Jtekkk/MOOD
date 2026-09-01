@@ -355,13 +355,17 @@ export class Game {
   // take the stairs). Lower blocks are free to step/drop onto.
   _ledgeBlocks(x, y, fromZ) {
     const map = this.map;
-    if (!map.hasHeights) return false;
-    const r = PLAYER_R, STEP = 0.28;
+    if (!map.hasHeights && !map.hasCeils) return false;
+    const r = PLAYER_R, STEP = 0.28, HEAD = 1.0;   // need HEAD units of headroom to fit
+    const bh = map.blockH, ch = map.ceilH;
     const x0 = Math.floor(x - r), x1 = Math.floor(x + r), y0 = Math.floor(y - r), y1 = Math.floor(y + r);
     for (let cy = y0; cy <= y1; cy++) {
       for (let cx = x0; cx <= x1; cx++) {
         if (cx < 0 || cy < 0 || cx >= map.W || cy >= map.H) continue;
-        if (map.blockH[cy * map.W + cx] > fromZ + STEP) {
+        const idx = cy * map.W + cx, fz = bh[idx];
+        const tooHigh = fz > fromZ + STEP;               // a ledge you must take the stairs to
+        const tooLow = ch ? (ch[idx] - fz < HEAD) : false;  // ceiling too low to squeeze under here
+        if (tooHigh || tooLow) {
           const nx = clamp(x, cx, cx + 1), ny = clamp(y, cy, cy + 1);
           if ((x - nx) ** 2 + (y - ny) ** 2 < r * r) return true;
         }

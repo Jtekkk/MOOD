@@ -130,6 +130,11 @@ find the matching keycard.
   camera rides at your standing height, you climb one step at a time, tall ledges
   block you (take the stairs), and you can drop off edges. Monsters stand up on
   the ledges. Showcased in **LEVEL 3: THE ASCENT**.
+- **Per-cell ceiling heights:** the same pass paints **soaring halls** and **low
+  crawl-tunnels** — each cell can set its own ceiling, drawn as textured
+  undersides with a riser at every downward step. Combined with the raised
+  floors this gives genuine multi-elevation rooms and passages; a ceiling too
+  low to fit under (over a raised floor) blocks you, so headroom is real.
 - **Dynamic coloured lighting:** real point lights spill onto floors, walls, and
   monsters — lit **braziers** (warm, flickering), glowing **projectiles** (blue
   plasma, orange fireballs, green BFG bolts), **muzzle flashes** that light the

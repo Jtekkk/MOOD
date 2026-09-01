@@ -8,7 +8,8 @@ export const RENDER_W = 320;
 export const RENDER_H = 200;
 const HALF_H = RENDER_H / 2;
 const PLANE = 0.66;            // camera plane length → ~66° FOV
-const CEIL_H = 2.4;           // ceiling height for height-mapped levels (tall rooms)
+const CEIL_H = 2.4;           // default ceiling height for height-mapped levels
+const CEIL_MAX = 3.9;         // tallest ceiling on a per-cell ceiling level (the '9' step)
 
 export class Renderer {
   constructor(displayCanvas) {
@@ -57,7 +58,7 @@ export class Renderer {
     this._gatherLights(game);
     this._buildSky(horizon);
     const camZ = 0.5 + (p.z || 0);
-    if (game.map.hasHeights) {
+    if (game.map.hasHeights || game.map.hasCeils) {
       this._floorCeilH(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
       this._renderHeights(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
     } else {
@@ -345,9 +346,11 @@ export class Renderer {
     const buf = this.buf, nLights = this._ln, lc = this._lc;
     const fType = map.floorType, cType = map.ceilType, hasTerrain = map.hasTerrain, W = map.W, Hh = map.H;
     const sky = this._sky;
+    const skipCeil = map.hasCeils;   // per-cell ceilings are painted in the column pass instead
     const t = this._time, rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
     for (let y = 0; y < RENDER_H; y++) {
       const isFloor = y > horizon;
+      if (!isFloor && skipCeil) continue;
       const pRow = isFloor ? (y - horizon) : (horizon - y);
       if (pRow <= 0) continue;
       const rowDist = (isFloor ? camZ : (CEIL_H - camZ)) * RENDER_H / pRow;
@@ -397,6 +400,15 @@ export class Renderer {
     const bS = this._hbS || (this._hbS = new Int8Array(64));
     const bU = this._hbU || (this._hbU = new Float32Array(64));
     const bW = this._hbW || (this._hbW = new Uint8Array(64));
+    // per-cell ceilings: soaring halls + low tunnels, drawn as undersides + risers
+    const hasCeils = map.hasCeils, ceilArr = map.ceilH, ceilTop = hasCeils ? CEIL_MAX : CEIL_H;
+    const ceilTex = TEX[map.ceil] || TEX.ceil || topTex;
+    const cD = this._cD || (this._cD = new Float32Array(64));
+    const cDx = this._cDx || (this._cDx = new Float32Array(64));
+    const cCH = this._cCH || (this._cCH = new Float32Array(64));
+    const cPrevA = this._cPrevA || (this._cPrevA = new Float32Array(64));
+    const cS = this._cS || (this._cS = new Int8Array(64));
+    const cU = this._cU || (this._cU = new Float32Array(64));
 
     for (let x = 0; x < RENDER_W; x++) {
       const cameraX = 2 * x / RENDER_W - 1;
@@ -408,6 +420,11 @@ export class Renderer {
       if (rayDirY < 0) { stepY = -1; sideY = (p.y - mapY) * deltaY; } else { stepY = 1; sideY = (mapY + 1 - p.y) * deltaY; }
 
       let nb = 0, wallDist = 1e9, wallU = 0, wallSide = 0, wallTex = null;
+      let nc = 0, prevCeil = ceilTop, wallCeil = ceilTop;
+      if (hasCeils && mapX >= 0 && mapY >= 0 && mapX < W && mapY < H) {
+        prevCeil = ceilArr[mapY * W + mapX];
+        cD[nc] = 0; cDx[nc] = (sideX < sideY ? sideX : sideY); cCH[nc] = prevCeil; cPrevA[nc] = prevCeil; cS[nc] = 0; cU[nc] = 0; nc++;
+      }
       for (let guard = 0; guard < 160; guard++) {
         let side;
         if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; } else { sideY += deltaY; mapY += stepY; side = 1; }
@@ -419,6 +436,7 @@ export class Renderer {
           wallDist = d; wallSide = side; wallTex = TEX[wallTexName(cell)] || TEX.tech;
           let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
           if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u; wallU = u;
+          if (hasCeils) wallCeil = prevCeil;   // the wall is only as tall as the ceiling you see it under
           break;
         }
         const h = blockH[idx];
@@ -426,6 +444,13 @@ export class Renderer {
           let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
           if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u;
           bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; bW[nb] = (fType && fType[idx]) ? 1 : 0; nb++;
+        }
+        if (hasCeils && nc < 64) {
+          const dEx = sideX < sideY ? sideX : sideY;   // distance where the ray leaves this cell
+          let cwx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let cu = cwx - Math.floor(cwx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) cu = 1 - cu;
+          cD[nc] = d; cDx[nc] = dEx; cCH[nc] = ceilArr[idx]; cPrevA[nc] = prevCeil; cS[nc] = side; cU[nc] = cu; nc++;
+          prevCeil = ceilArr[idx];
         }
       }
       this.zbuf[x] = wallDist;
@@ -435,7 +460,7 @@ export class Renderer {
       if (wallDist < 1e8) {
         const d = wallDist, tex = wallTex, th = tex.h, tw = tex.w;
         let texX = (wallU * tw) | 0; if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
-        const yTopF = horizon + (camZ - CEIL_H) * RH / d, yBotF = horizon + camZ * RH / d;
+        const yTopF = horizon + (camZ - wallCeil) * RH / d, yBotF = horizon + camZ * RH / d;
         const light = lightFor(d) * (wallSide === 1 ? 0.70 : 1.0), ft = fogT(d);
         let lr = 0, lg = 0, lb = 0;
         if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
@@ -491,6 +516,50 @@ export class Renderer {
             const l2 = lightFor(dRow), f2 = fogT(dRow);
             if (nLights) { this._lightAt(wx, wy, lc); buf[y * RENDER_W + x] = shadeLit(c, l2, fog, f2, lc[0], lc[1], lc[2]); }
             else buf[y * RENDER_W + x] = shadeFog(c, l2, fog, f2);
+          }
+        }
+      }
+
+      // ---- ceilings: undersides (soaring/low) + risers at each downward step --
+      if (hasCeils) {
+        const cpx = ceilTex.pixels, ctw = ceilTex.w, cth = ceilTex.h;
+        const rpx = sideTex.pixels, rtw = sideTex.w, rth = sideTex.h;
+        for (let i = nc - 1; i >= 0; i--) {
+          const d = cD[i], dEx = cDx[i], hC = cCH[i], pC = cPrevA[i];
+          const invSpan = RH / (d || 1e-4);
+          // flat ceiling underside at z=hC (seen from below the eye)
+          if (hC > camZ + 0.02) {
+            const yNear = horizon + (camZ - hC) * RH / (d || 1e-4);
+            const yFar = horizon + (camZ - hC) * RH / dEx;
+            const yy0 = Math.max(0, Math.ceil(yNear)), yy1 = Math.min(horizon - 1, Math.floor(yFar));
+            for (let y = yy0; y <= yy1; y++) {
+              const dRow = (hC - camZ) * RH / (horizon - y);
+              if (dRow < d - 0.03 || dRow > dEx + 0.03) continue;
+              const wx = p.x + dRow * rayDirX, wy = p.y + dRow * rayDirY;
+              let tx = (wx - Math.floor(wx)) * ctw | 0, ty = (wy - Math.floor(wy)) * cth | 0;
+              if (tx < 0) tx += ctw; if (ty < 0) ty += cth;
+              const c = cpx[(ty * ctw + tx) | 0];
+              const l2 = lightFor(dRow) * 0.74, f2 = fogT(dRow);
+              if (nLights) { this._lightAt(wx, wy, lc); buf[y * RENDER_W + x] = shadeLit(c, l2, fog, f2, lc[0], lc[1], lc[2]); }
+              else buf[y * RENDER_W + x] = shadeFog(c, l2, fog, f2);
+            }
+          }
+          // riser: the downward face where a higher ceiling (pC) steps to this one (hC)
+          if (pC > hC + 0.02) {
+            const light = lightFor(d) * (cS[i] === 1 ? 0.70 : 1.0) * 0.9, ft = fogT(d);
+            let lr = 0, lg = 0, lb = 0;
+            if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
+            const lit = (lr + lg + lb) > 1e-4;
+            const yTop = horizon + (camZ - pC) * RH / d, yBot = horizon + (camZ - hC) * RH / d;
+            let texX = (cU[i] * rtw) | 0; if (texX >= rtw) texX = rtw - 1; if (texX < 0) texX = 0;
+            const y0 = Math.max(0, Math.ceil(yTop)), y1 = Math.min(horizon, Math.floor(yBot));
+            for (let y = y0; y <= y1; y++) {
+              const worldZ = camZ - (y - horizon) / invSpan;   // pC..hC
+              let v = worldZ - Math.floor(worldZ);
+              let ty = (v * rth) | 0; if (ty < 0) ty += rth; if (ty >= rth) ty = rth - 1;
+              const c = rpx[ty * rtw + texX];
+              buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+            }
           }
         }
       }

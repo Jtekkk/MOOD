@@ -290,6 +290,28 @@ const ASCENT = {
     '........................',
     '........................',
   ],
+  // per-cell ceilings: a low entry nook ('2' ≈ 1.8) you emerge from, opening into
+  // a soaring cascade + platform hall ('8'/'9' ≈ 3.6/3.9) — real vertical drama.
+  ceils: [
+    '........................',
+    '.88888888...............',
+    '.88888888...............',
+    '.88888888...............',
+    '.88888888...............',
+    '.88888888...............',
+    '.888888888888888........',
+    '........888888899999999.',
+    '........888888899999999.',
+    '........8888888.........',
+    '........................',
+    '........................',
+    '........................',
+    '.22222222...............',
+    '.22222222...............',
+    '.22222222...............',
+    '.22222222...............',
+    '........................',
+  ],
 };
 
 // The finale: a dedicated boss arena. The exit stays sealed until the Gumbird
@@ -386,6 +408,20 @@ export function parseLevel(def) {
       }
     }
   }
+  // optional per-cell CEILING height — soaring halls and low crawl-tunnels, so
+  // rooms and passages read at genuinely different elevations. Chars '1'..'9' →
+  // 1.5..3.9 world units in 0.3 steps ('4' = the 2.4 default); '.'/space → 2.4.
+  const ceilRows = def.ceils ? pad(def.ceils, '.') : null;
+  let ceilH = null, hasCeils = false;
+  if (ceilRows) {
+    ceilH = new Float32Array(W * H); ceilH.fill(2.4);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const cc = ceilRows[y][x];
+        if (cc >= '1' && cc <= '9') { ceilH[y * W + x] = 1.2 + (cc.charCodeAt(0) - 48) * 0.3; hasCeils = true; }
+      }
+    }
+  }
   const doors = [];
   let start = null;
 
@@ -441,7 +477,7 @@ export function parseLevel(def) {
   }
 
   return {
-    name: def.name, W, H, cells, cellChar, doors, things, floorType, ceilType, hasTerrain, blockH, hasHeights,
+    name: def.name, W, H, cells, cellChar, doors, things, floorType, ceilType, hasTerrain, blockH, hasHeights, ceilH, hasCeils,
     totalSecrets: doors.reduce((n, d) => n + (d.secret ? 1 : 0), 0),
     floor: def.floor, ceil: def.ceil, skyTint: def.skyTint || '#1a1d24',
     start: start || { x: 1.5, y: 1.5 }, startAngle: def.startAngle || 0,
