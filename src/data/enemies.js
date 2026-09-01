@@ -44,6 +44,12 @@ export const ENEMY_TYPES = {
     hp: 400, speed: 1.3, radius: 0.46, spriteH: 1.4, vOffset: 0.5, float: true, mass: 3.0,
     attack: 'spawn', range: 18, dmg: [0, 0], cooldown: 2.6, painChance: 0.2,
   },
+  archvile: {
+    name: 'ARCH-VILE', prefix: 'archvile',
+    hp: 700, speed: 3.0, radius: 0.34, spriteH: 1.5, mass: 1.4,
+    attack: 'fire', windup: 0.95, range: 14, dmg: [15, 45], cooldown: 2.6,
+    painChance: 0.1, sightChance: 1,
+  },
   baron: {
     name: 'BARON OF HELL', prefix: 'baron',
     hp: 600, speed: 1.7, radius: 0.45, spriteH: 1.5, mass: 3.6,
@@ -58,7 +64,8 @@ export const ENEMY_TYPES = {
   },
 };
 
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel' };
+// 'j' = the Arch-Vile ('A' and 'V' are already blue-armor / invulnerability things).
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

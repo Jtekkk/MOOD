@@ -659,7 +659,7 @@ export class Game {
   _updateEffect(e, dt) {
     e.time += dt;
     const n = Math.min(3, Math.floor(e.time / (e.dur / 4)));
-    e.sprite = SPR['explosion' + n];
+    e.sprite = e.vile ? SPR['vileflame' + n] : SPR['explosion' + n];
     if (e.time >= e.dur) e._remove = true;
   }
 
@@ -692,6 +692,7 @@ export class Game {
       if (gib) {
         this._spawnParticles(e.x, e.y, zc, 12, { speed: 4.6, up: 5.6, life: 1.25, colors: GIB });
         this.audio.play('gib');
+        e.gibbed = true;      // obliterated — an Arch-Vile can't raise a puddle
         e.stateTime = 0.36;   // snap straight to the final gore frame (obliterated)
       }
       this.audio.play('monster_death');
@@ -813,13 +814,27 @@ export class Game {
 
     e.cooldownTimer = Math.max(0, e.cooldownTimer - dt);
 
+    // Arch-Vile: raise a fallen monster back to life instead of pressing forward.
+    if (e.def.attack === 'fire' && e.state === 'chase') {
+      e.reviveCD = Math.max(0, (e.reviveCD || 0) - dt);
+      if (e.reviveCD <= 0) {
+        const corpse = this._findResurrectable(e);
+        if (corpse) {
+          this._resurrect(e, corpse);
+          e.reviveCD = 3.4; e.cooldownTimer = Math.max(e.cooldownTimer, 0.9);
+          e.sprite = enemyFrame(e); return;
+        }
+      }
+    }
+
     if (e.state === 'attack') {
       e.attackTime += dt;
-      if (!e.didAttack && e.attackTime >= 0.3) {
+      const wind = e.def.windup || 0.3;   // the Arch-Vile telegraphs a long cast
+      if (!e.didAttack && e.attackTime >= wind) {
         e.didAttack = true;
-        if (see) this._enemyAttack(e);
+        if (see) this._enemyAttack(e);    // no line of sight at ignition → the cast fizzles
       }
-      if (e.attackTime >= 0.6) { e.state = 'chase'; e.cooldownTimer = e.def.cooldown * (this.skill ? this.skill.atkCooldown : 1); }
+      if (e.attackTime >= wind + 0.3) { e.state = 'chase'; e.cooldownTimer = e.def.cooldown * (this.skill ? this.skill.atkCooldown : 1); }
       e.sprite = enemyFrame(e);
       return;
     }
@@ -884,6 +899,8 @@ export class Game {
       this._hitscan(e.x, e.y, ang + rnd(-0.06, 0.06), dmg, e.def.range + 2, e);
     } else if (e.def.attack === 'spawn') {
       this._spawnLostSoul(e, ang);          // pain elemental belches a Lost Soul
+    } else if (e.def.attack === 'fire') {
+      this._vileFire(e);                    // arch-vile erupts flame at its target
     } else {
       this._spawnProjectile(e.x, e.y, ang, {
         proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
@@ -910,6 +927,65 @@ export class Game {
     });
     this.player.totalKills++;
     this.audio.play('monster_attack');
+  }
+
+  // ---- Arch-Vile abilities ----------------------------------------------
+  _spawnVileFlame(x, y, voff = 0) {
+    this.entities.push({
+      kind: 'effect', vile: true, x, y, spriteH: 1.7, vOffset: (voff || 0) + 0.05,
+      time: 0, dur: 0.5, fullbright: true, sprite: SPR.vileflame0, alive: true,
+    });
+  }
+
+  // The fire attack: a flame erupts from the ground at the target for heavy
+  // damage and a hard blast away from the Vile. Ignition only reaches here while
+  // the Vile still has line of sight — breaking it mid-cast makes it fizzle.
+  _vileFire(e) {
+    const tp = this._targetPos(e);
+    const dmg = irnd(e.def.dmg[0], e.def.dmg[1]);
+    this._spawnVileFlame(tp.x, tp.y, tp.ent ? (tp.ent.vOffset || 0) : (this.player.z || 0));
+    this._spawnParticles(tp.x, tp.y, 0.4, 14, { speed: 3.2, up: 5, life: 0.6, colors: DEBRIS });
+    this.audio.play('vilefire');
+    if (tp.ent) {
+      this._applyKnock(tp.ent, tp.ent.x - e.x, tp.ent.y - e.y, 7);
+      this._damageEnemy(tp.ent, dmg, e);
+    } else {
+      this.addShake(0.5);
+      this._applyKnock(this.player, this.player.x - e.x, this.player.y - e.y, 8);  // blasted off your feet
+      this._damagePlayer(dmg, e.x, e.y);
+    }
+  }
+
+  // A raiseable corpse near the Vile: a fully-collapsed monster (not gibbed, not
+  // a boss, not another Vile), within reach, in sight, and clear of the player.
+  _findResurrectable(v) {
+    for (const e of this.entities) {
+      if (e === v || e.kind !== 'enemy' || e.state !== 'dead') continue;
+      if (e.gibbed || e.def.boss || e.type === 'archvile') continue;
+      if (dist(v.x, v.y, e.x, e.y) > 4.5) continue;
+      if (dist(e.x, e.y, this.player.x, this.player.y) < 0.9) continue;
+      if (!this._lineOfSight(v.x, v.y, e.x, e.y)) continue;
+      return e;
+    }
+    return null;
+  }
+
+  // Raise a corpse: it stands at full health and rejoins the hunt. Taken back off
+  // the tally (kills--) so a resurrected-then-rekilled monster isn't double-counted.
+  _resurrect(v, e) {
+    e.alive = true; e.hp = e.def.hp;
+    e.state = 'chase'; e.target = 'player'; e.gibbed = false;
+    e.stateTime = 0; e.walkTime = 0; e.attackTime = 0; e.didAttack = false;
+    e.cooldownTimer = 0.5; e.kx = 0; e.ky = 0; e.flash = 0.2;
+    this.player.kills = Math.max(0, this.player.kills - 1);
+    this._spawnVileFlame(e.x, e.y, e.vOffset || 0);
+    this._spawnParticles(e.x, e.y, (e.vOffset || 0) + 0.5, 18,
+      { speed: 3, up: 4.4, life: 0.75, colors: [rgba(120, 255, 150), rgba(60, 200, 90), rgba(200, 255, 210), rgba(30, 150, 70)] });
+    this.audio.play('resurrect');
+    v.angle = Math.atan2(e.y - v.y, e.x - v.x);
+    if (!v._raisedOnce && this._lineOfSight(this.player.x, this.player.y, v.x, v.y)) {
+      v._raisedOnce = true; this.message('THE ARCH-VILE RAISES THE DEAD!');
+    }
   }
 
   // Monsters shove unlocked doors open to pursue their target.

@@ -119,6 +119,8 @@ export class AudioEngine {
       case 'levelend': this._tone(523, 0.15, { type: 'square', gain: 0.3 }); this._tone(659, 0.15, { type: 'square', gain: 0.3 }); this._tone(784, 0.3, { type: 'square', gain: 0.3 }); break;
       case 'splash':   this._noise(0.16, { freq: 1700, gain: 0.16, q: 1, decay: 1.2 }); break;
       case 'gib':      this._noise(0.24, { freq: 900, gain: 0.6, q: 0.6, decay: 0.7 }); this._tone(120, 0.16, { type: 'sawtooth', gain: 0.3, slideTo: 45 }); break;
+      case 'vilefire': this._noise(0.5, { freq: 950, gain: 0.55, q: 0.8, decay: 0.45 }); this._tone(190, 0.42, { type: 'sawtooth', gain: 0.38, slideTo: 560 }); break;
+      case 'resurrect':this._tone(170, 0.5, { type: 'sine', gain: 0.32, slideTo: 640 }); this._tone(300, 0.42, { type: 'triangle', gain: 0.22, slideTo: 920 }); this._noise(0.2, { freq: 2200, gain: 0.14, decay: 1.2 }); break;
       default: break;
     }
   }

@@ -1188,6 +1188,115 @@ function baronBack(frame) {
   ctx.fillStyle = '#e6dcc0'; ctx.beginPath(); ctx.moveTo(21, 10); ctx.lineTo(12, -1); ctx.lineTo(20, 4); ctx.fill(); ctx.beginPath(); ctx.moveTo(39, 10); ctx.lineTo(48, -1); ctx.lineTo(40, 4); ctx.fill();
   return texFrom(c, ctx);
 }
+// Arch-Vile: a tall, gaunt fire-priest — ashen-red skeletal body, exposed ribs,
+// a horned goat-skull head with burning eyes. In the attack frame both arms
+// rear back overhead, hands wreathed in summoned flame.
+function archvile(frame) {
+  const { c, ctx } = makeCanvas(60, 84);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 4 : 0;
+  // spindly digitigrade legs + cloven feet
+  ctx.fillStyle = '#5e241c'; ctx.fillRect(24 - sw, 60, 6, 20); ctx.fillRect(30 + sw, 60, 6, 20);
+  ctx.fillStyle = '#3a140f'; ctx.fillRect(22 - sw, 78, 9, 4); ctx.fillRect(30 + sw, 78, 9, 4);
+  // gaunt tapering torso
+  const bg = ctx.createLinearGradient(30, 22, 30, 62); bg.addColorStop(0, '#c05a4a'); bg.addColorStop(1, '#6e2a20');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(20, 30); ctx.lineTo(40, 30); ctx.lineTo(36, 62); ctx.lineTo(24, 62); ctx.closePath(); ctx.fill();
+  // exposed ribcage
+  ctx.strokeStyle = 'rgba(232,220,192,0.5)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(23, 37 + i * 6); ctx.lineTo(37, 37 + i * 6); ctx.stroke(); }
+  // arms
+  ctx.strokeStyle = '#a84a3c'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  if (attack) {
+    ctx.beginPath(); ctx.moveTo(22, 32); ctx.lineTo(9, 11); ctx.moveTo(38, 32); ctx.lineTo(51, 11); ctx.stroke();
+    for (const hx of [9, 51]) {
+      const g = ctx.createRadialGradient(hx, 11, 1, hx, 11, 11);
+      g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffb43a'); g.addColorStop(0.8, '#ff5a10'); g.addColorStop(1, 'rgba(255,60,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, 11, 11, 0, 7); ctx.fill();
+    }
+  } else {
+    ctx.beginPath(); ctx.moveTo(22, 32); ctx.lineTo(14, 52 + sw); ctx.moveTo(38, 32); ctx.lineTo(46, 52 - sw); ctx.stroke();
+    ctx.fillStyle = '#8a3a2e'; ctx.beginPath(); ctx.arc(14, 53 + sw, 3, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(46, 53 - sw, 3, 0, 7); ctx.fill();
+  }
+  ctx.lineCap = 'butt';
+  // hunched shoulders
+  ctx.fillStyle = '#6e2a20'; ctx.beginPath(); ctx.ellipse(30, 30, 13, 6, 0, 0, 7); ctx.fill();
+  // horned skull head + snout
+  ctx.fillStyle = '#e8dcc0'; ctx.beginPath(); ctx.ellipse(30, 18, 10, 11, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(30, 16); ctx.lineTo(31, 30); ctx.lineTo(23, 25); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(22, 10); ctx.quadraticCurveTo(11, 5, 15, -2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(38, 10); ctx.quadraticCurveTo(49, 5, 45, -2); ctx.stroke();
+  ctx.lineCap = 'butt';
+  // burning eyes
+  ctx.fillStyle = '#0a0604'; ctx.fillRect(24, 15, 5, 4); ctx.fillRect(31, 15, 5, 4);
+  ctx.fillStyle = attack ? '#fff2b0' : '#ff9a2a'; ctx.fillRect(25, 16, 3, 2); ctx.fillRect(32, 16, 3, 2);
+  // fanged maw
+  ctx.fillStyle = '#2a0a06'; ctx.fillRect(26, 24, 8, 3);
+  ctx.fillStyle = '#e8dcc0'; for (let x = 26; x < 34; x += 2) ctx.fillRect(x, 24, 1, 3);
+  return texFrom(c, ctx);
+}
+function archvileSide(frame) {
+  const { c, ctx } = makeCanvas(60, 84);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 5 : -5;
+  ctx.fillStyle = '#5e241c'; ctx.fillRect(28 + sw, 60, 6, 20); ctx.fillRect(28 - sw, 60, 6, 20);
+  ctx.fillStyle = '#3a140f'; ctx.fillRect(26 + sw, 78, 10, 4); ctx.fillRect(26 - sw, 78, 10, 4);
+  const bg = ctx.createLinearGradient(30, 22, 30, 62); bg.addColorStop(0, '#c05a4a'); bg.addColorStop(1, '#6e2a20');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(23, 30); ctx.lineTo(37, 30); ctx.lineTo(34, 62); ctx.lineTo(26, 62); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#a84a3c'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  if (attack) {
+    ctx.beginPath(); ctx.moveTo(31, 32); ctx.lineTo(44, 12); ctx.stroke();
+    const g = ctx.createRadialGradient(46, 12, 1, 46, 12, 10); g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffb43a'); g.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(46, 12, 10, 0, 7); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.moveTo(31, 33); ctx.lineTo(37, 53); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = '#e8dcc0'; ctx.beginPath(); ctx.ellipse(32, 18, 9, 11, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e8dcc0'; ctx.beginPath(); ctx.moveTo(38, 16); ctx.lineTo(46, 19); ctx.lineTo(38, 24); ctx.closePath(); ctx.fill();  // snout
+  ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(28, 9); ctx.quadraticCurveTo(18, 5, 22, -2); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = attack ? '#fff2b0' : '#ff9a2a'; ctx.fillRect(35, 16, 3, 3);
+  return texFrom(c, ctx);
+}
+function archvileBack(frame) {
+  const { c, ctx } = makeCanvas(60, 84);
+  const sw = frame === 'walk1' ? 4 : 0;
+  ctx.fillStyle = '#5e241c'; ctx.fillRect(24 - sw, 60, 6, 20); ctx.fillRect(30 + sw, 60, 6, 20);
+  ctx.fillStyle = '#3a140f'; ctx.fillRect(22 - sw, 78, 9, 4); ctx.fillRect(30 + sw, 78, 9, 4);
+  const bg = ctx.createLinearGradient(30, 22, 30, 62); bg.addColorStop(0, '#a84a3c'); bg.addColorStop(1, '#5e241c');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(20, 30); ctx.lineTo(40, 30); ctx.lineTo(36, 62); ctx.lineTo(24, 62); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, 32); ctx.lineTo(30, 60); ctx.stroke();  // spine
+  ctx.strokeStyle = '#8a3a2e'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(22, 32); ctx.lineTo(14, 52 + sw); ctx.moveTo(38, 32); ctx.lineTo(46, 52 - sw); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = '#6e2a20'; ctx.beginPath(); ctx.ellipse(30, 30, 13, 6, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#d8ccb0'; ctx.beginPath(); ctx.ellipse(30, 18, 10, 11, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(22, 10); ctx.quadraticCurveTo(11, 5, 15, -2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(38, 10); ctx.quadraticCurveTo(49, 5, 45, -2); ctx.stroke(); ctx.lineCap = 'butt';
+  return texFrom(c, ctx);
+}
+// The Arch-Vile's fire attack: a column of flame that erupts from the ground at
+// the target. 4-stage animation (grows to a white-hot spire, then collapses).
+function vileFlame(stage) {
+  const { c, ctx } = makeCanvas(40, 74);
+  const h = [30, 54, 70, 46][stage];
+  const w = [9, 15, 13, 7][stage];
+  const base = 72;
+  const g = ctx.createLinearGradient(20, base, 20, base - h);
+  g.addColorStop(0, 'rgba(255,120,20,0)'); g.addColorStop(0.14, '#ff7a18');
+  g.addColorStop(0.5, '#ffc23a'); g.addColorStop(0.82, '#fff2b0'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(20 - w, base);
+  ctx.quadraticCurveTo(20 - w * 1.4, base - h * 0.5, 20, base - h);
+  ctx.quadraticCurveTo(20 + w * 1.4, base - h * 0.5, 20 + w, base);
+  ctx.closePath(); ctx.fill();
+  const cg = ctx.createLinearGradient(20, base, 20, base - h * 0.72);
+  cg.addColorStop(0, 'rgba(255,220,120,0)'); cg.addColorStop(0.5, '#fff4cc'); cg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(20, base - h * 0.34, w * 0.42, h * 0.34, 0, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
 function baronBall() {
   const { c, ctx } = makeCanvas(26, 26);
   const g = ctx.createRadialGradient(13, 13, 1, 13, 13, 13);
@@ -1889,10 +1998,16 @@ export function buildAssets() {
   SPR.painel_attack = painElemental('attack'); SPR.painel_pain = painElemental('walk0');
   for (let i = 0; i < 4; i++) SPR['painel_die' + i] = humanoidDeath(60, 60, i, '#9c8468', '#5c4634', '#d8c9b0', true);
 
+  // arch-vile (tall fire-priest) — full directional set + its flame column
+  SPR.archvile_walk0 = archvile('walk0'); SPR.archvile_walk1 = archvile('walk1');
+  SPR.archvile_attack = archvile('attack'); SPR.archvile_pain = archvile('walk0');
+  for (let i = 0; i < 4; i++) SPR['archvile_die' + i] = humanoidDeath(60, 84, i, '#c05a4a', '#5e241c', '#e8dcc0', false);
+  for (let i = 0; i < 4; i++) SPR['vileflame' + i] = vileFlame(i);
+
   // directional walk rotations (front / side / back; side mirrored for L+R)
-  const sideFns = { zombie: zombieSide, imp: impSide, demon: demonSide, caco: cacoSide };
-  const backFns = { zombie: zombieBack, imp: impBack, demon: demonBack, caco: cacoBack };
-  for (const pre of ['zombie', 'imp', 'demon', 'caco']) {
+  const sideFns = { zombie: zombieSide, imp: impSide, demon: demonSide, caco: cacoSide, archvile: archvileSide };
+  const backFns = { zombie: zombieBack, imp: impBack, demon: demonBack, caco: cacoBack, archvile: archvileBack };
+  for (const pre of ['zombie', 'imp', 'demon', 'caco', 'archvile']) {
     for (const f of ['walk0', 'walk1']) {
       SPR[`${pre}_front_${f}`] = SPR[`${pre}_${f}`];
       SPR[`${pre}_sideR_${f}`] = sideFns[pre](f);
@@ -1992,7 +2107,7 @@ export function buildAssets() {
 
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
-    if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul')) continue;
+    if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul') || k.startsWith('vileflame')) continue;
     if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp') continue;
     SPR[k] = outlineTex(SPR[k]);
   }

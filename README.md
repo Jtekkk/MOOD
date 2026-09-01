@@ -156,10 +156,15 @@ find the matching keycard.
   later levels.
 - **The Pain Elemental** — a floating maw that belches **Lost Souls** at you
   (capped so the swarm can't run away), turning any fight into a spawn-camp.
+- **The Arch-Vile** — a gaunt fire-priest that **raises the dead** (any
+  non-gibbed corpse nearby stands back up at full health and rejoins the hunt)
+  and casts a line-of-sight **flame pillar** at your feet for heavy damage and a
+  hard blast off your feet. Break line of sight during its telegraphed cast and
+  it fizzles — and gib its victims so it has nothing to raise. Prioritise it.
 - **Gibbing:** overkill hits (rockets, the BFG, point-blank shells) burst a
   monster into a spray of gore and snap it straight to its final gib frame,
   with a wet splat.
-- **Eight enemy types** with a real AI state machine (idle → chase → attack →
+- **Nine enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
   charger), and the Baron of Hell (600-HP green-fireball boss). Ranged monsters
