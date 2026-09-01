@@ -26,7 +26,7 @@ try {
 
     // load the final level and find the boss
     game.startNewGame();
-    game.loadLevel(7);                                   // LEVEL 8: ICON
+    game.loadLevel(9);                                   // LEVEL 10: THE GUMBIRD (arena)
     const boss = game.entities.find((e) => e.type === 'gumbird');
     r.bossInLevel = !!boss;
     r.bossHP = boss ? boss.hp : 0;
@@ -90,7 +90,7 @@ try {
   console.log(JSON.stringify(out, null, 2));
   const checks = {
     'all gumbird sprites registered': out.sprites,
-    'boss present in level 8': out.bossInLevel,
+    'boss present in the arena': out.bossInLevel,
     'boss is a 1000-HP heavyweight': out.bossHP === 1000,
     'boss is tall (1.8)': out.bossSpriteH === 1.8,
     'rolls in with an intro line': out.introduced,

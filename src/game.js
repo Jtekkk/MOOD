@@ -435,7 +435,12 @@ export class Game {
         }
         return;
       }
-      if (ch === '+') { this._exitLevel(); return; }
+      if (ch === '+') {
+        if (this.entities.some((e) => e.kind === 'enemy' && e.alive && e.def.boss)) {
+          this.audio.play('nokey'); this.message('THE GUMBIRD STILL LIVES!');
+        } else { this._exitLevel(); }
+        return;
+      }
       if (SOLID.has(ch)) return;   // a wall blocks reaching further
     }
   }

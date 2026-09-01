@@ -46,7 +46,7 @@ const CONFIGS = [
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 9: ICON', w: 40, h: 28, rooms: 12, key: 'yellow',
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3, x: 3, P: 2 }, boss: 'G', outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 10, dais: 1, secret: 1, secretReward: '7',
+    enemies: { z: 4, i: 8, d: 6, c: 5, f: 5, B: 3, x: 3, P: 2 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 10, dais: 1, secret: 1, secretReward: '7',
     items: { V: 1, k: 1, v: 1, h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
 ];
 

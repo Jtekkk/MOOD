@@ -199,17 +199,20 @@ find the matching keycard.
   panic, complete with a wire cage and a swarm, when you're nearly dead.
 
   ![The nine moods](docs/screens/faces.png)
-- **Nine levels** — three hand-authored (Entryway, Underhalls, The Ascent) plus six
-  procedurally generated (`tools/gen-levels.mjs`): rooms-and-corridors layouts,
-  each with its own surface theme, a key-gated exit, and a rising
-  enemy/difficulty curve. A title screen, level-complete intermission (kills / items /
-  secrets / time tally), death/respawn, and a final victory screen tie them
-  together.
+- **Ten levels** — three hand-authored (Entryway, Underhalls, The Ascent), six
+  procedurally generated (`tools/gen-levels.mjs`) with per-level themes, hidden
+  **secrets**, water, elevation and open-sky sections, and a hand-built **boss
+  arena** finale (LEVEL 10: THE GUMBIRD) whose exit stays sealed until the boss
+  is dead. A title screen, level-complete intermission (kills / items / secrets /
+  time tally), death/respawn, and a final victory screen tie them together.
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
 - **Per-level background music** — seven looping MP3 tracks in `assets/music/`,
-  one per level (level 8 wraps to the first); the `M` mute key silences music
+  one per level (later levels wrap around); the `M` mute key silences music
   and SFX together.
+- **Reactive audio:** the mix reads the fight — awake monsters near you and
+  recent hits swell the music from 60% to full and fade in a low **tension
+  drone**, which eases back to calm once the room is clear.
 
 ## Project layout
 
