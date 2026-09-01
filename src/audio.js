@@ -13,6 +13,8 @@ export class AudioEngine {
     this.musicTracks = [];
     this.curTrack = -1;
     this.musicVol = 0.42;   // sit under the SFX
+    this.intensity = 0;     // reactive combat layer (0 calm .. 1 hot)
+    this.tension = null;
   }
 
   // Must be called from a user gesture (browsers block autoplay otherwise).
@@ -27,6 +29,23 @@ export class AudioEngine {
     this.musicGain = this.ctx.createGain();
     this.musicGain.gain.value = 0.18;
     this.musicGain.connect(this.master);
+    // reactive "tension" drone: a low detuned pad that swells during combat
+    this.tension = this.ctx.createGain(); this.tension.gain.value = 0;
+    this.tension.connect(this.master);
+    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 190; lp.Q.value = 5;
+    lp.connect(this.tension);
+    for (const f of [55, 55 * 1.5, 82.5]) {
+      const o = this.ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+      o.connect(lp); o.start();
+    }
+  }
+
+  // Set combat intensity 0..1: swell the music and fade in the tension drone.
+  setIntensity(t) {
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    this.intensity = t;
+    if (this.musicEl) this.musicEl.volume = this.enabled ? this.musicVol * (0.6 + 0.4 * t) : 0;
+    if (this.tension && this.ctx) this.tension.gain.setTargetAtTime(this.enabled ? 0.085 * t : 0, this._now(), 0.35);
   }
 
   resume() {

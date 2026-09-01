@@ -50,6 +50,7 @@ export class Game {
     this.showMap = false;
     this.messages = [];
     this.timer = 0;
+    this.combatT = 0;   // smoothed combat intensity for reactive audio
     this.player = this._freshPlayer();
     this.intermission = null;
     this.tally = null;
@@ -223,6 +224,11 @@ export class Game {
       case 'settings': this._updateSettings(); break;
       default: break;
     }
+    // outside of active play, let the combat music/tension settle back to calm
+    if (this.state !== 'playing' && this.combatT > 0.001) {
+      this.combatT = Math.max(0, this.combatT - dt * 0.8);
+      this.audio.setIntensity(this.combatT);
+    }
   }
 
   _updatePlaying(dt) {
@@ -307,6 +313,18 @@ export class Game {
     for (const d of this.map.doors) this._updateDoor(d, dt);
     this._updateParticles(dt);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 3);
+
+    // --- reactive audio: how hot is the fight right now? ---
+    let threat = 0;
+    for (const e of this.entities) {
+      if (e.kind === 'enemy' && e.alive && (e.state === 'chase' || e.state === 'attack' || e.state === 'pain')) {
+        const d = dist(e.x, e.y, p.x, p.y);
+        if (d < 16) threat += (e.def.boss ? 3 : 1) * (1 - d / 16);
+      }
+    }
+    const intTarget = Math.min(1, threat / 5 + (p.damageFlash > 0 ? 0.25 : 0));
+    this.combatT += (intTarget - this.combatT) * Math.min(1, dt * 1.6);
+    this.audio.setIntensity(this.combatT);
 
     // --- timers/flashes ---
     p.damageFlash = Math.max(0, p.damageFlash - dt * 2);
