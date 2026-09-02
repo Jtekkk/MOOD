@@ -70,6 +70,16 @@ export const ENEMY_TYPES = {
     range: 16, dmg: [10, 22], cooldown: 1.5, attackSound: 'revlaunch',
     painChance: 0.2, sightChance: 1,
   },
+  dukette: {
+    name: 'THE DUKETTE', prefix: 'dukette', boss: true,
+    hp: 800, speed: 2.3, radius: 0.40, spriteH: 1.7, mass: 3.4,
+    attack: 'projectile', proj: 'dukeblast', projSpeed: 8, salvo: 3, spread: 0.2,
+    range: 18, dmg: [8, 18], cooldown: 1.25, attackSound: 'dukeblast',
+    painChance: 0.06, sightChance: 1,
+    // parody one-liners (an original send-up of the wisecracking action hero)
+    quips: ['COME GET SOME.', 'HAIL TO THE QUEEN, BABY.', 'BALLS OF STEEL. AND HEELS.',
+      'GROOVY. LOVE THE DRESS?', "IT'S TIME TO ACCESSORIZE — WITH PAIN.", 'LOOKIN’ GOOD. FOR A CORPSE.'],
+  },
   gumbird: {
     name: 'THE GUMBIRD', prefix: 'gumbird', boss: true,
     hp: 1000, speed: 2.4, radius: 0.5, spriteH: 1.8, mass: 3.8,
@@ -79,7 +89,7 @@ export const ENEMY_TYPES = {
 };
 
 // 'j' = the Arch-Vile ('A' and 'V' are already blue-armor / invulnerability things).
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant', m: 'mancubus' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant', m: 'mancubus', n: 'dukette' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

@@ -46,7 +46,7 @@ const CONFIGS = [
     theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
     enemies: { z: 5, i: 6, d: 2, c: 1 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['4'], barrels: 5, lamps: 13,
     items: { h: 5, H: 3, p: 5, a: 1, A: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 2 } },
-  { name: 'LEVEL 5: FOUNDRY', w: 60, h: 42, rooms: 16, key: 'blue', doors: 4,
+  { name: 'LEVEL 5: FOUNDRY', w: 60, h: 42, rooms: 16, key: 'blue', doors: 4, boss: 'n',
     theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
     enemies: { z: 4, i: 6, d: 3, c: 2, f: 1, m: 1 }, outdoor: 1, weapons: ['5'], barrels: 6, lamps: 14, secret: 1, secretReward: 'g',
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 4, S: 3, r: 2, e: 3 } },

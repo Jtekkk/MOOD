@@ -29,6 +29,7 @@ const PROJ_LIGHT = {
   fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
   baronball: [0.4, 1.0, 0.4], bfgball: [0.5, 1.0, 0.55], jugball: [1.0, 0.45, 0.75],
   tadpole: [1.0, 1.0, 1.0], revmissile: [1.0, 0.55, 0.2], mancuball: [1.0, 0.62, 0.18],
+  dukeblast: [1.0, 0.82, 0.3],
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
@@ -443,8 +444,9 @@ export class Game {
         return;
       }
       if (ch === '+') {
-        if (this.entities.some((e) => e.kind === 'enemy' && e.alive && e.def.boss)) {
-          this.audio.play('nokey'); this.message('THE GUMBIRD STILL LIVES!');
+        const boss = this.entities.find((e) => e.kind === 'enemy' && e.alive && e.def.boss);
+        if (boss) {
+          this.audio.play('nokey'); this.message(`${boss.def.name} STILL LIVES!`);
         } else { this._exitLevel(); }
         return;
       }
@@ -837,7 +839,7 @@ export class Game {
     }
 
     if (e.state === 'idle') {
-      if (see && d < 16) { e.state = 'chase'; this.audio.play('monster_sight'); this._alertNearby(e.x, e.y, 5); }
+      if (see && d < 16) { e.state = 'chase'; this.audio.play('monster_sight'); this._alertNearby(e.x, e.y, 5); this._bossQuip(e); }
       e.sprite = enemyFrame(e);
       return;
     }
@@ -916,7 +918,18 @@ export class Game {
     }
   }
 
+  // A boss with a `quips` list barks an occasional one-liner (throttled so it
+  // never spams). Only when the player is the target.
+  _bossQuip(e, chance = 1) {
+    if (!e.def.quips || e.target !== 'player') return;
+    if ((e._quipT || 0) > this.timer) return;
+    if (Math.random() > chance) return;
+    this.message(e.def.quips[Math.floor(Math.random() * e.def.quips.length)]);
+    e._quipT = this.timer + 4.5;
+  }
+
   _enemyAttack(e) {
+    if (e.def.boss) this._bossQuip(e, 0.4);
     const tp = this._targetPos(e);
     const ang = Math.atan2(tp.y - e.y, tp.x - e.x);
     const dmg = irnd(e.def.dmg[0], e.def.dmg[1]);

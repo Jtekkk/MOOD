@@ -1506,6 +1506,103 @@ function mancuBall() {
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(12, 12, 12, 0, 7); ctx.fill();
   return texFrom(c, ctx);
 }
+// ----- boss: THE DUKETTE (parody wisecracking action hero in a red dress) ----
+// A slab of blond muscle in mirror shades and a little red cocktail dress,
+// firing gold energy blasts. An original send-up, not a likeness.
+function dukette(frame) {
+  const { c, ctx } = makeCanvas(64, 92);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 4 : 0;
+  // muscular bare legs below the skirt
+  ctx.fillStyle = '#d8a878'; ctx.fillRect(24 - sw, 68, 8, 20); ctx.fillRect(34 + sw, 68, 8, 20);
+  ctx.fillStyle = '#b33'; ctx.fillRect(22 - sw, 86, 11, 5); ctx.fillRect(33 + sw, 86, 11, 5);   // red heels
+  // flaring red dress skirt
+  ctx.fillStyle = '#c8202a'; ctx.beginPath(); ctx.moveTo(18, 48); ctx.lineTo(46, 48); ctx.lineTo(50, 72); ctx.lineTo(14, 72); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e23a44'; ctx.fillRect(16, 68, 32, 4);          // hem highlight
+  // bodice
+  const bg = ctx.createLinearGradient(32, 30, 32, 50); bg.addColorStop(0, '#e23a44'); bg.addColorStop(1, '#a81820');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(20, 32); ctx.lineTo(44, 32); ctx.lineTo(46, 50); ctx.lineTo(18, 50); ctx.closePath(); ctx.fill();
+  // big bare shoulders + arms
+  ctx.fillStyle = '#e0b080'; ctx.beginPath(); ctx.ellipse(32, 31, 16, 7, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#d8a878'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  if (attack) {
+    // right arm punched forward with a gold energy blast at the fist
+    ctx.beginPath(); ctx.moveTo(42, 33); ctx.lineTo(60, 40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(22, 33); ctx.lineTo(14, 50); ctx.stroke();
+    const g = ctx.createRadialGradient(61, 40, 1, 61, 40, 12);
+    g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffe89a'); g.addColorStop(0.8, '#ffae1a'); g.addColorStop(1, 'rgba(255,150,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(61, 40, 12, 0, 7); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.moveTo(42, 33); ctx.lineTo(50, 50 - sw); ctx.moveTo(22, 33); ctx.lineTo(14, 50 + sw); ctx.stroke();
+    ctx.fillStyle = '#e0b080'; ctx.beginPath(); ctx.arc(50, 51 - sw, 3.2, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(14, 51 + sw, 3.2, 0, 7); ctx.fill();
+  }
+  ctx.lineCap = 'butt';
+  // thick neck + square-jawed head
+  ctx.fillStyle = '#e0b080'; ctx.fillRect(28, 22, 8, 8);
+  ctx.fillStyle = '#e6b988'; ctx.beginPath(); ctx.ellipse(32, 16, 10, 11, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e6b988'; ctx.fillRect(24, 16, 16, 8);          // heavy jaw
+  // blond flat-top
+  ctx.fillStyle = '#f4d24a'; ctx.fillRect(22, 5, 20, 8);
+  ctx.fillStyle = '#e0bc2e'; ctx.fillRect(22, 5, 20, 2);
+  ctx.fillStyle = '#f4d24a'; ctx.fillRect(23, 12, 18, 3);
+  // mirror shades
+  ctx.fillStyle = '#101014'; ctx.fillRect(24, 15, 16, 5);
+  ctx.fillStyle = '#3a5a8a'; ctx.fillRect(25, 16, 6, 2); ctx.fillRect(33, 16, 6, 2);
+  ctx.fillStyle = '#9fc4ff'; ctx.fillRect(26, 16, 2, 1); ctx.fillRect(34, 16, 2, 1);
+  // smirk + cigar-less grin
+  ctx.fillStyle = '#7a3a2a'; ctx.fillRect(28, 22, 9, 2);
+  return texFrom(c, ctx);
+}
+function duketteSide(frame) {
+  const { c, ctx } = makeCanvas(64, 92);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 5 : -5;
+  ctx.fillStyle = '#d8a878'; ctx.fillRect(30 + sw, 68, 8, 20); ctx.fillRect(30 - sw, 68, 8, 20);
+  ctx.fillStyle = '#b33'; ctx.fillRect(28 + sw, 86, 12, 5); ctx.fillRect(28 - sw, 86, 12, 5);
+  ctx.fillStyle = '#c8202a'; ctx.beginPath(); ctx.moveTo(22, 48); ctx.lineTo(42, 48); ctx.lineTo(46, 72); ctx.lineTo(18, 72); ctx.closePath(); ctx.fill();
+  const bg = ctx.createLinearGradient(32, 30, 32, 50); bg.addColorStop(0, '#e23a44'); bg.addColorStop(1, '#a81820');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(24, 32); ctx.lineTo(40, 32); ctx.lineTo(42, 50); ctx.lineTo(22, 50); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#d8a878'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  if (attack) {
+    ctx.beginPath(); ctx.moveTo(34, 34); ctx.lineTo(52, 40); ctx.stroke();
+    const g = ctx.createRadialGradient(54, 40, 1, 54, 40, 11); g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffe89a'); g.addColorStop(1, 'rgba(255,150,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(54, 40, 11, 0, 7); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.moveTo(34, 34); ctx.lineTo(40, 52); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = '#e6b988'; ctx.beginPath(); ctx.ellipse(33, 16, 9, 11, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e6b988'; ctx.fillRect(33, 16, 9, 8);           // jaw juts forward
+  ctx.fillStyle = '#f4d24a'; ctx.fillRect(24, 5, 18, 8);
+  ctx.fillStyle = '#101014'; ctx.fillRect(33, 15, 9, 5);
+  ctx.fillStyle = '#9fc4ff'; ctx.fillRect(37, 16, 2, 1);
+  return texFrom(c, ctx);
+}
+function duketteBack(frame) {
+  const { c, ctx } = makeCanvas(64, 92);
+  const sw = frame === 'walk1' ? 4 : 0;
+  ctx.fillStyle = '#d8a878'; ctx.fillRect(24 - sw, 68, 8, 20); ctx.fillRect(34 + sw, 68, 8, 20);
+  ctx.fillStyle = '#b33'; ctx.fillRect(22 - sw, 86, 11, 5); ctx.fillRect(33 + sw, 86, 11, 5);
+  ctx.fillStyle = '#b81820'; ctx.beginPath(); ctx.moveTo(18, 48); ctx.lineTo(46, 48); ctx.lineTo(50, 72); ctx.lineTo(14, 72); ctx.closePath(); ctx.fill();
+  const bg = ctx.createLinearGradient(32, 30, 32, 50); bg.addColorStop(0, '#c8202a'); bg.addColorStop(1, '#8a1018');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(20, 32); ctx.lineTo(44, 32); ctx.lineTo(46, 50); ctx.lineTo(18, 50); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,10,14,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(32, 33); ctx.lineTo(32, 50); ctx.stroke();  // zipper
+  ctx.fillStyle = '#e0b080'; ctx.beginPath(); ctx.ellipse(32, 31, 16, 7, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#d8a878'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(42, 33); ctx.lineTo(50, 50 - sw); ctx.moveTo(22, 33); ctx.lineTo(14, 50 + sw); ctx.stroke(); ctx.lineCap = 'butt';
+  ctx.fillStyle = '#e6b988'; ctx.fillRect(28, 22, 8, 8);
+  ctx.fillStyle = '#f4d24a'; ctx.beginPath(); ctx.ellipse(32, 14, 10, 10, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e0bc2e'; ctx.fillRect(22, 6, 20, 4);          // flat-top from behind
+  return texFrom(c, ctx);
+}
+// The Dukette's gold energy blast.
+function dukeBlast() {
+  const { c, ctx } = makeCanvas(22, 22);
+  const g = ctx.createRadialGradient(11, 11, 1, 11, 11, 11);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffe89a'); g.addColorStop(0.75, '#ffae1a'); g.addColorStop(1, 'rgba(255,150,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(11, 11, 11, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
 function bfgBall() {
   const { c, ctx } = makeCanvas(48, 48);
   const g = ctx.createRadialGradient(24, 24, 2, 24, 24, 24);
@@ -2330,6 +2427,18 @@ export function buildAssets() {
   }
   SPR.mancuball = mancuBall();
 
+  // THE DUKETTE (LEVEL 5 boss) — full directional set + gold blast
+  SPR.dukette_walk0 = dukette('walk0'); SPR.dukette_walk1 = dukette('walk1');
+  SPR.dukette_attack = dukette('attack'); SPR.dukette_pain = dukette('walk0');
+  for (let i = 0; i < 4; i++) SPR['dukette_die' + i] = humanoidDeath(64, 88, i, '#c8202a', '#8a1018', '#e6b988', true);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`dukette_front_${f}`] = SPR[`dukette_${f}`];
+    SPR[`dukette_sideR_${f}`] = duketteSide(f);
+    SPR[`dukette_sideL_${f}`] = mirrorTex(SPR[`dukette_sideR_${f}`]);
+    SPR[`dukette_back_${f}`] = duketteBack(f);
+  }
+  SPR.dukeblast = dukeBlast();
+
   // the Gumbird (final boss) — full directional set + thrown juggling ball
   SPR.gumbird_walk0 = gumbird('walk0'); SPR.gumbird_walk1 = gumbird('walk1');
   SPR.gumbird_attack = gumbird('attack'); SPR.gumbird_pain = gumbird('walk0');
@@ -2363,7 +2472,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul') || k.startsWith('vileflame')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile' || k === 'mancuball') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile' || k === 'mancuball' || k === 'dukeblast') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

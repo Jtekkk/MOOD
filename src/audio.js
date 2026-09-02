@@ -115,6 +115,7 @@ export class AudioEngine {
       case 'monster_attack': this._tone(180, 0.18, { type: 'square', gain: 0.28, slideTo: 90 }); break;
       case 'revlaunch': this._noise(0.34, { freq: 900, gain: 0.5, decay: 0.55 }); this._tone(300, 0.28, { type: 'sawtooth', gain: 0.28, slideTo: 90 }); break;
       case 'mancubus': this._noise(0.3, { freq: 500, gain: 0.45, q: 0.6, decay: 0.6 }); this._tone(140, 0.26, { type: 'sawtooth', gain: 0.32, slideTo: 300 }); break;
+      case 'dukeblast': this._tone(520, 0.14, { type: 'square', gain: 0.3, slideTo: 180 }); this._tone(260, 0.16, { type: 'sawtooth', gain: 0.22, slideTo: 620 }); this._noise(0.1, { freq: 2600, gain: 0.2, decay: 1.4 }); break;
       case 'monster_death':  this._tone(200, 0.4, { type: 'sawtooth', gain: 0.35, slideTo: 40 }); this._noise(0.3, { freq: 600, gain: 0.25, decay: 0.8 }); break;
       case 'oof':      this._tone(180, 0.12, { type: 'square', gain: 0.3, slideTo: 110 }); break;
       case 'menu':     this._tone(440, 0.05, { gain: 0.2 }); break;

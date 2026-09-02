@@ -183,13 +183,18 @@ find the matching keycard.
   charger), the Revenant (homing missiles), the Mancubus (spread fireballs),
   and the Baron of Hell (600-HP green-fireball boss). Ranged monsters strafe to
   dodge and kite you, and each has a distinct death animation.
-- **The Gumbird** — a 1000-HP final boss guarding LEVEL 8's exit: part Gumby,
+- **The Dukette** — LEVEL 5's boss and the campaign's mid-game wall: an 800-HP
+  slab of blond muscle in mirror shades, a little red dress and heels, barking
+  parody one-liners while unloading fans of gold energy blasts. The exit stays
+  sealed until she drops.
+- **The Gumbird** — a 1000-HP final boss guarding LEVEL 10's arena: part Gumby,
   part Big Bird, on roller skates, in a dunce cap and a polka-dot dress,
   juggling three balls and belting out "Row, Row, Row Your Boat" line by line
   (with a synthesized melody) while pelting you with juggling balls.
 - **Gamepad support:** any standard-mapping controller is detected on connect —
-  sticks to move and look, triggers to fire, shoulders to swap weapons, and
-  full menu/pause navigation.
+  **left stick moves + strafes, the right stick rotates the view** (true
+  dual-stick), triggers to fire, shoulders to swap weapons, and full menu/pause
+  navigation.
 - **Environmental terrain:** wadeable **water** — ponds and streams that ripple,
   slow you down, and kick up splashes — and **outdoor sections** open to a dusk
   **sky** instead of a ceiling. (The renderer is a flat-floor raycaster, so
