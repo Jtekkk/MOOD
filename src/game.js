@@ -28,6 +28,7 @@ const GIB = [rgba(190, 40, 40), rgba(140, 20, 24), rgba(220, 120, 120), rgba(90,
 const PROJ_LIGHT = {
   fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
   baronball: [0.4, 1.0, 0.4], bfgball: [0.5, 1.0, 0.55], jugball: [1.0, 0.45, 0.75],
+  tadpole: [1.0, 1.0, 1.0],
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
@@ -123,7 +124,7 @@ export class Game {
       x: 1.5, y: 1.5, angle: 0, pitch: 0,
       vx: 0, vy: 0, kx: 0, ky: 0,    // momentum + knockback velocities
       health: 100, armor: 0,
-      owned: [true, true, false, false, false, false, false, false],
+      owned: [true, true, false, false, false, false, false, false, false],
       weapon: 1, pendingWeapon: 1, raiseT: 0,
       ammo: { bullets: 50, shells: 0, rockets: 0, cells: 0 },
       keys: { red: false, blue: false, yellow: false },
@@ -534,7 +535,7 @@ export class Game {
     this.audio.play(w.sound);
 
     if (w.kind === 'projectile') {
-      this._spawnProjectile(p.x, p.y, p.angle, w);
+      this._spawnProjectile(p.x, p.y, p.angle + (w.spread ? rnd(-w.spread, w.spread) : 0), w);
     } else {
       const pellets = w.pellets || 1;
       const berserkMul = (p.berserk && w.kind === 'melee') ? 10 : 1;   // berserk fist wrecks
@@ -1065,6 +1066,30 @@ export class Game {
   }
 
   // ---- level flow --------------------------------------------------------
+  // Cheat: warp straight to the next level (no intermission), keeping your
+  // loadout. Triggered by typing "stfl" during play. Wraps victory on the last.
+  cheatNextLevel() {
+    if (this.state !== 'playing') return;
+    if (this.levelIndex + 1 < LEVELS.length) {
+      this.levelIndex++;
+      this.loadLevel(this.levelIndex);
+      this.message('STFL — WARPED TO ' + this.map.name);
+    } else {
+      this.message('STFL — NO NEXT LEVEL (final map)');
+    }
+  }
+
+  // Cheat: grant the secret SAUSAGE gun (fires white tadpoles, no ammo) and
+  // switch to it. Triggered by typing "sauce" during play.
+  cheatSausage() {
+    if (this.state !== 'playing') return;
+    const idx = WEAPONS.length - 1;   // the sausage is the last slot
+    this.player.owned[idx] = true;
+    this._switchWeapon(idx);
+    this.message('SAUCE — THE SAUSAGE IS YOURS');
+    this.audio.play('weapon');
+  }
+
   _exitLevel() {
     this.audio.play('levelend');
     this.tally = {

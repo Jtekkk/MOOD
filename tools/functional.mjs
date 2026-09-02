@@ -76,6 +76,8 @@ try {
     out.unlockedOpens = exitDoor.state === 'opening';
 
     // 5b) rays are blocked by a CLOSED door, pass through an OPEN one
+    // (clear wandering enemies first so none crosses the ray path — determinism)
+    game.entities = game.entities.filter((e) => e.kind !== 'enemy');
     const dr = normDoor, a = approach(dr);
     const target = { kind: 'enemy', x: a.tx, y: a.ty, radius: 0.3, hp: 1000, alive: true,
       state: 'chase', def: { painChance: 0 } };

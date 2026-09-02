@@ -41,6 +41,13 @@ export const WEAPONS = [
     fp: 'fp_bfg', fpFire: 'fp_bfg_fire', cooldown: 0.9, sound: 'bfg',
     kind: 'projectile', proj: 'bfgball', projSpeed: 8, projH: 0.95, splash: 4.5, dmg: [380, 540], flash: [0.5, 1.0, 0.5],
   },
+  {
+    // secret weapon — granted by the "sauce" cheat. A grilled sausage that
+    // spits an endless stream of wiggling white tadpoles. No ammo.
+    name: 'SAUSAGE', key: 'Digit9', ammo: null, useAmmo: 0, secret: true,
+    fp: 'fp_sausage', fpFire: 'fp_sausage_fire', cooldown: 0.14, sound: 'plasma',
+    kind: 'projectile', proj: 'tadpole', projSpeed: 12, projH: 0.3, splash: 0, spread: 0.06, dmg: [14, 26], flash: [1.0, 1.0, 1.0],
+  },
 ];
 
 export const AMMO_MAX = { bullets: 200, shells: 50, rockets: 50, cells: 300 };

@@ -71,12 +71,19 @@ document.addEventListener('pointerlockchange', () => {
   if (!input.locked && game.state === 'playing') game.state = 'paused';
 });
 
+let cheatBuf = '';
 window.addEventListener('keydown', (e) => {
   ensureAudio();
   if (e.code === 'KeyM') { const on = audio.toggleMute(); game.message(on ? 'sound on' : 'sound off'); }
   if (e.code === 'KeyO' && (game.state === 'title' || game.state === 'paused')) game.openSettings(game.state);
   if (e.code === 'Tab' && (game.state === 'playing' || game.state === 'paused')) game.showMap = !game.showMap;
   if (e.code === 'Escape' && game.state === 'playing') { game.state = 'paused'; input.exitLock(); }
+  // cheat codes: keep a short buffer of typed letters and match a code
+  if (e.key && e.key.length === 1 && /[a-z]/i.test(e.key)) {
+    cheatBuf = (cheatBuf + e.key.toLowerCase()).slice(-8);
+    if (cheatBuf.endsWith('stfl')) { game.cheatNextLevel(); cheatBuf = ''; }
+    else if (cheatBuf.endsWith('sauce')) { game.cheatSausage(); cheatBuf = ''; }
+  }
 });
 
 function render() {

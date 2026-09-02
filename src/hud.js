@@ -203,9 +203,10 @@ export function drawStatusBar(ctx, game) {
   // ARMS panel — owned weapon slot numbers
   ctx.font = '7px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let i = 1; i < WEAPONS.length; i++) {
+    const owned = p.owned[i];
+    if (WEAPONS[i].secret && !owned) continue;   // keep secret weapons hidden until owned
     const col = 112 + ((i - 1) % 3) * 12;
     const row = BAR_Y + 6 + (((i - 1) / 3) | 0) * 11;
-    const owned = p.owned[i];
     ctx.fillStyle = (i === p.weapon) ? '#ffd040' : owned ? '#9aa' : '#445';
     ctx.fillText(String(i + 1), col, row);
   }

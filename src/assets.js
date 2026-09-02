@@ -721,6 +721,19 @@ function plasmaBall() {
   return texFrom(c, ctx);
 }
 
+// white tadpole — the sausage's projectile: a glowing round head + wiggly tail
+function tadpole() {
+  const { c, ctx } = makeCanvas(24, 16);
+  const g = ctx.createRadialGradient(7, 8, 1, 7, 8, 8);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, 'rgba(226,238,255,0.65)'); g.addColorStop(1, 'rgba(200,220,255,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(7, 8, 8, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#eef4ff'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(10, 8); ctx.quadraticCurveTo(16, 3.5, 21, 9); ctx.stroke();   // tail flick
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(7, 8, 5, 4.5, 0, 0, 7); ctx.fill();  // head
+  ctx.fillStyle = '#8890b8'; ctx.fillRect(5, 7, 1, 1); ctx.fillRect(8, 7, 1, 1);               // eyes
+  return texFrom(c, ctx);
+}
+
 function rocketProj() {
   const { c, ctx } = makeCanvas(28, 16);
   ctx.fillStyle = '#cfcfcf'; ctx.fillRect(6, 5, 16, 6);
@@ -1330,6 +1343,33 @@ function fpBfg(fire) {
     const f = ctx.createRadialGradient(cx, 24 + r, 1, cx, 24 + r, 28);
     f.addColorStop(0, '#fff'); f.addColorStop(0.4, '#9cff8c'); f.addColorStop(1, 'rgba(20,160,20,0)');
     ctx.fillStyle = f; ctx.beginPath(); ctx.arc(cx, 24 + r, 28, 0, 7); ctx.fill();
+  }
+  return texFrom(c, ctx);
+}
+
+// the secret SAUSAGE gun (first person): a grilled banger gripped in both fists,
+// spitting a white tadpole from its tip on fire.
+function fpSausage(fire) {
+  const { c, ctx } = makeCanvas(200, 130);
+  const cx = 100, r = fire ? 8 : 0;
+  glove(ctx, cx - 30, 96 + r, 30, 34); glove(ctx, cx + 4, 100 + r, 26, 30);
+  ctx.save();
+  ctx.translate(cx, 60 + r); ctx.rotate(-0.1);
+  const bg = ctx.createLinearGradient(-16, 0, 16, 0);
+  bg.addColorStop(0, '#6e3421'); bg.addColorStop(0.5, '#b5623f'); bg.addColorStop(1, '#7f4028');
+  ctx.fillStyle = bg;
+  ctx.fillRect(-15, -34, 30, 74);
+  ctx.beginPath(); ctx.ellipse(0, -34, 15, 11, 0, 0, 7); ctx.fill();     // rounded tip
+  ctx.beginPath(); ctx.ellipse(0, 40, 15, 11, 0, 0, 7); ctx.fill();      // rounded base
+  ctx.fillStyle = '#c9764f'; ctx.beginPath(); ctx.ellipse(-3, -36, 9, 6, 0, 0, 7); ctx.fill();   // tip highlight
+  ctx.strokeStyle = 'rgba(60,26,16,0.55)'; ctx.lineWidth = 3;           // grill marks
+  for (let i = -1; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(-13, -14 + i * 16); ctx.lineTo(13, -22 + i * 16); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(255,224,190,0.32)'; ctx.fillRect(-10, -28, 5, 62);  // sheen
+  ctx.restore();
+  if (fire) {
+    const f = ctx.createRadialGradient(cx - 6, 14, 1, cx - 6, 14, 26);
+    f.addColorStop(0, '#fff'); f.addColorStop(0.5, 'rgba(224,236,255,0.7)'); f.addColorStop(1, 'rgba(200,220,255,0)');
+    ctx.fillStyle = f; ctx.beginPath(); ctx.arc(cx - 6, 14, 26, 0, 7); ctx.fill();
   }
   return texFrom(c, ctx);
 }
@@ -2091,6 +2131,8 @@ export function buildAssets() {
 
   SPR.pickup_bfg = weaponPickup('bfg');
   SPR.fp_bfg = fpBfg(false); SPR.fp_bfg_fire = fpBfg(true);
+  SPR.tadpole = tadpole();
+  SPR.fp_sausage = fpSausage(false); SPR.fp_sausage_fire = fpSausage(true);
 
   // status-bar faces (5 damage states x the Nic Cage moods)
   for (let s = 0; s < 5; s++) for (const m of FACE_MOODS) SPR[`face_${s}_${m}`] = makeFace(s, m);
@@ -2108,7 +2150,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul') || k.startsWith('vileflame')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }
