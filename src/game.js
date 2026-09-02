@@ -28,7 +28,7 @@ const GIB = [rgba(190, 40, 40), rgba(140, 20, 24), rgba(220, 120, 120), rgba(90,
 const PROJ_LIGHT = {
   fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
   baronball: [0.4, 1.0, 0.4], bfgball: [0.5, 1.0, 0.55], jugball: [1.0, 0.45, 0.75],
-  tadpole: [1.0, 1.0, 1.0],
+  tadpole: [1.0, 1.0, 1.0], revmissile: [1.0, 0.55, 0.2],
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
@@ -590,11 +590,34 @@ export class Game {
       dmg: Array.isArray(w.dmg) ? irnd(w.dmg[0], w.dmg[1]) : w.dmg,
       splash: w.splash || 0, owner, sprite, spriteH: w.projH || 0.4, vOffset: 0.45,
       fullbright: true, alive: true, life: 6,
+      // homing (Revenant missiles): curve toward the shooter's target at a
+      // capped turn rate, so strafing still dodges them.
+      homing: !!w.homing, turn: w.turn || 2.2,
+      hTarget: (owner && owner !== 'player' && owner.target) ? owner.target : 'player',
       light: glow ? { r: glow[0], g: glow[1], b: glow[2], radius: w.splash > 1 ? 4 : 3, intensity: 1.5 } : null,
     });
   }
 
+  // Where a homing projectile should steer: its target entity if alive, else the player.
+  _projTarget(pr) {
+    const t = pr.hTarget;
+    if (t && t !== 'player' && t.alive && t.state !== 'dead' && t.state !== 'dying') return t;
+    return this.player;
+  }
+
   _updateProjectile(pr, dt) {
+    // Homing missiles (Revenant): rotate the velocity toward the target at a
+    // capped turn rate so a strafing player can still outrun/dodge them.
+    if (pr.homing) {
+      const tp = this._projTarget(pr);
+      const desired = Math.atan2(tp.y - pr.y, tp.x - pr.x);
+      const cur = Math.atan2(pr.vy, pr.vx);
+      let d = normalizeAngle(desired - cur);
+      const m = pr.turn * dt;
+      if (d > m) d = m; else if (d < -m) d = -m;
+      const na = cur + d, spd = Math.hypot(pr.vx, pr.vy);
+      pr.vx = Math.cos(na) * spd; pr.vy = Math.sin(na) * spd;
+    }
     const steps = 3;
     const sx = pr.vx * dt / steps, sy = pr.vy * dt / steps;
     pr.life -= dt;
@@ -850,7 +873,7 @@ export class Game {
     if (see && inRange && e.cooldownTimer <= 0) {
       e.state = 'attack'; e.attackTime = 0; e.didAttack = false;
       e.angle = Math.atan2(ty - e.y, tx - e.x);
-      this.audio.play('monster_attack');
+      this.audio.play(e.def.attackSound || 'monster_attack');
       e.sprite = enemyFrame(e);
       return;
     }
@@ -909,6 +932,7 @@ export class Game {
     } else {
       this._spawnProjectile(e.x, e.y, ang, {
         proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
+        homing: e.def.homing, turn: e.def.turn,
       }, e);
     }
   }

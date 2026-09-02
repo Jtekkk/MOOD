@@ -166,14 +166,19 @@ find the matching keycard.
   and casts a line-of-sight **flame pillar** at your feet for heavy damage and a
   hard blast off your feet. Break line of sight during its telegraphed cast and
   it fizzles — and gib its victims so it has nothing to raise. Prioritise it.
+- **The Revenant** — a tall bone-white skeleton with shoulder-mounted rocket
+  pods that fires **homing missiles**: they bend toward you at a capped turn
+  rate, so you can't just stand still, but a hard strafe still outruns the
+  curve. Fast on its feet (300 HP) and stalks the later levels (6-9).
 - **Gibbing:** overkill hits (rockets, the BFG, point-blank shells) burst a
   monster into a spray of gore and snap it straight to its final gib frame,
   with a wet splat.
-- **Nine enemy types** with a real AI state machine (idle → chase → attack →
+- **Ten enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
-  charger), and the Baron of Hell (600-HP green-fireball boss). Ranged monsters
-  strafe to dodge and kite you, and each has a distinct death animation.
+  charger), the Revenant (homing missiles), and the Baron of Hell (600-HP
+  green-fireball boss). Ranged monsters strafe to dodge and kite you, and each
+  has a distinct death animation.
 - **The Gumbird** — a 1000-HP final boss guarding LEVEL 8's exit: part Gumby,
   part Big Bird, on roller skates, in a dunce cap and a polka-dot dress,
   juggling three balls and belting out "Row, Row, Row Your Boat" line by line

@@ -1317,6 +1317,110 @@ function baronBall() {
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(13, 13, 13, 0, 7); ctx.fill();
   return texFrom(c, ctx);
 }
+// ----- enemy: revenant (tall bone-white skeleton with shoulder rocket pods) --
+// A gaunt undead soldier: skull head, exposed ribcage, and two boxy
+// missile-launcher pods bolted to its shoulders. On the attack frame a pod
+// flares with a muzzle flash as a homing missile leaves the tube.
+function revenant(frame) {
+  const { c, ctx } = makeCanvas(60, 84);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 4 : 0;
+  // bony legs + splayed feet
+  ctx.fillStyle = '#c8c2ac'; ctx.fillRect(24 - sw, 60, 6, 20); ctx.fillRect(30 + sw, 60, 6, 20);
+  ctx.fillStyle = '#9a947e'; ctx.fillRect(21 - sw, 78, 10, 4); ctx.fillRect(30 + sw, 78, 10, 4);
+  // knee joints
+  ctx.fillStyle = '#e6e0c8'; ctx.beginPath(); ctx.arc(27 - sw, 68, 3, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(33 + sw, 68, 3, 0, 7); ctx.fill();
+  // gaunt tapering torso
+  const bg = ctx.createLinearGradient(30, 22, 30, 62); bg.addColorStop(0, '#e8e2ca'); bg.addColorStop(1, '#9a947e');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(21, 30); ctx.lineTo(39, 30); ctx.lineTo(35, 62); ctx.lineTo(25, 62); ctx.closePath(); ctx.fill();
+  // spine + exposed ribs
+  ctx.strokeStyle = 'rgba(90,84,64,0.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(30, 32); ctx.lineTo(30, 60); ctx.stroke();
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(23, 38 + i * 6); ctx.lineTo(37, 38 + i * 6); ctx.stroke(); }
+  // arms
+  ctx.strokeStyle = '#d8d2ba'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(22, 34); ctx.lineTo(15, 54 + sw); ctx.moveTo(38, 34); ctx.lineTo(45, 54 - sw); ctx.stroke();
+  ctx.fillStyle = '#e6e0c8'; ctx.beginPath(); ctx.arc(15, 55 + sw, 3, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(45, 55 - sw, 3, 0, 7); ctx.fill();
+  ctx.lineCap = 'butt';
+  // shoulder rocket pods
+  for (const [px, dir] of [[10, -1], [50, 1]]) {
+    ctx.fillStyle = '#4a4e52'; ctx.fillRect(px - 7, 24, 14, 12);
+    ctx.fillStyle = '#2c3034'; ctx.fillRect(px - 7, 24, 14, 3);
+    ctx.fillStyle = '#15181a'; ctx.beginPath(); ctx.arc(px, 30, 3, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#6a6e72'; ctx.lineWidth = 1; ctx.strokeRect(px - 7, 24, 14, 12);
+    if (attack && dir === 1) {
+      // muzzle flash + missile leaving the right pod
+      const g = ctx.createRadialGradient(px + 5, 30, 1, px + 5, 30, 12);
+      g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffd27a'); g.addColorStop(0.8, '#ff6a1a'); g.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px + 6, 30, 12, 0, 7); ctx.fill();
+    }
+  }
+  // hunched shoulder girdle
+  ctx.fillStyle = '#c8c2ac'; ctx.beginPath(); ctx.ellipse(30, 30, 13, 5, 0, 0, 7); ctx.fill();
+  // skull head
+  ctx.fillStyle = '#eee8d0'; ctx.beginPath(); ctx.ellipse(30, 17, 9, 10, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(26, 24); ctx.lineTo(34, 24); ctx.lineTo(31, 30); ctx.lineTo(29, 30); ctx.closePath(); ctx.fill(); // jaw
+  // eye sockets — hollow with a cold glow
+  ctx.fillStyle = '#0a0806'; ctx.beginPath(); ctx.arc(26, 16, 2.6, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(34, 16, 2.6, 0, 7); ctx.fill();
+  ctx.fillStyle = attack ? '#eaffff' : '#8ad6ff'; ctx.beginPath(); ctx.arc(26, 16, 1.2, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(34, 16, 1.2, 0, 7); ctx.fill();
+  // nasal + teeth
+  ctx.fillStyle = '#0a0806'; ctx.beginPath(); ctx.moveTo(30, 18); ctx.lineTo(28, 22); ctx.lineTo(32, 22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#c8c0a0'; for (let x = 27; x < 34; x += 2) ctx.fillRect(x, 24, 1, 3);
+  return texFrom(c, ctx);
+}
+function revenantSide(frame) {
+  const { c, ctx } = makeCanvas(60, 84);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 5 : -5;
+  ctx.fillStyle = '#c8c2ac'; ctx.fillRect(28 + sw, 60, 6, 20); ctx.fillRect(28 - sw, 60, 6, 20);
+  ctx.fillStyle = '#9a947e'; ctx.fillRect(26 + sw, 78, 11, 4); ctx.fillRect(26 - sw, 78, 11, 4);
+  const bg = ctx.createLinearGradient(30, 22, 30, 62); bg.addColorStop(0, '#e8e2ca'); bg.addColorStop(1, '#9a947e');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(24, 30); ctx.lineTo(36, 30); ctx.lineTo(33, 62); ctx.lineTo(27, 62); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,84,64,0.5)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(26, 38 + i * 6); ctx.lineTo(34, 38 + i * 6); ctx.stroke(); }
+  ctx.strokeStyle = '#d8d2ba'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(31, 34); ctx.lineTo(37, 54); ctx.stroke(); ctx.lineCap = 'butt';
+  // single visible shoulder pod aimed forward
+  ctx.fillStyle = '#4a4e52'; ctx.fillRect(34, 24, 16, 11);
+  ctx.fillStyle = '#15181a'; ctx.beginPath(); ctx.arc(50, 29, 3, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#6a6e72'; ctx.lineWidth = 1; ctx.strokeRect(34, 24, 16, 11);
+  if (attack) {
+    const g = ctx.createRadialGradient(53, 29, 1, 53, 29, 11); g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffd27a'); g.addColorStop(1, 'rgba(255,80,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(54, 29, 11, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = '#eee8d0'; ctx.beginPath(); ctx.ellipse(32, 17, 8, 10, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(38, 16); ctx.lineTo(44, 19); ctx.lineTo(38, 23); ctx.closePath(); ctx.fill(); // snout
+  ctx.fillStyle = '#0a0806'; ctx.beginPath(); ctx.arc(34, 16, 2.4, 0, 7); ctx.fill();
+  ctx.fillStyle = attack ? '#eaffff' : '#8ad6ff'; ctx.beginPath(); ctx.arc(34, 16, 1.1, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+function revenantBack(frame) {
+  const { c, ctx } = makeCanvas(60, 84);
+  const sw = frame === 'walk1' ? 4 : 0;
+  ctx.fillStyle = '#c8c2ac'; ctx.fillRect(24 - sw, 60, 6, 20); ctx.fillRect(30 + sw, 60, 6, 20);
+  ctx.fillStyle = '#9a947e'; ctx.fillRect(21 - sw, 78, 10, 4); ctx.fillRect(30 + sw, 78, 10, 4);
+  const bg = ctx.createLinearGradient(30, 22, 30, 62); bg.addColorStop(0, '#d8d2ba'); bg.addColorStop(1, '#8a846e');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(21, 30); ctx.lineTo(39, 30); ctx.lineTo(35, 62); ctx.lineTo(25, 62); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(60,54,40,0.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, 32); ctx.lineTo(30, 60); ctx.stroke();
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = '#b8b298'; ctx.fillRect(27, 36 + i * 5, 6, 2); }
+  ctx.strokeStyle = '#c8c2ac'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(22, 34); ctx.lineTo(15, 54 + sw); ctx.moveTo(38, 34); ctx.lineTo(45, 54 - sw); ctx.stroke(); ctx.lineCap = 'butt';
+  for (const px of [10, 50]) { ctx.fillStyle = '#4a4e52'; ctx.fillRect(px - 7, 24, 14, 12); ctx.strokeStyle = '#6a6e72'; ctx.lineWidth = 1; ctx.strokeRect(px - 7, 24, 14, 12); }
+  ctx.fillStyle = '#c8c2ac'; ctx.beginPath(); ctx.ellipse(30, 30, 13, 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ddd7bf'; ctx.beginPath(); ctx.ellipse(30, 17, 9, 10, 0, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+// The Revenant's homing missile: a small dark warhead trailing orange fire.
+function revMissile() {
+  const { c, ctx } = makeCanvas(24, 24);
+  const g = ctx.createRadialGradient(12, 12, 1, 12, 12, 12);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#ffd27a'); g.addColorStop(0.7, '#ff6a1a'); g.addColorStop(1, 'rgba(255,60,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(12, 12, 12, 0, 7); ctx.fill();
+  // metal warhead body in the middle
+  ctx.fillStyle = '#3a3e42'; ctx.beginPath(); ctx.ellipse(12, 12, 4.5, 3, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#c8ccd0'; ctx.beginPath(); ctx.arc(15, 12, 1.4, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
 function bfgBall() {
   const { c, ctx } = makeCanvas(48, 48);
   const g = ctx.createRadialGradient(24, 24, 2, 24, 24, 24);
@@ -2117,6 +2221,18 @@ export function buildAssets() {
   SPR.baronball = baronBall();
   SPR.bfgball = bfgBall();
 
+  // revenant — full directional set + homing missile
+  SPR.revenant_walk0 = revenant('walk0'); SPR.revenant_walk1 = revenant('walk1');
+  SPR.revenant_attack = revenant('attack'); SPR.revenant_pain = revenant('walk0');
+  for (let i = 0; i < 4; i++) SPR['revenant_die' + i] = humanoidDeath(60, 82, i, '#d8d2ba', '#8a846e', '#eee8d0', false);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`revenant_front_${f}`] = SPR[`revenant_${f}`];
+    SPR[`revenant_sideR_${f}`] = revenantSide(f);
+    SPR[`revenant_sideL_${f}`] = mirrorTex(SPR[`revenant_sideR_${f}`]);
+    SPR[`revenant_back_${f}`] = revenantBack(f);
+  }
+  SPR.revmissile = revMissile();
+
   // the Gumbird (final boss) — full directional set + thrown juggling ball
   SPR.gumbird_walk0 = gumbird('walk0'); SPR.gumbird_walk1 = gumbird('walk1');
   SPR.gumbird_attack = gumbird('attack'); SPR.gumbird_pain = gumbird('walk0');
@@ -2150,7 +2266,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul') || k.startsWith('vileflame')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

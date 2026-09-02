@@ -56,6 +56,13 @@ export const ENEMY_TYPES = {
     attack: 'projectile', proj: 'baronball', projSpeed: 8, range: 16, dmg: [12, 28], cooldown: 1.5,
     painChance: 0.12,
   },
+  revenant: {
+    name: 'REVENANT', prefix: 'revenant',
+    hp: 300, speed: 3.4, radius: 0.34, spriteH: 1.5, mass: 1.6,
+    attack: 'projectile', proj: 'revmissile', projSpeed: 7, homing: true, turn: 2.4,
+    range: 16, dmg: [10, 22], cooldown: 1.5, attackSound: 'revlaunch',
+    painChance: 0.2, sightChance: 1,
+  },
   gumbird: {
     name: 'THE GUMBIRD', prefix: 'gumbird', boss: true,
     hp: 1000, speed: 2.4, radius: 0.5, spriteH: 1.8, mass: 3.8,
@@ -65,7 +72,7 @@ export const ENEMY_TYPES = {
 };
 
 // 'j' = the Arch-Vile ('A' and 'V' are already blue-armor / invulnerability things).
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).
