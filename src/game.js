@@ -35,6 +35,27 @@ const PROJ_LIGHT = {
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
 
+// The six D.I. HARDWARE ACCESS TERMINAL subsystems (levels 2 & 6). Only #6 is
+// survivable — it drains the hazardous sludge pool on sublevel 9; the rest trip
+// a lethal plant failure.
+const TERMINAL_OPTIONS = [
+  { label: 'COOLING TOWER FLOW DIVERSION', fatal: 'COOLANT LOOP REVERSED — CORE MELTDOWN' },
+  { label: 'PARTICLE BEAM MIRROR ROTATION', fatal: 'MIRROR SWEEP — YOU ARE IN THE BEAM PATH' },
+  { label: 'WASTE GAS RECIRCULATE', fatal: 'VENTS SEALED — TOXIC GAS FLOODS THE ROOM' },
+  { label: 'TRANSFORMER FAULT RESET', fatal: 'BUS RE-ENERGIZED — ARC FLASH' },
+  { label: 'PLASMA TANK PURGE', fatal: 'PURGE VALVE BLEW BACK — PLASMA WASH' },
+  { label: 'HAZARDOUS WASTE DRAINAGE', fatal: null },
+];
+// rewards revealed in the drained sludge pool on LEVEL 9
+const GOLD_SLUDGE = {
+  sprite: 'goldsludge', spriteH: 0.5, sound: 'health',
+  apply: (g) => { g.player.immortal = true; g.player.health = Math.max(g.player.health, 200); g.player.powerFlash = 1; g.message('24K GOLD SLUDGE — YOU ARE IMMORTAL'); return true; },
+};
+const SAUCE_PICKUP = {
+  sprite: 'pickup_sausage', spriteH: 0.4, sound: 'weapon',
+  apply: (g) => { const i = WEAPONS.length - 1; g.player.owned[i] = true; g._switchWeapon(i); g.message('THE SECRET SAUSAGE GUN!'); return true; },
+};
+
 // The Gumbird's repertoire — "Row, Row, Row Your Boat", lyric + melody (C maj).
 const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.0, C5 = 523.25;
 const GUMBIRD_SONG = [
@@ -133,7 +154,7 @@ export class Game {
       fireCD: 0, weaponFlash: 0, recoil: 0,
       bobPhase: 0, bobAmt: 0,
       damageFlash: 0, pickupFlash: 0, powerFlash: 0,
-      invuln: 0, berserk: false, visor: 0, z: 0, hurtT: 0, hurtDir: 0,
+      invuln: 0, immortal: false, berserk: false, visor: 0, z: 0, hurtT: 0, hurtDir: 0,
       kills: 0, totalKills: 0, secrets: 0,
       dead: false, deathTime: 0,
       faceTimer: 0, faceMood: 'happy', calmT: 0, idleMoveT: 0, killStreak: 0, lastKillStamp: -99,
@@ -144,6 +165,7 @@ export class Game {
   startNewGame() {
     this.player = this._freshPlayer();
     this.levelIndex = 0;
+    this.wasteDrained = false;   // set by terminal option 6; unlocks LEVEL 9's pool
     this.loadLevel(0);   // also starts the level-1 track
     this.state = 'playing';
   }
@@ -193,6 +215,7 @@ export class Game {
     this.player.keys = { red: false, blue: false, yellow: false };
     this.player.kills = 0;
     this._spawnThings(map);
+    this._setupSludgePool(map);
     this.player.totalKills = this.entities.filter((e) => e.kind === 'enemy').length;
     this.levelStartT = this.timer;
     this.totalItems = this.entities.filter((e) => e.kind === 'item').length;
@@ -226,10 +249,43 @@ export class Game {
           kind: 'lamp', x, y, radius: 0.28, spriteH: 0.95, vOffset: 0, alive: true, fullbright: true, sprite: SPR.lamp,
           light: { r: 1.0, g: 0.72, b: 0.34, radius: 5.0, intensity: 1.5, flicker: 0.16, phase: Math.random() * 6.28 },
         });
+      } else if (ch === 't') {
+        // a D.I. access terminal you walk up to and USE (opens the console UI)
+        this.entities.push({
+          kind: 'terminal', x, y, radius: 0.3, spriteH: 1.0, vOffset: 0, alive: true, fullbright: true, sprite: SPR.terminal,
+          light: { r: 0.3, g: 1.0, b: 0.5, radius: 3.0, intensity: 1.0, flicker: 0.1, phase: Math.random() * 6.28 },
+        });
       } else if (ITEMS[ch]) {
         const def = ITEMS[ch];
         this.entities.push({ kind: 'item', ch, def, x, y, spriteH: def.spriteH, vOffset: 0, alive: true, sprite: SPR[def.sprite], bob: Math.random() * 6 });
       }
+    }
+  }
+
+  // LEVEL 9's hazardous sludge pool. Undrained it's toxic (burns you); once the
+  // D.I. terminal drainage (option 6) has been run it's cleared and holds the
+  // secret Sausage gun + the 24K gold sludge (immortality).
+  _setupSludgePool(map) {
+    this.sludgeRect = null; this._sludgeDmgT = 0;
+    const wp = map.wastePool;
+    if (!wp) return;
+    const cx = Math.floor(wp.x + wp.w / 2), cy = Math.floor(wp.y + wp.h / 2);
+    if (this.wasteDrained) {
+      if (map.floorType) {
+        for (let y = wp.y; y < wp.y + wp.h; y++) for (let x = wp.x; x < wp.x + wp.w; x++) {
+          const i = y * map.W + x; if (i >= 0 && i < map.floorType.length) map.floorType[i] = 0;   // no longer flooded
+        }
+      }
+      this.entities.push({
+        kind: 'item', ch: '$', def: GOLD_SLUDGE, x: cx + 0.5, y: cy + 0.5, spriteH: GOLD_SLUDGE.spriteH, vOffset: 0, alive: true, sprite: SPR.goldsludge, bob: Math.random() * 6,
+        light: { r: 1.0, g: 0.82, b: 0.3, radius: 4.5, intensity: 1.5, flicker: 0.12, phase: 1 },
+      });
+      this.entities.push({
+        kind: 'item', ch: 'µ', def: SAUCE_PICKUP, x: cx + 1.5, y: cy + 0.5, spriteH: SAUCE_PICKUP.spriteH, vOffset: 0, alive: true, sprite: SPR.pickup_sausage, bob: Math.random() * 6,
+      });
+      this.message('SUBLEVEL 9 SLUDGE POOL: DRAINED');
+    } else {
+      this.sludgeRect = wp;   // toxic until drained
     }
   }
 
@@ -247,6 +303,7 @@ export class Game {
     switch (this.state) {
       case 'playing': this._updatePlaying(dt); break;
       case 'intro': this._updateIntro(dt); break;
+      case 'terminal': this._updateTerminal(dt); break;
       case 'intermission': this._updateIntermission(dt); break;
       case 'dead': this._updateDead(dt); break;
       case 'settings': this._updateSettings(); break;
@@ -338,6 +395,15 @@ export class Game {
       else if (e.kind === 'item') { e.bob += dt * 4; this._tryPickup(e); }
     }
     this.entities = this.entities.filter((e) => !e._remove);
+
+    // --- toxic sludge pool (LEVEL 9, undrained): burns while you stand in it ---
+    if (this.sludgeRect) {
+      const r = this.sludgeRect;
+      if (p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h) {
+        this._sludgeDmgT += dt;
+        if (this._sludgeDmgT >= 0.4) { this._sludgeDmgT = 0; this._damagePlayer(6, p.x, p.y); p.damageFlash = Math.min(1, p.damageFlash + 0.3); }
+      }
+    }
 
     // --- doors / particles / shake ---
     for (const d of this.map.doors) this._updateDoor(d, dt);
@@ -453,6 +519,16 @@ export class Game {
   _useAction() {
     const p = this.player;
     const dx = Math.cos(p.angle), dy = Math.sin(p.angle);
+    // a terminal you're standing in front of takes priority over doors/switches
+    let term = null, best = 1.6;
+    for (const e of this.entities) {
+      if (e.kind !== 'terminal' || !e.alive) continue;
+      const d = dist(e.x, e.y, p.x, p.y);
+      if (d > 1.5) continue;
+      const facing = ((e.x - p.x) * dx + (e.y - p.y) * dy) / (d || 1);   // 1 = dead ahead
+      if (facing > 0.2 && d < best) { best = d; term = e; }
+    }
+    if (term) { this._openTerminal(term); return; }
     for (let t = 0.4; t <= 1.3; t += 0.2) {
       const cx = Math.floor(p.x + dx * t), cy = Math.floor(p.y + dy * t);
       const idx = cy * this.map.W + cx;
@@ -476,6 +552,66 @@ export class Game {
         return;
       }
       if (SOLID.has(ch)) return;   // a wall blocks reaching further
+    }
+  }
+
+  // ---- D.I. access terminal ---------------------------------------------
+  _openTerminal(node) {
+    this.state = 'terminal';
+    this.terminal = { node, step: 'login', field: 'user', user: '', pass: '', msg: '', sel: 0, timer: 0, result: '', fatal: false, cursor: 0, options: TERMINAL_OPTIONS };
+    this.audio.play('switch');
+  }
+
+  _updateTerminal(dt) {
+    const t = this.terminal, inp = this.input;
+    t.cursor += dt;
+    if (t.step === 'result') {
+      t.timer -= dt;
+      if (t.timer <= 0) {
+        const fatal = t.fatal;
+        this.state = 'playing'; this.terminal = null;
+        if (fatal) { this.player.damageFlash = 1; this.player.health = 0; }   // lethal subsystem → death
+      }
+      return;
+    }
+    if (inp.justPressed('Escape')) { this.state = 'playing'; this.terminal = null; this.audio.play('switch'); return; }
+
+    if (t.step === 'login') {
+      for (const chr of (inp.typed || '')) {
+        if (chr >= ' ' && chr <= '~') {
+          if (t.field === 'user') t.user = (t.user + chr).slice(0, 16);
+          else t.pass = (t.pass + chr).slice(0, 16);
+        }
+      }
+      if (inp.justPressed('Backspace')) {
+        if (t.field === 'user') t.user = t.user.slice(0, -1); else t.pass = t.pass.slice(0, -1);
+      }
+      if (inp.justPressed('Enter')) {
+        if (t.field === 'user') { t.field = 'pass'; }
+        else if (t.user.trim().toLowerCase() === 'admin' && t.pass.trim().toLowerCase() === 'admin') {
+          t.step = 'menu'; t.msg = ''; this.audio.play('switch');
+        } else { t.msg = 'ACCESS DENIED — TRY AGAIN'; t.user = ''; t.pass = ''; t.field = 'user'; this.audio.play('nokey'); }
+      }
+    } else if (t.step === 'menu') {
+      for (let i = 1; i <= 6; i++) { if (inp.justPressed('Digit' + i) || inp.justPressed('Numpad' + i)) { this._terminalSelect(i - 1); return; } }
+      if (inp.justPressed('ArrowUp')) { t.sel = (t.sel + 5) % 6; this.audio.play('menu'); }
+      if (inp.justPressed('ArrowDown')) { t.sel = (t.sel + 1) % 6; this.audio.play('menu'); }
+      if (inp.justPressed('Enter')) this._terminalSelect(t.sel);
+    }
+  }
+
+  _terminalSelect(idx) {
+    const t = this.terminal, opt = TERMINAL_OPTIONS[idx];
+    t.node.used = true;
+    if (opt.fatal) {
+      t.step = 'result'; t.fatal = true; t.timer = 2.2; t.result = 'CRITICAL FAILURE\n' + opt.fatal;
+      this.audio.play('explosion'); this.addShake(0.8);
+    } else {
+      const already = this.wasteDrained;
+      this.wasteDrained = true;
+      t.step = 'result'; t.fatal = false; t.timer = 2.4;
+      t.result = already ? 'DRAINAGE ALREADY COMPLETE' : 'HAZARDOUS WASTE DRAINAGE ENGAGED\nSUBLEVEL 9 SLUDGE POOL DRAINING...';
+      this.audio.play('door');
     }
   }
 
@@ -782,7 +918,7 @@ export class Game {
 
   _damagePlayer(dmg, srcX, srcY) {
     const p = this.player;
-    if (p.dead || p.invuln > 0) return;   // invulnerability sphere shrugs it off
+    if (p.dead || p.invuln > 0 || p.immortal) return;   // invuln sphere / gold sludge shrug it off
     dmg = Math.max(1, Math.round(dmg * (this.skill ? this.skill.dmgTaken : 1)));
     let dealt = dmg;
     if (p.armor > 0) {

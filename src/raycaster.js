@@ -139,7 +139,7 @@ export class Renderer {
     const raw = this._rawLights || (this._rawLights = []);
     raw.length = 0;
     for (const e of game.entities) {
-      if (e.light && (e.kind === 'lamp' || e.kind === 'proj')) {
+      if (e.light && (e.kind === 'lamp' || e.kind === 'proj' || e.kind === 'terminal' || e.kind === 'item')) {
         const L = e.light;
         let inten = L.intensity;
         if (L.flicker) inten *= 1 + L.flicker * Math.sin(t * 9 + (L.phase || 0));

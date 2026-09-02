@@ -377,6 +377,36 @@ export function drawBossBar(ctx, game) {
   ctx.strokeStyle = 'rgba(220,220,220,0.4)'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, bw, bh);
 }
 
+// The D.I. access terminal overlay — black screen, green phosphor text.
+export function drawTerminal(ctx, game) {
+  const t = game.terminal; if (!t) return;
+  ctx.fillStyle = '#020a05'; ctx.fillRect(0, 0, RENDER_W, RENDER_H);
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; for (let y = 0; y < RENDER_H; y += 2) ctx.fillRect(0, y, RENDER_W, 1);  // scanlines
+  const green = '#5dff8a', dim = '#2f8a52', amber = '#ffd24a', red = '#ff5a44';
+  const x = 20; let y = 24;
+  ctx.textAlign = 'left';
+  const line = (s, col, bold) => { ctx.font = (bold ? 'bold ' : '') + '8px monospace'; ctx.fillStyle = col || green; ctx.fillText(s, x, y); y += 12; };
+  line('D.I. HARDWARE ACCESS TERMINAL', green, true); y += 2;
+  line('D-INDUSTRIES // PLANT CONTROL NODE', dim); y += 6;
+  const cur = (Math.floor(t.cursor * 2) % 2) ? '_' : ' ';
+  if (t.step === 'login') {
+    line('SECURE LOGIN REQUIRED', dim); y += 6;
+    line('USERNAME: ' + t.user + (t.field === 'user' ? cur : ''), t.field === 'user' ? green : dim);
+    line('PASSWORD: ' + '*'.repeat(t.pass.length) + (t.field === 'pass' ? cur : ''), t.field === 'pass' ? green : dim);
+    y += 8; if (t.msg) { line(t.msg, red); y += 2; }
+    line('hint: admin / admin', dim);
+    line('ENTER submit   BACKSPACE erase   ESC cancel', dim);
+  } else if (t.step === 'menu') {
+    line('ACCESS GRANTED. SELECT SUBSYSTEM:', amber); y += 4;
+    (t.options || []).forEach((o, i) => { const sel = i === t.sel; line((sel ? '> ' : '  ') + (i + 1) + '. ' + o.label, sel ? amber : green); });
+    y += 6; line('PRESS 1-6  (or ARROWS + ENTER)   ESC cancel', dim);
+  } else if (t.step === 'result') {
+    y += 20; ctx.font = 'bold 9px monospace';
+    for (const l of t.result.split('\n')) { ctx.fillStyle = t.fatal ? red : amber; ctx.fillText(l, x, y); y += 14; }
+    if (t.fatal) { ctx.fillStyle = red; ctx.fillText('!!', RENDER_W - 34, 30); }
+  }
+}
+
 const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export function drawIntermission(ctx, game) {

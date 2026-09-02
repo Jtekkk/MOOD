@@ -7,7 +7,7 @@ import { AudioEngine } from './audio.js';
 import { Game } from './game.js';
 import {
   blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette, drawAutomap,
-  drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings, drawBossBar,
+  drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings, drawBossBar, drawTerminal,
 } from './hud.js';
 import { drawCutscene } from './cutscene.js';
 
@@ -92,6 +92,7 @@ function render() {
   switch (game.state) {
     case 'title': drawTitle(octx, game.timer); renderer.presentOverlay(); return;
     case 'intro': drawCutscene(octx, game.cutT); renderer.presentOverlay(); return;
+    case 'terminal': drawTerminal(octx, game); renderer.presentOverlay(); return;
     case 'settings': drawSettings(octx, game); renderer.presentOverlay(); return;
     case 'intermission': drawIntermission(octx, game); renderer.presentOverlay(); return;
     case 'victory': drawVictory(octx, game.timer); renderer.presentOverlay(); return;

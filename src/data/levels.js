@@ -484,5 +484,6 @@ export function parseLevel(def) {
     totalSecrets: doors.reduce((n, d) => n + (d.secret ? 1 : 0), 0),
     floor: def.floor, ceil: def.ceil, skyTint: def.skyTint || '#1a1d24',
     start: start || { x: 1.5, y: 1.5 }, startAngle: def.startAngle || 0,
+    wastePool: def.wastePool || null,
   };
 }

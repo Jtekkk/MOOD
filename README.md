@@ -207,6 +207,13 @@ find the matching keycard.
   imps drag your stunned marine into a cell, you grab a dropped pistol and gun
   them down through the bars, then bust out straight into LEVEL 1. Rendered on
   the same 320×200 canvas with timed audio + screen-shake cues.
+- **D.I. access terminals:** wall-mounted consoles on **LEVEL 2** and **LEVEL
+  6** — walk up and USE to bring up a black-and-green login screen (admin /
+  admin), then a plant-subsystem menu. Five of the six options trip a lethal
+  failure; only **#6 HAZARDOUS WASTE DRAINAGE** is safe — it drains the toxic
+  sludge pool on **LEVEL 9**, where you'll then find the secret **Sausage gun**
+  and **24K gold sludge** (permanent immortality). Skip it and the pool stays
+  flooded and burns you.
 - **End-of-level stats screen:** a Doom-style intermission that counts up
   KILLS / ITEMS / SECRETS with progress bars and percentages, then your TIME vs
   a par target — the first ENTER snaps the tally complete, the next moves on.

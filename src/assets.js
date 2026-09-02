@@ -1745,6 +1745,54 @@ function arachnoBack(frame) {
   for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(32, 26, 6 + i * 4, Math.PI + 0.3, 2 * Math.PI - 0.3); ctx.stroke(); }
   return texFrom(c, ctx);
 }
+// ----- prop: a D.I. access terminal you walk up to and USE -----------------
+function terminalTex() {
+  const { c, ctx } = makeCanvas(40, 60);
+  // dark pedestal + casing
+  ctx.fillStyle = '#26292e'; ctx.fillRect(8, 40, 24, 20);
+  ctx.fillStyle = '#15171a'; ctx.fillRect(6, 8, 28, 34);
+  ctx.fillStyle = '#3a3e44'; ctx.fillRect(6, 8, 28, 2);
+  // recessed green CRT
+  ctx.fillStyle = '#04160a'; ctx.fillRect(9, 11, 22, 24);
+  const gl = ctx.createLinearGradient(9, 11, 9, 35);
+  gl.addColorStop(0, 'rgba(60,255,140,0.25)'); gl.addColorStop(1, 'rgba(20,120,60,0.1)');
+  ctx.fillStyle = gl; ctx.fillRect(9, 11, 22, 24);
+  // green text lines + scanlines
+  ctx.fillStyle = '#4dff86';
+  for (let i = 0; i < 5; i++) ctx.fillRect(11, 14 + i * 4, 6 + ((i * 7) % 16), 1);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  for (let y = 12; y < 35; y += 2) ctx.fillRect(9, y, 22, 1);
+  // blinking cursor + keyboard ledge
+  ctx.fillStyle = '#baffcf'; ctx.fillRect(11, 30, 3, 2);
+  ctx.fillStyle = '#1c1f23'; ctx.fillRect(6, 42, 28, 5);
+  ctx.fillStyle = '#2e3238'; for (let x = 8; x < 33; x += 3) ctx.fillRect(x, 43, 2, 2);
+  return texFrom(c, ctx);
+}
+// ----- pickup: 24K GOLD SLUDGE (immortality), found in the drained pool -----
+function goldSludge() {
+  const { c, ctx } = makeCanvas(30, 26);
+  // puddle
+  ctx.fillStyle = 'rgba(120,90,10,0.5)'; ctx.beginPath(); ctx.ellipse(15, 21, 13, 5, 0, 0, 7); ctx.fill();
+  // glowing gold blob
+  const g = ctx.createRadialGradient(13, 12, 1, 15, 14, 14);
+  g.addColorStop(0, '#fff7d0'); g.addColorStop(0.45, '#ffd24a'); g.addColorStop(0.8, '#c8912a'); g.addColorStop(1, 'rgba(150,100,20,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(15, 13, 11, 11, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.ellipse(11, 9, 3, 2, -0.5, 0, 7); ctx.fill();  // highlight
+  return texFrom(c, ctx);
+}
+// ----- pickup: the secret SAUSAGE gun lying on the ground -------------------
+function sausagePickup() {
+  const { c, ctx } = makeCanvas(30, 20);
+  ctx.save(); ctx.translate(15, 11); ctx.rotate(-0.35);
+  const g = ctx.createLinearGradient(-11, 0, 11, 0);
+  g.addColorStop(0, '#7a3a1c'); g.addColorStop(0.5, '#b5651d'); g.addColorStop(1, '#7a3a1c');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 12, 5, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(60,26,10,0.7)'; ctx.lineWidth = 1;
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(i * 4, -4); ctx.lineTo(i * 4 + 2, 4); ctx.stroke(); }  // grill marks
+  ctx.fillStyle = '#5a2a12'; ctx.beginPath(); ctx.ellipse(-11, 0, 2, 4, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(11, 0, 2, 4, 0, 0, 7); ctx.fill();
+  ctx.restore();
+  return texFrom(c, ctx);
+}
 function bfgBall() {
   const { c, ctx } = makeCanvas(48, 48);
   const g = ctx.createRadialGradient(24, 24, 2, 24, 24, 24);
@@ -2617,6 +2665,9 @@ export function buildAssets() {
   SPR.fp_bfg = fpBfg(false); SPR.fp_bfg_fire = fpBfg(true);
   SPR.tadpole = tadpole();
   SPR.fp_sausage = fpSausage(false); SPR.fp_sausage_fire = fpSausage(true);
+  SPR.terminal = terminalTex();
+  SPR.goldsludge = goldSludge();
+  SPR.pickup_sausage = sausagePickup();
 
   // status-bar faces (5 damage states x the Nic Cage moods)
   for (let s = 0; s < 5; s++) for (const m of FACE_MOODS) SPR[`face_${s}_${m}`] = makeFace(s, m);
@@ -2634,7 +2685,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul') || k.startsWith('vileflame')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile' || k === 'mancuball' || k === 'dukeblast') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile' || k === 'mancuball' || k === 'dukeblast' || k === 'goldsludge') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

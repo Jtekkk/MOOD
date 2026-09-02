@@ -6,6 +6,7 @@ export class Input {
     this.keys = new Set();
     this.pressed = new Set();   // edge-triggered (cleared each frame after consume)
     this.mouseDX = 0;
+    this.typed = '';            // printable chars typed this frame (terminal text entry)
     this.mouseButtons = new Set();
     this.mousePressed = new Set();
     this.locked = false;
@@ -30,6 +31,7 @@ export class Input {
       }
       if (!this.keys.has(c)) this.pressed.add(c);
       this.keys.add(c);
+      if (e.key && e.key.length === 1) this.typed += e.key;   // accumulate printable text
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
 
@@ -114,5 +116,6 @@ export class Input {
     this.pressed.clear();
     this.mousePressed.clear();
     this.mouseDX = 0;
+    this.typed = '';
   }
 }
