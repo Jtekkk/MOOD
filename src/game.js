@@ -1124,29 +1124,63 @@ export class Game {
 
   _exitLevel() {
     this.audio.play('levelend');
+    const total = this.player.totalKills, totItems = this.totalItems || 0;
     this.tally = {
       level: LEVELS[this.levelIndex].name,
-      kills: this.player.kills, total: this.player.totalKills,
-      items: this.itemsTaken || 0, totalItems: this.totalItems || 0,
+      kills: this.player.kills, total,
+      items: this.itemsTaken || 0, totalItems: totItems,
       secrets: this.player.secrets || 0, totalSecrets: this.totalSecrets || 0,
       time: Math.max(0, this.timer - (this.levelStartT || 0)),
+      // a target time that scales with how much there was to clear
+      par: Math.round(35 + total * 4 + totItems * 1.5),
       next: this.levelIndex + 1 < LEVELS.length,
     };
     this.state = 'intermission';
     this.intermission = 0;
+    this._tallyDone = 0; this._tickAcc = 0;
+  }
+
+  // Rows the intermission counts up, in order. Secrets only when the level had any.
+  _tallyRows() {
+    const t = this.tally;
+    const rows = ['kills', 'items'];
+    if ((t.totalSecrets || 0) > 0) rows.push('secrets');
+    rows.push('time');
+    return rows;
+  }
+
+  // Animation timing shared with the HUD (hud.js mirrors these constants).
+  _tallyTiming() { return { LEAD: 0.45, ROW_DUR: 0.85, ROW_GAP: 0.32 }; }
+  _tallyTotalTime() {
+    const { LEAD, ROW_DUR, ROW_GAP } = this._tallyTiming();
+    return LEAD + this._tallyRows().length * (ROW_DUR + ROW_GAP) + 0.2;
   }
 
   _updateIntermission(dt) {
     this.intermission += dt;
-    if ((this.input.justPressed('Enter') || this.input.justPressed('Space') || this.input.mouseJustPressed(0)) && this.intermission > 0.4) {
-      if (this.tally.next) {
-        this.levelIndex++;
-        this.loadLevel(this.levelIndex);   // switches to the next level's track
-        this.state = 'playing';
-      } else {
-        this.audio.stopMusic();
-        this.state = 'victory';
-      }
+    const { LEAD, ROW_DUR, ROW_GAP } = this._tallyTiming();
+    const rows = this._tallyRows(), t = this.intermission;
+
+    // tick while a row is counting up; a ding as each row lands
+    let counting = false;
+    for (let k = 0; k < rows.length; k++) { const s = LEAD + k * (ROW_DUR + ROW_GAP); if (t >= s && t < s + ROW_DUR) counting = true; }
+    this._tickAcc = (this._tickAcc || 0) + dt;
+    if (counting && this._tickAcc >= 0.05) { this.audio.play('menu'); this._tickAcc = 0; }
+    const done = rows.filter((_, k) => t >= LEAD + k * (ROW_DUR + ROW_GAP) + ROW_DUR).length;
+    if (done > (this._tallyDone || 0)) this.audio.play('pickup');
+    this._tallyDone = done;
+
+    const advance = this.input.justPressed('Enter') || this.input.justPressed('Space') || this.input.mouseJustPressed(0);
+    if (!advance) return;
+    // first press snaps the still-running tally to complete; press again to leave
+    if (this.intermission < this._tallyTotalTime()) { this.intermission = this._tallyTotalTime(); this._tallyDone = rows.length; return; }
+    if (this.tally.next) {
+      this.levelIndex++;
+      this.loadLevel(this.levelIndex);   // switches to the next level's track
+      this.state = 'playing';
+    } else {
+      this.audio.stopMusic();
+      this.state = 'victory';
     }
   }
 

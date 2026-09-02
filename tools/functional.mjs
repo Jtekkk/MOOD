@@ -117,7 +117,8 @@ try {
     // 6) exit → intermission → next level
     game._exitLevel();
     out.intermission = game.state === 'intermission';
-    game.intermission = 1; window.__MOOD.input.pressed.add('Enter');
+    // let the count-up finish (so ENTER advances rather than just snapping it)
+    game.intermission = 999; window.__MOOD.input.pressed.add('Enter');
     game.update(0.05);
     out.level2 = game.state === 'playing' && /LEVEL 2/.test(game.map.name);
 

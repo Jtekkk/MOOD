@@ -352,34 +352,79 @@ export function drawDead(ctx, game) {
   }
 }
 
+const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
 export function drawIntermission(ctx, game) {
-  ctx.fillStyle = '#0a0a0c'; ctx.fillRect(0, 0, RENDER_W, RENDER_H);
   const g = ctx.createLinearGradient(0, 0, 0, RENDER_H);
   g.addColorStop(0, '#101820'); g.addColorStop(1, '#05080a');
   ctx.fillStyle = g; ctx.fillRect(0, 0, RENDER_W, RENDER_H);
-  const tally = game.tally;
+  const tally = game.tally, t = game.intermission || 0;
+  const cx = RENDER_W / 2;
+
   ctx.textAlign = 'center';
-  ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#cfcf40';
-  ctx.fillText('LEVEL COMPLETE', RENDER_W / 2, 36);
-  ctx.font = '9px monospace'; ctx.fillStyle = '#bbb';
-  ctx.fillText(tally.level, RENDER_W / 2, 56);
-  const kpct = tally.total ? Math.round((tally.kills / tally.total) * 100) : 100;
-  const ipct = tally.totalItems ? Math.round((tally.items / tally.totalItems) * 100) : 100;
-  const secs = Math.floor(tally.time || 0);
-  const tstr = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
-  ctx.textAlign = 'left'; ctx.font = '10px monospace';
-  const lx = RENDER_W / 2 - 56;
-  const rx = RENDER_W / 2 + 60;
-  const showSecret = (tally.totalSecrets || 0) > 0;
-  let ry = 80;
-  const row = (label, col, value) => { ctx.textAlign = 'left'; ctx.fillStyle = col; ctx.fillText(label, lx, ry); ctx.textAlign = 'right'; ctx.fillStyle = '#eaeaea'; ctx.fillText(value, rx, ry); ry += 16; };
-  row('KILLS', '#d83030', `${tally.kills} / ${tally.total}   ${kpct}%`);
-  row('ITEMS', '#3a9adf', `${tally.items} / ${tally.totalItems}   ${ipct}%`);
-  if (showSecret) { const spct = Math.round((tally.secrets / tally.totalSecrets) * 100); row('SECRETS', '#40c060', `${tally.secrets} / ${tally.totalSecrets}   ${spct}%`); }
-  row('TIME', '#cfcf40', tstr);
+  ctx.font = 'bold 14px monospace';
+  ctx.fillStyle = (Math.sin(game.timer * 3) > 0) ? '#ffe15a' : '#cfae30';
+  ctx.fillText('LEVEL COMPLETE', cx, 32);
+  ctx.font = '9px monospace'; ctx.fillStyle = '#9fb0bb';
+  ctx.fillText(tally.level, cx, 50);
+
+  // animated count-up, mirroring game._tallyTiming()
+  const LEAD = 0.45, ROW_DUR = 0.85, ROW_GAP = 0.32;
+  const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  const rows = [
+    { key: 'kills', label: 'KILLS', col: '#e04a3a', cur: tally.kills, tot: tally.total },
+    { key: 'items', label: 'ITEMS', col: '#3a9adf', cur: tally.items, tot: tally.totalItems },
+  ];
+  if ((tally.totalSecrets || 0) > 0) rows.push({ key: 'secrets', label: 'SECRETS', col: '#46c85a', cur: tally.secrets, tot: tally.totalSecrets });
+  rows.push({ key: 'time', label: 'TIME', col: '#cfcf40', time: true });
+
+  // panel
+  const panelW = 200, panelX = cx - panelW / 2, panelY = 66, rowH = 22;
+  const panelH = rows.length * rowH + 18;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(panelX, panelY, panelW, panelH);
+  ctx.strokeStyle = 'rgba(140,160,180,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+  const lx = panelX + 12, barX = panelX + 70, barW = 74, rx = panelX + panelW - 12;
+  let ry = panelY + 20;
+  rows.forEach((r, k) => {
+    const start = LEAD + k * (ROW_DUR + ROW_GAP);
+    const p = clamp01((t - start) / ROW_DUR);
+    if (p <= 0) { ry += rowH; return; }             // not revealed yet
+    ctx.textAlign = 'left'; ctx.font = 'bold 10px monospace'; ctx.fillStyle = r.col;
+    ctx.fillText(r.label, lx, ry);
+    ctx.textAlign = 'right'; ctx.font = '10px monospace'; ctx.fillStyle = '#eef2f4';
+    if (r.time) {
+      ctx.fillText(mmss((tally.time || 0) * p), rx, ry);
+      if (p >= 1) {   // par comparison lands with the final time
+        const under = (tally.time || 0) <= (tally.par || 1e9);
+        ctx.textAlign = 'left'; ctx.font = '8px monospace'; ctx.fillStyle = '#7f8b93';
+        ctx.fillText('PAR', lx, ry + 10);
+        ctx.textAlign = 'right'; ctx.fillStyle = under ? '#46c85a' : '#e08a3a';
+        ctx.fillText(`${mmss(tally.par || 0)}  ${under ? '✓' : ''}`, rx, ry + 10);
+      }
+    } else {
+      const cur = Math.round((r.cur || 0) * p);
+      const pct = r.tot ? Math.round((cur / r.tot) * 100) : 100;
+      ctx.fillText(`${cur} / ${r.tot}`, rx, ry);
+      // progress bar
+      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(barX, ry - 7, barW, 5);
+      const frac = r.tot ? cur / r.tot : 1;
+      ctx.fillStyle = r.col; ctx.fillRect(barX, ry - 7, Math.round(barW * frac), 5);
+      ctx.textAlign = 'left'; ctx.font = '7px monospace'; ctx.fillStyle = '#9fb0bb';
+      ctx.fillText(`${pct}%`, barX + barW + 4, ry - 3);
+    }
+    ry += rowH;
+  });
+
+  const done = t >= LEAD + rows.length * (ROW_DUR + ROW_GAP);
   ctx.textAlign = 'center'; ctx.font = '8px monospace';
-  ctx.fillStyle = (Math.sin(game.timer * 4) > 0) ? '#ffd040' : '#998';
-  ctx.fillText(tally.next ? 'press ENTER for the next level' : 'press ENTER', RENDER_W / 2, ry + 8);
+  if (done) {
+    ctx.fillStyle = (Math.sin(game.timer * 4) > 0) ? '#ffd040' : '#8a8f77';
+    ctx.fillText(tally.next ? 'press ENTER / A for the next level' : 'press ENTER / A', cx, panelY + panelH + 20);
+  } else {
+    ctx.fillStyle = '#66707a';
+    ctx.fillText('press ENTER to skip', cx, panelY + panelH + 20);
+  }
 }
 
 export function drawVictory(ctx, t) {
