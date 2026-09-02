@@ -1,0 +1,789 @@
+// raycaster.js — software renderer. Draws into a low-res 32-bit pixel buffer
+// (classic 320x200 chunky look) which is then scaled up to the display canvas.
+
+import { TEX } from './assets.js';
+import { enemyRenderSprite } from './data/enemies.js';
+
+export const RENDER_W = 320;
+export const RENDER_H = 200;
+const HALF_H = RENDER_H / 2;
+const PLANE = 0.66;            // camera plane length → ~66° FOV
+const CEIL_H = 2.4;           // default ceiling height for height-mapped levels
+const CEIL_MAX = 3.9;         // tallest ceiling on a per-cell ceiling level (the '9' step)
+
+// 4x4 ordered-dither biases (~±3) to break up smooth-gradient banding (the sky)
+const DITHER = (() => {
+  const b = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const a = new Float32Array(16);
+  for (let i = 0; i < 16; i++) a[i] = (b[i] - 7.5) * 0.5;
+  return a;
+})();
+function ditherPacked(c, d) {
+  let r = (c & 0xff) + d, g = ((c >>> 8) & 0xff) + d, b = ((c >>> 16) & 0xff) + d;
+  r = r < 0 ? 0 : r > 255 ? 255 : r; g = g < 0 ? 0 : g > 255 ? 255 : g; b = b < 0 ? 0 : b > 255 ? 255 : b;
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
+export class Renderer {
+  constructor(displayCanvas) {
+    this.display = displayCanvas;
+    this.dctx = displayCanvas.getContext('2d');
+    this.dctx.imageSmoothingEnabled = false;
+
+    this.off = document.createElement('canvas');
+    this.off.width = RENDER_W; this.off.height = RENDER_H;
+    this.octx = this.off.getContext('2d', { willReadFrequently: true });
+    this.img = this.octx.createImageData(RENDER_W, RENDER_H);
+    this.buf = new Uint32Array(this.img.data.buffer);
+    this.zbuf = new Float32Array(RENDER_W);
+  }
+
+  // Blit the finished low-res buffer to the (larger) display canvas.
+  present() {
+    this.octx.putImageData(this.img, 0, 0);
+    const dw = this.display.width, dh = this.display.height;
+    this.dctx.imageSmoothingEnabled = false;
+    this.dctx.drawImage(this.off, 0, 0, RENDER_W, RENDER_H, 0, 0, dw, dh);
+  }
+
+  // The offscreen 2D context, for HUD/text drawn on top of the world buffer.
+  beginOverlay() {
+    this.octx.putImageData(this.img, 0, 0);
+    return this.octx;
+  }
+  presentOverlay() {
+    const dw = this.display.width, dh = this.display.height;
+    this.dctx.imageSmoothingEnabled = false;
+    this.dctx.drawImage(this.off, 0, 0, RENDER_W, RENDER_H, 0, 0, dw, dh);
+  }
+
+  clear() { this.buf.fill(0xff000000); }
+
+  renderWorld(game) {
+    const p = game.player;
+    const sh = game.shake || 0;
+    const angle = p.angle + (sh > 0 ? (Math.random() - 0.5) * sh * 0.045 : 0);
+    const dirX = Math.cos(angle), dirY = Math.sin(angle);
+    const planeX = -dirY * PLANE, planeY = dirX * PLANE;
+    const horizon = ((HALF_H + p.pitch) + (sh > 0 ? (Math.random() - 0.5) * sh * 13 : 0)) | 0;
+    this._fog = hexToPacked(game.map.skyTint || '#15171c');
+    this._time = game.timer || 0;
+    this._gatherLights(game);
+    this._buildSky(horizon);
+    const camZ = 0.5 + (p.z || 0);
+    if (game.map.hasHeights || game.map.hasCeils) {
+      this._floorCeilH(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
+      this._renderHeights(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
+    } else {
+      this._floorCeil(game, p, dirX, dirY, planeX, planeY, horizon);
+      this._walls(game, p, dirX, dirY, planeX, planeY, horizon);
+    }
+    this._sprites(game, p, dirX, dirY, planeX, planeY, horizon, camZ);
+    this._particles(game, p, dirX, dirY, planeX, planeY, horizon);
+    this._bloom();
+  }
+
+  // Light bloom: bright pixels (lamps, plasma, explosions, muzzle) bleed a soft
+  // glow. Bright-pass at half res, separable blur, add back — additive.
+  _bloom() {
+    const W = RENDER_W, H = RENDER_H, BW = W >> 1, BH = H >> 1, N = BW * BH;
+    if (!this._blR) { this._blR = new Float32Array(N); this._blG = new Float32Array(N); this._blB = new Float32Array(N); this._blT = new Float32Array(N); }
+    const br = this._blR, bg = this._blG, bb = this._blB, tmp = this._blT, buf = this.buf;
+    const TH = 164;                         // brightness threshold
+    // 1) bright-pass + 2x2 downsample
+    for (let by = 0; by < BH; by++) {
+      const sy = by << 1, drow = by * BW;
+      for (let bx = 0; bx < BW; bx++) {
+        const sx = bx << 1;
+        const c0 = buf[sy * W + sx], c1 = buf[sy * W + sx + 1], c2 = buf[(sy + 1) * W + sx], c3 = buf[(sy + 1) * W + sx + 1];
+        const r = ((c0 & 0xff) + (c1 & 0xff) + (c2 & 0xff) + (c3 & 0xff)) * 0.25;
+        const g = (((c0 >>> 8) & 0xff) + ((c1 >>> 8) & 0xff) + ((c2 >>> 8) & 0xff) + ((c3 >>> 8) & 0xff)) * 0.25;
+        const b = (((c0 >>> 16) & 0xff) + ((c1 >>> 16) & 0xff) + ((c2 >>> 16) & 0xff) + ((c3 >>> 16) & 0xff)) * 0.25;
+        const lum = 0.3 * r + 0.6 * g + 0.1 * b, i = drow + bx;
+        if (lum > TH) { const f = (lum - TH) / lum; br[i] = r * f; bg[i] = g * f; bb[i] = b * f; }
+        else { br[i] = 0; bg[i] = 0; bb[i] = 0; }
+      }
+    }
+    // 2) separable box blur (two passes → soft gaussian-ish glow)
+    for (let pass = 0; pass < 2; pass++) {
+      boxBlurH(br, tmp, BW, BH, 2); boxBlurV(br, tmp, BW, BH, 2);
+      boxBlurH(bg, tmp, BW, BH, 2); boxBlurV(bg, tmp, BW, BH, 2);
+      boxBlurH(bb, tmp, BW, BH, 2); boxBlurV(bb, tmp, BW, BH, 2);
+    }
+    // 3) add back at full res (nearest upsample), additive with clamp
+    const K = 1.3;
+    for (let y = 0; y < H; y++) {
+      const srow = (y >> 1) * BW, drow = y * W;
+      for (let x = 0; x < W; x++) {
+        const bi = srow + (x >> 1), addR = br[bi] * K;
+        if (addR < 1.2 && bg[bi] * K < 1.2 && bb[bi] * K < 1.2) continue;
+        const c = buf[drow + x];
+        let r = (c & 0xff) + addR, g = ((c >>> 8) & 0xff) + bg[bi] * K, b = ((c >>> 16) & 0xff) + bb[bi] * K;
+        if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+        buf[drow + x] = (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+      }
+    }
+  }
+
+  // Collect the active point lights for this frame into flat typed arrays:
+  // static lamps + glowing projectiles + explosion effects + the muzzle flash.
+  _gatherLights(game) {
+    const p = game.player, t = this._time;
+    const MAX = 24;
+    if (!this._lx) {
+      this._lx = new Float32Array(MAX); this._ly = new Float32Array(MAX);
+      this._lr = new Float32Array(MAX); this._lg = new Float32Array(MAX); this._lb = new Float32Array(MAX);
+      this._lrad2 = new Float32Array(MAX); this._lint = new Float32Array(MAX);
+      this._lc = [0, 0, 0];
+    }
+    const raw = this._rawLights || (this._rawLights = []);
+    raw.length = 0;
+    for (const e of game.entities) {
+      if (e.light && (e.kind === 'lamp' || e.kind === 'proj' || e.kind === 'terminal' || e.kind === 'item')) {
+        const L = e.light;
+        let inten = L.intensity;
+        if (L.flicker) inten *= 1 + L.flicker * Math.sin(t * 9 + (L.phase || 0));
+        raw.push({ x: e.x, y: e.y, r: L.r, g: L.g, b: L.b, rad: L.radius, int: inten });
+      } else if (e.kind === 'effect') {
+        const k = e.dur > 0 ? 1 - e.time / e.dur : 0;   // fades as it dies
+        if (k > 0) raw.push({ x: e.x, y: e.y, r: 1.0, g: 0.62, b: 0.28, rad: (e.small ? 3 : 6) * (0.5 + 0.5 * k), int: 2.4 * k });
+      }
+    }
+    if (p.weaponFlash > 0 && p.muzzle) {
+      const k = p.weaponFlash / 0.09;
+      raw.push({ x: p.x, y: p.y, r: p.muzzle[0], g: p.muzzle[1], b: p.muzzle[2], rad: 5.5, int: 2.6 * k });
+    }
+    // light-amplification visor: a broad soft glow around the player
+    if (p.visor > 0) {
+      const fade = p.visor < 3 ? p.visor / 3 : 1;   // ease out in the last seconds
+      raw.push({ x: p.x, y: p.y, r: 0.7, g: 0.85, b: 0.7, rad: 30, int: 0.85 * fade });
+    }
+    if (raw.length > MAX) {
+      raw.sort((a, b) => ((a.x - p.x) ** 2 + (a.y - p.y) ** 2) - ((b.x - p.x) ** 2 + (b.y - p.y) ** 2));
+      raw.length = MAX;
+    }
+    const n = raw.length;
+    for (let i = 0; i < n; i++) {
+      const L = raw[i];
+      this._lx[i] = L.x; this._ly[i] = L.y; this._lr[i] = L.r; this._lg[i] = L.g; this._lb[i] = L.b;
+      this._lrad2[i] = L.rad * L.rad; this._lint[i] = L.int;
+    }
+    this._ln = n;
+  }
+
+  // Accumulate light colour at world point (wx,wy) into out[3]. Quadratic falloff.
+  _lightAt(wx, wy, out) {
+    let r = 0, g = 0, b = 0;
+    const n = this._ln, lx = this._lx, ly = this._ly, lr = this._lr, lg = this._lg, lb = this._lb, lrad2 = this._lrad2, lint = this._lint;
+    for (let i = 0; i < n; i++) {
+      const dx = wx - lx[i], dy = wy - ly[i], d2 = dx * dx + dy * dy, rr = lrad2[i];
+      if (d2 < rr) { let a = 1 - d2 / rr; a *= a * lint[i]; r += lr[i] * a; g += lg[i] * a; b += lb[i] * a; }
+    }
+    out[0] = r; out[1] = g; out[2] = b;
+  }
+
+  // Precompute a per-row sky gradient (used by open-air ceiling cells).
+  _buildSky(horizon) {
+    if (!this._sky || this._sky.length !== RENDER_H) this._sky = new Uint32Array(RENDER_H);
+    const sky = this._sky;
+    // dusk gradient: lighter at the horizon, deeper blue overhead
+    const topR = 30, topG = 44, topB = 78;
+    const horR = 120, horG = 134, horB = 158;
+    for (let y = 0; y < RENDER_H; y++) {
+      const t = horizon > 0 ? Math.max(0, Math.min(1, y / horizon)) : 0; // 0 top .. 1 horizon
+      const r = (topR + (horR - topR) * t) | 0;
+      const g = (topG + (horG - topG) * t) | 0;
+      const b = (topB + (horB - topB) * t) | 0;
+      sky[y] = (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+    }
+  }
+
+  // ---- floor + ceiling (per-row casting) ---------------------------------
+  _floorCeil(game, p, dirX, dirY, planeX, planeY, horizon) {
+    const map = game.map;
+    const floorTex = TEX[map.floor] || TEX.floor;
+    const ceilTex = TEX[map.ceil] || TEX.ceil;
+    const waterTex = TEX.water || floorTex;
+    const fp = floorTex.pixels, cp = ceilTex.pixels, wp = waterTex.pixels;
+    const fw = floorTex.w, ch = ceilTex.w, ww = waterTex.w;
+    const rayDirX0 = dirX - planeX, rayDirY0 = dirY - planeY;
+    const rayDirX1 = dirX + planeX, rayDirY1 = dirY + planeY;
+    const buf = this.buf;
+    const W = map.W, Hh = map.H;
+    const fType = map.floorType, cType = map.ceilType;
+    const hasTerrain = map.hasTerrain;
+    const sky = this._sky;
+    const t = this._time;
+    const nLights = this._ln, lc = this._lc;
+    // animated ripple offsets for water (whole-texel shimmer)
+    const rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
+
+    for (let y = 0; y < RENDER_H; y++) {
+      const isFloor = y > horizon;
+      const pRow = isFloor ? (y - horizon) : (horizon - y);
+      if (pRow <= 0) continue;
+      const rowDist = HALF_H / pRow;
+      const stepX = rowDist * (rayDirX1 - rayDirX0) / RENDER_W;
+      const stepY = rowDist * (rayDirY1 - rayDirY0) / RENDER_W;
+      let fx = p.x + rowDist * rayDirX0;
+      let fy = p.y + rowDist * rayDirY0;
+      const light = lightFor(rowDist) * (isFloor ? 1 : 0.74);
+      const ft = fogT(rowDist), fog = this._fog;
+      const rowOff = y * RENDER_W;
+      const tex = isFloor ? fp : cp;
+      const tw = isFloor ? fw : ch;
+      for (let x = 0; x < RENDER_W; x++) {
+        const cx = Math.floor(fx), cy = Math.floor(fy);
+        let terr = 0;
+        if (hasTerrain && cx >= 0 && cy >= 0 && cx < W && cy < Hh) {
+          terr = isFloor ? (fType && fType[cy * W + cx]) : (cType && cType[cy * W + cx]);
+        }
+        if (!isFloor && terr) {
+          // open sky overhead — no fog, straight gradient
+          buf[rowOff + x] = ditherPacked(sky[y], DITHER[(x & 3) + ((y & 3) << 2)]);
+        } else if (isFloor && terr) {
+          // water — sample the rippling water texture
+          let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0;
+          let ty = (fy + roy - Math.floor(fy + roy)) * ww | 0;
+          if (tx < 0) tx += ww; if (ty < 0) ty += ww;
+          const c = wp[(ty * ww + tx) | 0];
+          if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
+          else buf[rowOff + x] = shadeFog(c, light, fog, ft);
+        } else {
+          let tx = (fx - Math.floor(fx)) * tw | 0;
+          let ty = (fy - Math.floor(fy)) * tw | 0;
+          if (tx < 0) tx += tw; if (ty < 0) ty += tw;
+          const c = tex[(ty * tw + tx) | 0];
+          if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
+          else buf[rowOff + x] = shadeFog(c, light, fog, ft);
+        }
+        fx += stepX; fy += stepY;
+      }
+    }
+  }
+
+  // ---- walls (per-column DDA with sliding doors) -------------------------
+  _walls(game, p, dirX, dirY, planeX, planeY, horizon) {
+    const map = game.map;
+    const buf = this.buf;
+    for (let x = 0; x < RENDER_W; x++) {
+      const cameraX = 2 * x / RENDER_W - 1;
+      const rayDirX = dirX + planeX * cameraX;
+      const rayDirY = dirY + planeY * cameraX;
+
+      let mapX = Math.floor(p.x), mapY = Math.floor(p.y);
+      const deltaX = Math.abs(1 / rayDirX), deltaY = Math.abs(1 / rayDirY);
+      let stepX, stepY, sideX, sideY;
+      if (rayDirX < 0) { stepX = -1; sideX = (p.x - mapX) * deltaX; }
+      else { stepX = 1; sideX = (mapX + 1 - p.x) * deltaX; }
+      if (rayDirY < 0) { stepY = -1; sideY = (p.y - mapY) * deltaY; }
+      else { stepY = 1; sideY = (mapY + 1 - p.y) * deltaY; }
+
+      let hit = 0, side = 0, perpDist = 0, tex = null, texXf = 0;
+      for (let guard = 0; guard < 200 && !hit; guard++) {
+        if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; }
+        else { sideY += deltaY; mapY += stepY; side = 1; }
+        if (mapX < 0 || mapY < 0 || mapX >= map.W || mapY >= map.H) { hit = 1; perpDist = 1e9; break; }
+
+        const idx = mapY * map.W + mapX;
+        const door = map.doorMap[idx];
+        if (door) {
+          // intersection with door's centre plane
+          let dDist, coord;
+          if (door.axis === 'v') {                 // plane x = mapX + 0.5
+            dDist = (mapX + 0.5 - p.x) / rayDirX;
+            const hy = p.y + dDist * rayDirY;
+            if (dDist > 0 && Math.floor(hy) === mapY) {
+              const u = hy - mapY;
+              if (u >= door.open) { perpDist = dDist; tex = TEX[door.tex]; texXf = u; side = 0; hit = 1; }
+            }
+          } else {                                  // plane y = mapY + 0.5
+            dDist = (mapY + 0.5 - p.y) / rayDirY;
+            const hx = p.x + dDist * rayDirX;
+            if (dDist > 0 && Math.floor(hx) === mapX) {
+              const u = hx - mapX;
+              if (u >= door.open) { perpDist = dDist; tex = TEX[door.tex]; texXf = u; side = 1; hit = 1; }
+            }
+          }
+          continue; // ray passes through the open part of the door cell
+        }
+
+        const cell = map.cellChar[idx];
+        if (cell !== '.' && cell !== ' ' && cell !== '@') {
+          hit = 1;
+          perpDist = (side === 0) ? (sideX - deltaX) : (sideY - deltaY);
+          tex = TEX[wallTexName(cell)] || TEX.tech;
+          const wx = (side === 0) ? (p.y + perpDist * rayDirY) : (p.x + perpDist * rayDirX);
+          texXf = wx - Math.floor(wx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) texXf = 1 - texXf;
+        }
+      }
+      this.zbuf[x] = perpDist;
+      if (perpDist >= 1e8) continue;
+
+      const lineH = (RENDER_H / perpDist) | 0;
+      let drawStart = horizon - (lineH >> 1);
+      let drawEnd = horizon + (lineH >> 1);
+      const y0 = Math.max(0, drawStart);
+      const y1 = Math.min(RENDER_H - 1, drawEnd);
+      const tw = tex.w, th = tex.h;
+      let texX = (texXf * tw) | 0;
+      if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
+      const light = lightFor(perpDist) * (side === 1 ? 0.70 : 1.0);
+      const ft = fogT(perpDist), fog = this._fog;
+      const texCol = texX;
+      const stepTex = th / lineH;
+      let texPos = (y0 - drawStart) * stepTex;
+      // dynamic light at the wall-face hit point (constant down the column)
+      let lr = 0, lg = 0, lb = 0;
+      if (this._ln) {
+        this._lightAt(p.x + perpDist * rayDirX, p.y + perpDist * rayDirY, this._lc);
+        lr = this._lc[0]; lg = this._lc[1]; lb = this._lc[2];
+      }
+      const lit = (lr + lg + lb) > 0.0001;
+      for (let y = y0; y <= y1; y++) {
+        let ty = texPos | 0; if (ty >= th) ty = th - 1;
+        const c = tex.pixels[ty * tw + texCol];
+        buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+        texPos += stepTex;
+      }
+    }
+  }
+
+  // ---- base floor (z=0) + ceiling (z=CEIL_H) for height levels, camZ-aware --
+  _floorCeilH(game, p, dirX, dirY, planeX, planeY, horizon, camZ) {
+    const map = game.map;
+    const floorTex = TEX[map.floor] || TEX.floor, ceilTex = TEX[map.ceil] || TEX.ceil, waterTex = TEX.water || floorTex;
+    const fp = floorTex.pixels, cp = ceilTex.pixels, fw = floorTex.w, ch = ceilTex.w, wp = waterTex.pixels, ww = waterTex.w;
+    const rayDirX0 = dirX - planeX, rayDirY0 = dirY - planeY, rayDirX1 = dirX + planeX, rayDirY1 = dirY + planeY;
+    const buf = this.buf, nLights = this._ln, lc = this._lc;
+    const fType = map.floorType, cType = map.ceilType, hasTerrain = map.hasTerrain, W = map.W, Hh = map.H;
+    const sky = this._sky;
+    const skipCeil = map.hasCeils;   // per-cell ceilings are painted in the column pass instead
+    const t = this._time, rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
+    for (let y = 0; y < RENDER_H; y++) {
+      const isFloor = y > horizon;
+      if (!isFloor && skipCeil) continue;
+      const pRow = isFloor ? (y - horizon) : (horizon - y);
+      if (pRow <= 0) continue;
+      const rowDist = (isFloor ? camZ : (CEIL_H - camZ)) * RENDER_H / pRow;
+      if (rowDist <= 0) continue;
+      const stepX = rowDist * (rayDirX1 - rayDirX0) / RENDER_W, stepY = rowDist * (rayDirY1 - rayDirY0) / RENDER_W;
+      let fx = p.x + rowDist * rayDirX0, fy = p.y + rowDist * rayDirY0;
+      const light = lightFor(rowDist) * (isFloor ? 1 : 0.74);
+      const ft = fogT(rowDist), fog = this._fog, rowOff = y * RENDER_W;
+      const tex = isFloor ? fp : cp, tw = isFloor ? fw : ch;
+      for (let x = 0; x < RENDER_W; x++) {
+        let water = false;
+        if (hasTerrain) {
+          const cx = Math.floor(fx), cy = Math.floor(fy);
+          if (cx >= 0 && cy >= 0 && cx < W && cy < Hh) {
+            if (isFloor) { if (fType[cy * W + cx]) water = true; }
+            else if (cType[cy * W + cx]) { buf[rowOff + x] = ditherPacked(sky[y], DITHER[(x & 3) + ((y & 3) << 2)]); fx += stepX; fy += stepY; continue; }  // open sky
+          }
+        }
+        let c;
+        if (water) {
+          let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0, ty = (fy + roy - Math.floor(fy + roy)) * ww | 0;
+          if (tx < 0) tx += ww; if (ty < 0) ty += ww; c = wp[(ty * ww + tx) | 0];
+        } else {
+          let tx = (fx - Math.floor(fx)) * tw | 0, ty = (fy - Math.floor(fy)) * tw | 0;
+          if (tx < 0) tx += tw; if (ty < 0) ty += tw; c = tex[(ty * tw + tx) | 0];
+        }
+        if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
+        else buf[rowOff + x] = shadeFog(c, light, fog, ft);
+        fx += stepX; fy += stepY;
+      }
+    }
+  }
+
+  // ---- height pass: full walls + raised walkable blocks (steps/platforms) ---
+  // Per column: DDA collecting blocks until a full wall; then paint far→near
+  // (wall, then blocks) so nearer geometry overdraws farther. Blocks get a
+  // textured front face (z=0..h) and, if below eye, a textured top at z=h.
+  _renderHeights(game, p, dirX, dirY, planeX, planeY, horizon, camZ) {
+    const map = game.map, buf = this.buf, W = map.W, H = map.H, blockH = map.blockH;
+    const cellChar = map.cellChar, RH = RENDER_H, fog = this._fog, nLights = this._ln, lc = this._lc;
+    const sideTex = TEX.stone || TEX.tech, topTex = TEX.metal || TEX.floor2 || TEX.floor;
+    const waterTex = TEX.water || sideTex, fType = map.floorType, tNow = this._time;
+    const wfall = (tNow * 1.6) % 1;   // waterfall scroll phase (rows/sec down the riser)
+    const bD = this._hbD || (this._hbD = new Float32Array(64));
+    const bDx = this._hbDx || (this._hbDx = new Float32Array(64));
+    const bH = this._hbH || (this._hbH = new Float32Array(64));
+    const bS = this._hbS || (this._hbS = new Int8Array(64));
+    const bU = this._hbU || (this._hbU = new Float32Array(64));
+    const bW = this._hbW || (this._hbW = new Uint8Array(64));
+    const bEx = this._hbEx || (this._hbEx = new Float32Array(64));   // each block's far edge
+    // per-cell ceilings: soaring halls + low tunnels, drawn as undersides + risers
+    const hasCeils = map.hasCeils, ceilArr = map.ceilH, ceilTop = hasCeils ? CEIL_MAX : CEIL_H;
+    const ceilTex = TEX[map.ceil] || TEX.ceil || topTex;
+    const cD = this._cD || (this._cD = new Float32Array(64));
+    const cDx = this._cDx || (this._cDx = new Float32Array(64));
+    const cCH = this._cCH || (this._cCH = new Float32Array(64));
+    const cPrevA = this._cPrevA || (this._cPrevA = new Float32Array(64));
+    const cS = this._cS || (this._cS = new Int8Array(64));
+    const cU = this._cU || (this._cU = new Float32Array(64));
+    // per-column floor-occlusion: screen row of the nearest raised block's top
+    // edge, so sprites behind stairs/platforms get clipped (no see-through).
+    const colMaxH = this._colMaxH || (this._colMaxH = new Float32Array(RENDER_W));
+    const colFarD = this._colFarD || (this._colFarD = new Float32Array(RENDER_W));
+
+    for (let x = 0; x < RENDER_W; x++) {
+      const cameraX = 2 * x / RENDER_W - 1;
+      const rayDirX = dirX + planeX * cameraX, rayDirY = dirY + planeY * cameraX;
+      let mapX = Math.floor(p.x), mapY = Math.floor(p.y);
+      const deltaX = Math.abs(1 / rayDirX), deltaY = Math.abs(1 / rayDirY);
+      let stepX, stepY, sideX, sideY;
+      if (rayDirX < 0) { stepX = -1; sideX = (p.x - mapX) * deltaX; } else { stepX = 1; sideX = (mapX + 1 - p.x) * deltaX; }
+      if (rayDirY < 0) { stepY = -1; sideY = (p.y - mapY) * deltaY; } else { stepY = 1; sideY = (mapY + 1 - p.y) * deltaY; }
+
+      let nb = 0, wallDist = 1e9, wallU = 0, wallSide = 0, wallTex = null;
+      let nc = 0, prevCeil = ceilTop, wallCeil = ceilTop;
+      if (hasCeils && mapX >= 0 && mapY >= 0 && mapX < W && mapY < H) {
+        prevCeil = ceilArr[mapY * W + mapX];
+        cD[nc] = 0; cDx[nc] = (sideX < sideY ? sideX : sideY); cCH[nc] = prevCeil; cPrevA[nc] = prevCeil; cS[nc] = 0; cU[nc] = 0; nc++;
+      }
+      for (let guard = 0; guard < 160; guard++) {
+        let side;
+        if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; } else { sideY += deltaY; mapY += stepY; side = 1; }
+        if (mapX < 0 || mapY < 0 || mapX >= W || mapY >= H) break;
+        const d = (side === 0) ? (sideX - deltaX) : (sideY - deltaY);
+        if (d > 26) break;
+        const idx = mapY * W + mapX, cell = cellChar[idx];
+        if (cell !== '.' && cell !== ' ' && cell !== '@') {
+          wallDist = d; wallSide = side; wallTex = TEX[wallTexName(cell)] || TEX.tech;
+          let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u; wallU = u;
+          if (hasCeils) wallCeil = prevCeil;   // the wall is only as tall as the ceiling you see it under
+          break;
+        }
+        const h = blockH[idx];
+        if (h > 0 && nb < 64) {
+          let wx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let u = wx - Math.floor(wx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) u = 1 - u;
+          bD[nb] = d; bH[nb] = h; bS[nb] = side; bU[nb] = u; bW[nb] = (fType && fType[idx]) ? 1 : 0;
+          bEx[nb] = (sideX < sideY ? sideX : sideY); nb++;
+        }
+        if (hasCeils && nc < 64) {
+          const dEx = sideX < sideY ? sideX : sideY;   // distance where the ray leaves this cell
+          let cwx = (side === 0) ? (p.y + d * rayDirY) : (p.x + d * rayDirX); let cu = cwx - Math.floor(cwx);
+          if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) cu = 1 - cu;
+          cD[nc] = d; cDx[nc] = dEx; cCH[nc] = ceilArr[idx]; cPrevA[nc] = prevCeil; cS[nc] = side; cU[nc] = cu; nc++;
+          prevCeil = ceilArr[idx];
+        }
+      }
+      this.zbuf[x] = wallDist;
+      for (let i = 0; i < nb; i++) bDx[i] = (i + 1 < nb) ? bD[i + 1] : (wallDist < 1e8 ? wallDist : bD[i] + 1.0);
+      // per-column floor-occlusion: the tallest raised block in this column and
+      // the far edge of the farthest cell at that height, so a sprite standing
+      // beyond it has its lower body clipped (no seeing enemies through
+      // stairs / platforms).
+      { let mh = 0; for (let i = 0; i < nb; i++) if (bH[i] > mh) mh = bH[i];
+        let mfd = 0; for (let i = 0; i < nb; i++) if (bH[i] >= mh - 0.001 && bEx[i] > mfd) mfd = bEx[i];
+        colMaxH[x] = mh; colFarD[x] = mfd; }
+
+      // full wall (farthest opaque) — draw first
+      if (wallDist < 1e8) {
+        const d = wallDist, tex = wallTex, th = tex.h, tw = tex.w;
+        let texX = (wallU * tw) | 0; if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
+        const yTopF = horizon + (camZ - wallCeil) * RH / d, yBotF = horizon + camZ * RH / d;
+        const light = lightFor(d) * (wallSide === 1 ? 0.70 : 1.0), ft = fogT(d);
+        let lr = 0, lg = 0, lb = 0;
+        if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
+        const lit = (lr + lg + lb) > 1e-4;
+        const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(RH - 1, Math.floor(yBotF));
+        const invSpan = RH / d;   // pixels per world unit at this distance
+        for (let y = y0; y <= y1; y++) {
+          const worldZ = camZ - (y - horizon) / invSpan;             // CEIL_H..0 down the wall
+          let v = worldZ - Math.floor(worldZ);                        // tile every 1 unit
+          let ty = (v * th) | 0; if (ty < 0) ty += th; if (ty >= th) ty = th - 1;
+          const c = tex.pixels[ty * tw + texX];
+          buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+        }
+      }
+
+      // blocks, far → near
+      for (let i = nb - 1; i >= 0; i--) {
+        const d = bD[i], h = bH[i], dEx = bDx[i];
+        const light = lightFor(d) * (bS[i] === 1 ? 0.70 : 1.0), ft = fogT(d);
+        let lr = 0, lg = 0, lb = 0;
+        if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
+        const lit = (lr + lg + lb) > 1e-4;
+        const invSpan = RH / d;
+        const isWater = bW[i] === 1;
+        // front face z=0..h — flowing water for waterfall blocks, else stone
+        const faceTex = isWater ? waterTex : sideTex;
+        const yTopF = horizon + (camZ - h) * RH / d, yBotF = horizon + camZ * RH / d;
+        const th = faceTex.h, tw = faceTex.w, fpx = faceTex.pixels;
+        let texX = (bU[i] * tw) | 0; if (texX >= tw) texX = tw - 1; if (texX < 0) texX = 0;
+        const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(RH - 1, Math.floor(yBotF));
+        for (let y = y0; y <= y1; y++) {
+          const worldZ = camZ - (y - horizon) / invSpan;             // h..0
+          let v = isWater ? ((-worldZ * 1.5 - wfall) % 1) : (worldZ - Math.floor(worldZ));
+          if (v < 0) v += 1;
+          let ty = (v * th) | 0; if (ty < 0) ty += th; if (ty >= th) ty = th - 1;
+          const c = fpx[ty * tw + texX];
+          buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+        }
+        // top face z=h (only visible when below the eye)
+        if (h < camZ - 0.02) {
+          const tt = isWater ? waterTex : topTex, ttw = tt.w, tpx = tt.pixels;
+          const wox = isWater ? Math.sin(tNow * 1.7) * 3 : 0, woy = isWater ? Math.cos(tNow * 1.3) * 3 : 0;
+          const yFar = horizon + (camZ - h) * RH / dEx, yNear = horizon + (camZ - h) * RH / d;
+          const yy0 = Math.max(0, Math.ceil(yFar)), yy1 = Math.min(RH - 1, Math.floor(yNear));
+          for (let y = yy0; y <= yy1; y++) {
+            if (y <= horizon) continue;
+            const dRow = (camZ - h) * RH / (y - horizon);
+            if (dRow < d - 0.03 || dRow > dEx + 0.03) continue;
+            const wx = p.x + dRow * rayDirX, wy = p.y + dRow * rayDirY;
+            let tx = (wx + wox - Math.floor(wx + wox)) * ttw | 0, ty = (wy + woy - Math.floor(wy + woy)) * ttw | 0;
+            if (tx < 0) tx += ttw; if (ty < 0) ty += ttw;
+            const c = tpx[(ty * ttw + tx) | 0];
+            const l2 = lightFor(dRow), f2 = fogT(dRow);
+            if (nLights) { this._lightAt(wx, wy, lc); buf[y * RENDER_W + x] = shadeLit(c, l2, fog, f2, lc[0], lc[1], lc[2]); }
+            else buf[y * RENDER_W + x] = shadeFog(c, l2, fog, f2);
+          }
+        }
+      }
+
+      // ---- ceilings: undersides (soaring/low) + risers at each downward step --
+      if (hasCeils) {
+        const cpx = ceilTex.pixels, ctw = ceilTex.w, cth = ceilTex.h;
+        const rpx = sideTex.pixels, rtw = sideTex.w, rth = sideTex.h;
+        for (let i = nc - 1; i >= 0; i--) {
+          const d = cD[i], dEx = cDx[i], hC = cCH[i], pC = cPrevA[i];
+          const invSpan = RH / (d || 1e-4);
+          // flat ceiling underside at z=hC (seen from below the eye)
+          if (hC > camZ + 0.02) {
+            const yNear = horizon + (camZ - hC) * RH / (d || 1e-4);
+            const yFar = horizon + (camZ - hC) * RH / dEx;
+            const yy0 = Math.max(0, Math.ceil(yNear)), yy1 = Math.min(horizon - 1, Math.floor(yFar));
+            for (let y = yy0; y <= yy1; y++) {
+              const dRow = (hC - camZ) * RH / (horizon - y);
+              if (dRow < d - 0.03 || dRow > dEx + 0.03) continue;
+              const wx = p.x + dRow * rayDirX, wy = p.y + dRow * rayDirY;
+              let tx = (wx - Math.floor(wx)) * ctw | 0, ty = (wy - Math.floor(wy)) * cth | 0;
+              if (tx < 0) tx += ctw; if (ty < 0) ty += cth;
+              const c = cpx[(ty * ctw + tx) | 0];
+              const l2 = lightFor(dRow) * 0.74, f2 = fogT(dRow);
+              if (nLights) { this._lightAt(wx, wy, lc); buf[y * RENDER_W + x] = shadeLit(c, l2, fog, f2, lc[0], lc[1], lc[2]); }
+              else buf[y * RENDER_W + x] = shadeFog(c, l2, fog, f2);
+            }
+          }
+          // riser: the downward face where a higher ceiling (pC) steps to this one (hC)
+          if (pC > hC + 0.02) {
+            const light = lightFor(d) * (cS[i] === 1 ? 0.70 : 1.0) * 0.9, ft = fogT(d);
+            let lr = 0, lg = 0, lb = 0;
+            if (nLights) { this._lightAt(p.x + d * rayDirX, p.y + d * rayDirY, lc); lr = lc[0]; lg = lc[1]; lb = lc[2]; }
+            const lit = (lr + lg + lb) > 1e-4;
+            const yTop = horizon + (camZ - pC) * RH / d, yBot = horizon + (camZ - hC) * RH / d;
+            let texX = (cU[i] * rtw) | 0; if (texX >= rtw) texX = rtw - 1; if (texX < 0) texX = 0;
+            const y0 = Math.max(0, Math.ceil(yTop)), y1 = Math.min(horizon, Math.floor(yBot));
+            for (let y = y0; y <= y1; y++) {
+              const worldZ = camZ - (y - horizon) / invSpan;   // pC..hC
+              let v = worldZ - Math.floor(worldZ);
+              let ty = (v * rth) | 0; if (ty < 0) ty += rth; if (ty >= rth) ty = rth - 1;
+              const c = rpx[ty * rtw + texX];
+              buf[y * RENDER_W + x] = lit ? shadeLit(c, light, fog, ft, lr, lg, lb) : shadeFog(c, light, fog, ft);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ---- billboarded sprites ----------------------------------------------
+  _sprites(game, p, dirX, dirY, planeX, planeY, horizon, camZ = 0.5) {
+    const map = game.map;
+    const bh = map.hasHeights ? map.blockH : null;
+    const ents = game.entities;
+    const list = [];
+    for (const e of ents) {
+      if (!e.sprite) continue;
+      const dx = e.x - p.x, dy = e.y - p.y;
+      e._dist = dx * dx + dy * dy;
+      list.push(e);
+    }
+    list.sort((a, b) => b._dist - a._dist);
+    const invDet = 1.0 / (planeX * dirY - dirX * planeY);
+    const buf = this.buf;
+
+    for (const e of list) {
+      const relX = e.x - p.x, relY = e.y - p.y;
+      const tX = invDet * (dirY * relX - dirX * relY);
+      const tY = invDet * (-planeY * relX + planeX * relY); // depth
+      if (tY <= 0.05) continue;
+      const sprite = e.kind === 'enemy' ? enemyRenderSprite(e, p.x, p.y) : e.sprite;
+      if (!sprite) continue;
+      const worldH = e.spriteH || 1.0;
+      const lineH = RENDER_H / tY;
+      const drawH = (lineH * worldH) | 0;
+      const drawW = (drawH * (sprite.w / sprite.h)) | 0;
+      const vOff = (e.vOffset || 0) * lineH;
+      const screenX = ((RENDER_W / 2) * (1 + tX / tY)) | 0;
+      // feet rest on whatever floor/block height is under the sprite
+      let feetZ = 0;
+      if (bh) { const cx = Math.floor(e.x), cy = Math.floor(e.y); if (cx >= 0 && cy >= 0 && cx < map.W && cy < map.H) feetZ = bh[cy * map.W + cx]; }
+      const baseY = horizon + (camZ - feetZ) * lineH - vOff;
+      const drawBottom = baseY | 0;
+      const drawTop = (baseY - drawH) | 0;
+      const x0 = Math.max(0, screenX - (drawW >> 1));
+      const x1 = Math.min(RENDER_W - 1, screenX + (drawW >> 1));
+      const light = e.fullbright ? 1 : lightFor(tY);
+      const ft = e.fullbright ? 0 : fogT(tY) * 0.55, fog = this._fog;
+      const flash = (e.kind === 'enemy' && e.flash > 0) ? 0.78 : 0;   // white hit-flash
+      // dynamic light on the sprite (emitters/fullbright ignore it)
+      let lr = 0, lg = 0, lb = 0;
+      if (this._ln && !e.fullbright) {
+        this._lightAt(e.x, e.y, this._lc);
+        lr = this._lc[0]; lg = this._lc[1]; lb = this._lc[2];
+      }
+      const lit = (lr + lg + lb) > 0.0001;
+      // Spectre: a shimmering, near-invisible fuzz — a moving dither that shows
+      // only a fraction of pixels, darkened, so it reads as a heat-haze shadow.
+      const fuzz = e.fuzz ? ((this._time * 30) | 0) : 0;
+      const tw = sprite.w, th = sprite.h, px = sprite.pixels;
+      const heightLvl = !!bh;
+      for (let x = x0; x <= x1; x++) {
+        if (tY >= this.zbuf[x]) continue;             // behind a wall
+        // standing behind a taller raised block? clip the part below its top.
+        let clipY = RENDER_H;
+        if (heightLvl) {
+          const mh = this._colMaxH[x];
+          if (mh > feetZ + 0.05 && tY > this._colFarD[x] + 0.1) clipY = horizon + (camZ - mh) * lineH;
+        }
+        let texX = (((x - (screenX - (drawW >> 1))) * tw) / drawW) | 0;
+        if (texX < 0 || texX >= tw) continue;
+        const y0 = Math.max(0, drawTop), y1 = Math.min(RENDER_H - 1, drawBottom);
+        for (let y = y0; y <= y1; y++) {
+          if (y >= clipY) continue;                   // occluded by the block in front
+          let texY = (((y - drawTop) * th) / drawH) | 0;
+          if (texY < 0 || texY >= th) continue;
+          const c = px[texY * tw + texX];
+          if ((c >>> 24) < 128) continue;             // transparent / soft edge
+          if (e.fuzz && (((x * 5 + y * 3 + fuzz) & 3) !== 0)) continue;   // sparse shimmer
+          let out = lit ? shadeLit(c, light, fog, ft, lr, lg, lb)
+            : (light >= 1 && ft === 0) ? c : shadeFog(c, light, fog, ft);
+          if (e.fuzz) out = shadePacked(out, 0.5);
+          if (flash) out = whiten(out, flash);
+          buf[y * RENDER_W + x] = out;
+        }
+      }
+    }
+  }
+
+  // ---- particles (blood / sparks / debris) ------------------------------
+  _particles(game, p, dirX, dirY, planeX, planeY, horizon) {
+    const arr = game.particles;
+    if (!arr || !arr.length) return;
+    const invDet = 1.0 / (planeX * dirY - dirX * planeY);
+    const buf = this.buf;
+    for (const pt of arr) {
+      const rx = pt.x - p.x, ry = pt.y - p.y;
+      const tX = invDet * (dirY * rx - dirX * ry);
+      const tY = invDet * (-planeY * rx + planeX * ry);
+      if (tY <= 0.12) continue;
+      const sx = ((RENDER_W / 2) * (1 + tX / tY)) | 0;
+      if (sx < 0 || sx >= RENDER_W || tY >= this.zbuf[sx]) continue;
+      const lineH = RENDER_H / tY;
+      const sy = (horizon + lineH * (0.5 - pt.z)) | 0;
+      const ps = lineH > 60 ? 2 : 1;
+      const c = pt.color;
+      for (let yy = sy; yy < sy + ps; yy++) {
+        if (yy < 0 || yy >= RENDER_H) continue;
+        for (let xx = sx; xx < sx + ps; xx++) {
+          if (xx < 0 || xx >= RENDER_W) continue;
+          buf[yy * RENDER_W + xx] = c;
+        }
+      }
+    }
+  }
+}
+
+// Distance light falloff (diminishing lighting like the original).
+function lightFor(dist) {
+  const l = 1.0 / (1 + dist * 0.115);
+  return l < 0.36 ? 0.36 : l > 1 ? 1 : l;
+}
+
+// How much distance haze to mix in (0 near .. ~0.6 far).
+function fogT(dist) {
+  if (dist < 4) return 0;
+  const t = (dist - 4) * 0.044;
+  return t > 0.6 ? 0.6 : t;
+}
+
+// Fast packed-color shade (scale RGB by f, keep alpha 0xff).
+function shadePacked(c, f) {
+  const r = (c & 0xff) * f & 0xff;
+  const g = ((c >>> 8) & 0xff) * f & 0xff;
+  const b = ((c >>> 16) & 0xff) * f & 0xff;
+  return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+}
+
+// Separable box blur over a Float32 plane (used by the bloom pass).
+function boxBlurH(src, tmp, W, H, R) {
+  const inv = 1 / (2 * R + 1);
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    for (let x = 0; x < W; x++) {
+      let s = 0;
+      for (let k = -R; k <= R; k++) { let xx = x + k; if (xx < 0) xx = 0; else if (xx >= W) xx = W - 1; s += src[row + xx]; }
+      tmp[row + x] = s * inv;
+    }
+  }
+  src.set(tmp);
+}
+function boxBlurV(src, tmp, W, H, R) {
+  const inv = 1 / (2 * R + 1);
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) {
+      let s = 0;
+      for (let k = -R; k <= R; k++) { let yy = y + k; if (yy < 0) yy = 0; else if (yy >= H) yy = H - 1; s += src[yy * W + x]; }
+      tmp[y * W + x] = s * inv;
+    }
+  }
+  src.set(tmp);
+}
+
+// Like shadeFog, but adds per-channel dynamic light (lr,lg,lb) before fog.
+function shadeLit(c, f, fog, t, lr, lg, lb) {
+  let r = (c & 0xff) * (f + lr), g = ((c >>> 8) & 0xff) * (f + lg), b = ((c >>> 16) & 0xff) * (f + lb);
+  if (t > 0) {
+    const fr = fog & 0xff, fg = (fog >>> 8) & 0xff, fb = (fog >>> 16) & 0xff;
+    r += (fr - r) * t; g += (fg - g) * t; b += (fb - b) * t;
+  }
+  if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
+// Shade by light factor `f`, then blend toward fog colour by `t`.
+function shadeFog(c, f, fog, t) {
+  let r = (c & 0xff) * f, g = ((c >>> 8) & 0xff) * f, b = ((c >>> 16) & 0xff) * f;
+  if (t > 0) {
+    const fr = fog & 0xff, fg = (fog >>> 8) & 0xff, fb = (fog >>> 16) & 0xff;
+    r += (fr - r) * t; g += (fg - g) * t; b += (fb - b) * t;
+  }
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
+// Blend a packed colour toward white by t (used for the enemy hit-flash).
+function whiten(c, t) {
+  let r = c & 0xff, g = (c >>> 8) & 0xff, b = (c >>> 16) & 0xff;
+  r += (255 - r) * t; g += (255 - g) * t; b += (255 - b) * t;
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
+function hexToPacked(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+  return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+}
+
+const WALL_TEX_BY_CHAR = {
+  '#': 'tech', 'B': 'brick', 'M': 'metal', 'S': 'stone', 'A': 'marble', '+': 'exit',
+  'C': 'console', 'H': 'hazard', 'V': 'vine', 'P': 'pipe', 'W': 'wood', 'K': 'flesh',
+  'T': 'circuit', 'L': 'lightpanel', 'Z': 'rust', 'X': 'gothic', 'Q': 'crystal', 'N': 'slime',
+  'F': 'hexplate', 'J': 'obsidian',
+};
+function wallTexName(ch) { return WALL_TEX_BY_CHAR[ch] || 'tech'; }
