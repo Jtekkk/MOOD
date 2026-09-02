@@ -50,36 +50,43 @@ try {
     out.clipPicked = !game.entities.includes(clip);
     out.bulletsGained = game.player.ammo.bullets > bulletsBefore;
 
-    // 4) door: stand east of the armory door (7,15) facing west and use it
-    game.player.x = 8.5; game.player.y = 15.5; game.player.angle = Math.PI;
-    const armory = game.map.doors.find((d) => d.x === 7 && d.y === 15);
-    game._useAction();
-    out.doorOpening = armory && armory.state === 'opening';
-    step(40); // ~2s, plenty to fully open
-    out.doorOpen = armory.open > 0.9;
+    // where to stand to face a door, and a floor cell just past it (works for
+    // both orientations: 'h' opens N/S, 'v' opens E/W)
+    const approach = (d) => d.axis === 'h'
+      ? { px: d.x + 0.5, py: d.y + 1.5, ang: -Math.PI / 2, tx: d.x + 0.5, ty: d.y - 0.5 }
+      : { px: d.x + 1.5, py: d.y + 0.5, ang: Math.PI, tx: d.x - 0.5, ty: d.y + 0.5 };
 
-    // 5) locked exit door: needs red key
-    const exitDoor = game.map.doors.find((d) => d.lock === 'red');
-    game.player.x = exitDoor.x + 1.5; game.player.y = exitDoor.y + 0.5; game.player.angle = Math.PI;
-    game.player.keys.red = false;
+    // 4) door: face a normal (unlocked) door and use it
+    const normDoor = game.map.doors.find((d) => !d.lock && !d.secret);
+    { const a = approach(normDoor); game.player.x = a.px; game.player.y = a.py; game.player.angle = a.ang; }
+    game._useAction();
+    out.doorOpening = normDoor && normDoor.state === 'opening';
+    step(40); // ~2s, plenty to fully open
+    out.doorOpen = normDoor.open > 0.9;
+
+    // 5) locked door: needs its coloured key
+    const exitDoor = game.map.doors.find((d) => d.lock);
+    const lockColor = exitDoor.lock;
+    { const a = approach(exitDoor); game.player.x = a.px; game.player.y = a.py; game.player.angle = a.ang; }
+    game.player.keys[lockColor] = false;
     game._useAction();
     out.lockedStaysClosed = exitDoor.state === 'closed';
-    game.player.keys.red = true;
+    game.player.keys[lockColor] = true;
     game._useAction();
     out.unlockedOpens = exitDoor.state === 'opening';
 
     // 5b) rays are blocked by a CLOSED door, pass through an OPEN one
-    const dr = game.map.doors.find((d) => d.x === 7 && d.y === 15);
-    const target = { kind: 'enemy', x: 6.5, y: 15.5, radius: 0.3, hp: 1000, alive: true,
+    const dr = normDoor, a = approach(dr);
+    const target = { kind: 'enemy', x: a.tx, y: a.ty, radius: 0.3, hp: 1000, alive: true,
       state: 'chase', def: { painChance: 0 } };
     game.entities.push(target);
-    game.player.x = 8.5; game.player.y = 15.5; game.player.angle = Math.PI;
-    dr.open = 0;                                  // closed
+    game.player.x = a.px; game.player.y = a.py; game.player.angle = a.ang;
+    dr.open = 0; dr.state = 'closed';             // closed
     const hpBeforeClosed = target.hp;
-    game._hitscan(game.player.x, game.player.y, Math.PI, 50, 6, 'player');
+    game._hitscan(game.player.x, game.player.y, a.ang, 50, 6, 'player');
     out.rayBlockedByClosedDoor = target.hp === hpBeforeClosed;
     dr.open = 1;                                  // open
-    game._hitscan(game.player.x, game.player.y, Math.PI, 50, 6, 'player');
+    game._hitscan(game.player.x, game.player.y, a.ang, 50, 6, 'player');
     out.rayThroughOpenDoor = target.hp < hpBeforeClosed;
     target._remove = true; game.entities = game.entities.filter((e) => !e._remove);
 

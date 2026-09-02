@@ -1,3 +1,6 @@
+// Verifies the per-cell ceiling engine on a generated ceiling level (LEVEL 3):
+// ceilings vary (low passages ↔ tall halls), headroom blocks where it should,
+// and it renders fast. Level-agnostic — finds a hasCeils level itself.
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright-core';
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -15,54 +18,45 @@ try {
   await page.waitForFunction('window.__MOOD && window.__MOOD.game', null, { timeout: 8000 });
 
   const out = await page.evaluate(() => {
-    const { game } = window.__MOOD;
+    const { game, renderer } = window.__MOOD;
     game.startNewGame();
-    game.loadLevel(2);                     // LEVEL 3: THE ASCENT (now with per-cell ceilings)
-    const m = game.map, r = {};
-    const at = (x, y) => m.ceilH[y * m.W + x];
-    r.hasCeils = !!m.hasCeils;
-    r.tall = at(18, 8);                     // catwalk-to-exit hall → 3.9
-    r.low = at(3, 15);                      // entry nook → 1.8
-    r.def = at(20, 11);                     // untouched → 2.4 default
-    r.range = r.tall > 3.5 && r.low < 2.0 && Math.abs(r.def - 2.4) < 0.01;
-
-    // headroom physics: a base-floor cell under the low nook stays passable…
-    r.nookPassable = game._ledgeBlocks(3.5, 15.5, 0) === false;
-    // …but drop a low ceiling over a raised platform cell and you can't fit
-    const pi = 7 * m.W + 11;               // a platform cell (blockH ≈ 1.0)
-    r.platFloor = m.blockH[pi];
-    const save = m.ceilH[pi];
-    m.ceilH[pi] = 1.5;                      // headroom 0.5 < 1.0 → blocked
-    r.lowCeilBlocks = game._ledgeBlocks(11.5, 7.5, 0) === true;
-    m.ceilH[pi] = save;
-    r.restored = game._ledgeBlocks(11.5, 7.5, 1.0) === false;   // fits again once ceiling restored
-
-    // render a few frames from the low nook, looking into the tall hall
-    game.player.x = 3.5; game.player.y = 15.5; game.player.angle = -Math.PI / 2 + 0.5; game.player.z = 0;
+    // find the first campaign level that carries a per-cell ceiling map
+    let idx = -1;
+    for (let i = 0; i < 32; i++) { try { game.loadLevel(i); } catch (e) { break; } if (game.map.hasCeils) { idx = i; break; } }
+    const m = game.map, r = { idx, name: m.name, hasCeils: !!m.hasCeils };
+    // ceiling variety: some cells lower than the 2.4 default, some taller
+    let lo = 9, hi = 0;
+    for (let i = 0; i < m.ceilH.length; i++) { const c = m.ceilH[i]; if (c < lo) lo = c; if (c > hi) hi = c; }
+    r.lo = +lo.toFixed(2); r.hi = +hi.toFixed(2);
+    r.variety = lo < 2.3 && hi > 2.5;
+    // headroom physics: a low ceiling over a raised block blocks entry; restore → fits
+    const W = m.W, cx = Math.floor(m.start.x) + 1, cy = Math.floor(m.start.y);
+    const bi = cy * W + cx;
+    const sbH = m.blockH[bi], scH = m.ceilH[bi];
+    m.blockH[bi] = 1.0; m.ceilH[bi] = 1.5;                       // headroom 0.5 < 1.0
+    r.lowBlocks = game._ledgeBlocks(cx + 0.5, cy + 0.5, 1.0) === true;   // fromZ=1.0 isolates headroom from step-up
+    m.ceilH[bi] = 3.0;                                           // headroom 2.0
+    r.restored = game._ledgeBlocks(cx + 0.5, cy + 0.5, 1.0) === false;
+    m.blockH[bi] = sbH; m.ceilH[bi] = scH;
+    // fps: update + render a few dozen frames
     game.state = 'playing';
     for (let i = 0; i < 4; i++) game.update(0.03);
-    const R = window.__MOOD.renderer;
     const t0 = performance.now();
-    for (let i = 0; i < 30; i++) { game.update(0.016); R.clear(); R.renderWorld(game); }
+    for (let i = 0; i < 30; i++) { game.update(0.016); renderer.clear(); renderer.renderWorld(game); }
     r.fps = Math.round(30000 / (performance.now() - t0));
     return r;
   });
 
   console.log(JSON.stringify(out, null, 2));
   const checks = {
-    'ASCENT now carries a per-cell ceiling map': out.hasCeils,
-    'ceilings span low→default→tall (1.8 / 2.4 / 3.9)': out.range,
-    'a low ceiling over open floor stays walkable': out.nookPassable,
-    'a low ceiling over a raised platform blocks entry': out.lowCeilBlocks,
-    'headroom returns once the ceiling is restored': out.restored,
+    'a campaign level carries a per-cell ceiling map': out.hasCeils && out.idx >= 0,
+    'ceilings vary (low passages ↔ tall halls)': out.variety,
+    'a low ceiling over a raised block blocks entry': out.lowBlocks,
+    'headroom returns once the ceiling is raised': out.restored,
     'renders at a healthy frame rate': out.fps >= 45,
   };
   for (const [k, v] of Object.entries(checks)) { console.log((v ? '  ✓ ' : '  ✗ ') + k); if (!v) errs.push('FAIL ' + k); }
-  await page.evaluate(() => {
-    const { game } = window.__MOOD;
-    game.player.x = 4.5; game.player.y = 12.5; game.player.angle = -Math.PI / 2 + 0.35; game.player.z = 0;
-    for (let i = 0; i < 3; i++) game.update(0.03);
-  });
+  await page.evaluate(() => { const { game } = window.__MOOD; game.state = 'playing'; for (let i = 0; i < 3; i++) game.update(0.03); });
   await page.waitForTimeout(140);
   await page.screenshot({ path: `${OUT}/ceilings.png` });
 } catch (e) { errs.push('HARNESS ' + e.message); }

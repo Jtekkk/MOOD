@@ -216,12 +216,16 @@ find the matching keycard.
   panic, complete with a wire cage and a swarm, when you're nearly dead.
 
   ![The nine moods](docs/screens/faces.png)
-- **Ten levels** — three hand-authored (Entryway, Underhalls, The Ascent), six
-  procedurally generated (`tools/gen-levels.mjs`) with per-level themes, hidden
-  **secrets**, water, elevation and open-sky sections, and a hand-built **boss
-  arena** finale (LEVEL 10: THE GUMBIRD) whose exit stays sealed until the boss
-  is dead. A title screen, level-complete intermission (kills / items / secrets /
-  time tally), death/respawn, and a final victory screen tie them together.
+- **Ten levels** — a nine-level procedurally generated campaign
+  (`tools/gen-levels.mjs`) that **scales up with the level number** (LEVEL 1 is
+  48×32, growing to 70×54 by LEVEL 9), with more rooms, hallways and doors each
+  level and enemies spread thin across the bigger footprints. Per-level themes,
+  hidden **secrets**, water, **elevation** (stairs / stepped daises), tall/low
+  **ceilings**, and open-sky sections — then a hand-built **boss arena** finale
+  (LEVEL 10: THE GUMBIRD) whose exit stays sealed until the boss is dead. A title
+  screen, level-complete intermission (kills / items / secrets / time tally),
+  death/respawn, and a final victory screen tie them together. Every level is
+  verified fully traversable with the real movement code (`tools/physicscheck.mjs`).
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
 - **Per-level background music** — seven looping MP3 tracks in `assets/music/`,
@@ -270,8 +274,9 @@ npm run validate     # node tools/validate-levels.mjs
 It enforces a solid border, uniform row widths, a player start, and that the
 exit switch is actually reachable.
 
-Levels 3-8 live in `src/data/levels.gen.js`, produced by the procedural
-generator. Re-roll them (or tweak the per-level themes/difficulty in its
+Campaign levels 1-9 live in `src/data/levels.gen.js`, produced by the
+procedural generator (level 10, the boss arena, is hand-built in `levels.js`).
+Re-roll them (or tweak the per-level size/rooms/doors/themes/difficulty in its
 `CONFIGS`) with:
 
 ```bash

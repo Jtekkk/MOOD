@@ -366,7 +366,10 @@ const GUMBIRD_ARENA = {
   ],
 };
 
-export const LEVELS = [E1M1, E1M2, ASCENT, ...GEN_LEVELS, GUMBIRD_ARENA];
+// The campaign is now fully generated (levels 1-9, scaling up in size) plus the
+// hand-built boss arena finale. E1M1 / E1M2 / ASCENT / HEIGHTS_LAB above are kept
+// as references / test fixtures but are no longer part of the campaign.
+export const LEVELS = [...GEN_LEVELS, GUMBIRD_ARENA];
 
 // Parse a level definition into a runtime map object.
 export function parseLevel(def) {

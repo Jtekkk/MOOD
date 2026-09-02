@@ -1,5 +1,6 @@
-// gen-levels.mjs — procedurally builds 6 valid levels and writes them as
-// hand-editable text grids to src/data/levels.gen.js.
+// gen-levels.mjs — procedurally builds the 9 campaign levels (1-9), scaling up
+// in size / rooms / hallways / doors with the level number (capped), and writes
+// them as hand-editable text grids to src/data/levels.gen.js.
 //
 // Guarantees per level: uniform width, fully solid border, every floor cell
 // connected, a reachable exit switch gated by a reachable keycard. Each level
@@ -23,31 +24,48 @@ function overlap(a, b, gap) {
 
 const KEY = { red: { key: 'R', door: 'r' }, blue: { key: 'U', door: 'b' }, yellow: { key: 'Y', door: 'y' } };
 
+// The full campaign (levels 1-9) is generated. Maps scale up with the level —
+// bigger footprints, more rooms, more hallways and more doors — but the size is
+// capped so late levels stay traversable and the bundle stays small. Enemy
+// counts grow only modestly, so the larger maps read as sparse and explorable
+// (monsters land on random floor cells, spread across the whole level).
 const CONFIGS = [
-  { name: 'LEVEL 4: REFINERY', w: 46, h: 32, rooms: 11, key: 'red',
+  { name: 'LEVEL 1: ENTRYWAY', w: 48, h: 32, rooms: 10, key: 'red', doors: 2,
     theme: { primary: '#', accents: ['C', 'L', 'M', 'P'] }, floor: 'floor', ceil: 'ceil', sky: '#20242c',
-    enemies: { z: 4, i: 3, d: 1, c: 0 }, water: { ponds: 1, streams: 1 }, weapons: ['2'], barrels: 4, lamps: 9,
-    items: { h: 4, H: 2, p: 3, a: 1, l: 3, L: 2, s: 3, S: 1 } },
-  { name: 'LEVEL 5: FOUNDRY', w: 48, h: 32, rooms: 12, key: 'blue',
+    enemies: { z: 5, i: 3 }, barrels: 4, lamps: 10,
+    items: { h: 4, H: 2, p: 4, a: 1, l: 4, L: 2, s: 3, S: 1 } },
+  { name: 'LEVEL 2: OUTPOST', w: 52, h: 34, rooms: 12, key: 'blue', doors: 3,
     theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
-    enemies: { z: 3, i: 4, d: 2, c: 1, f: 1 }, outdoor: 1, water: { ponds: 1 }, weapons: ['4'], barrels: 5, lamps: 10, secret: 1, secretReward: 'g',
-    items: { h: 4, H: 2, p: 3, a: 1, A: 1, l: 2, L: 3, s: 2, S: 2 } },
-  { name: 'LEVEL 6: THE WOUND', w: 48, h: 34, rooms: 12, key: 'yellow',
+    enemies: { z: 5, i: 5, d: 1 }, water: { ponds: 1 }, weapons: ['2'], barrels: 5, lamps: 11,
+    items: { h: 4, H: 2, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2 } },
+  { name: 'LEVEL 3: THE ASCENT', w: 54, h: 38, rooms: 13, key: 'yellow', doors: 3,
+    theme: { primary: 'S', accents: ['C', 'L', 'M', 'V'] }, floor: 'floor2', ceil: 'ceil', sky: '#1b2028',
+    enemies: { z: 4, i: 5, d: 2, f: 1 }, outdoor: 1, water: { ponds: 1 }, weapons: ['3'], barrels: 4, lamps: 12, dais: 2, ceils: 1,
+    items: { h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 1, e: 2 } },
+  { name: 'LEVEL 4: REFINERY', w: 58, h: 40, rooms: 15, key: 'red', doors: 4,
     theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
-    enemies: { z: 2, i: 4, d: 2, c: 1, f: 2 }, outdoor: 1, weapons: ['3'], barrels: 4, lamps: 11, dais: 1, ceils: 1,
-    items: { h: 5, H: 3, p: 4, a: 1, A: 1, g: 1, s: 3, S: 2, r: 1, e: 2 } },
-  { name: 'LEVEL 7: RUSTWORKS', w: 50, h: 34, rooms: 13, key: 'red',
+    enemies: { z: 5, i: 6, d: 2, c: 1 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['4'], barrels: 5, lamps: 13,
+    items: { h: 5, H: 3, p: 5, a: 1, A: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 2 } },
+  { name: 'LEVEL 5: FOUNDRY', w: 60, h: 42, rooms: 16, key: 'blue', doors: 4,
     theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
-    enemies: { z: 3, i: 4, d: 2, c: 2, f: 2 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['5'], barrels: 6, lamps: 12, secret: 1, secretReward: 'V',
-    items: { v: 1, h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 2, e: 2 } },
-  { name: 'LEVEL 8: CRYPTWORKS', w: 52, h: 36, rooms: 14, key: 'blue',
-    theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
-    enemies: { z: 3, i: 5, d: 3, c: 2, f: 2, B: 1, x: 1, P: 1, j: 1 }, outdoor: 1, weapons: ['6'], barrels: 5, lamps: 13, dais: 1, ceils: 1,
-    items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 3, E: 2 } },
-  { name: 'LEVEL 9: ICON', w: 54, h: 38, rooms: 15, key: 'yellow',
+    enemies: { z: 4, i: 6, d: 3, c: 2, f: 1 }, outdoor: 1, weapons: ['5'], barrels: 6, lamps: 14, secret: 1, secretReward: 'g',
+    items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 4, S: 3, r: 2, e: 3 } },
+  { name: 'LEVEL 6: THE WOUND', w: 62, h: 46, rooms: 18, key: 'yellow', doors: 5,
     theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
-    enemies: { z: 3, i: 5, d: 3, c: 3, f: 3, B: 2, x: 2, P: 1, j: 2 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 14, dais: 1, ceils: 1, secret: 1, secretReward: '7',
-    items: { V: 1, k: 1, v: 1, h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
+    enemies: { z: 4, i: 6, d: 3, c: 2, f: 2, x: 1 }, outdoor: 1, water: { ponds: 1 }, weapons: ['6'], barrels: 6, lamps: 15, dais: 2, ceils: 1,
+    items: { h: 6, H: 4, p: 6, a: 1, A: 1, l: 4, L: 4, s: 4, S: 3, r: 2, e: 3, E: 2 } },
+  { name: 'LEVEL 7: RUSTWORKS', w: 64, h: 48, rooms: 19, key: 'red', doors: 5,
+    theme: { primary: '#', accents: ['C', 'M', 'P', 'L'] }, floor: 'floor', ceil: 'ceil', sky: '#1c2026',
+    enemies: { z: 4, i: 7, d: 3, c: 3, f: 2, B: 1 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['5'], barrels: 7, lamps: 16, secret: 1, secretReward: 'V',
+    items: { v: 1, h: 6, H: 4, p: 6, a: 1, A: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 3, E: 2 } },
+  { name: 'LEVEL 8: CRYPTWORKS', w: 66, h: 50, rooms: 20, key: 'blue', doors: 6,
+    theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
+    enemies: { z: 3, i: 7, d: 4, c: 3, f: 2, B: 1, x: 1, P: 1, j: 1 }, outdoor: 1, weapons: ['6'], barrels: 6, lamps: 17, dais: 2, ceils: 1,
+    items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, k: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
+  { name: 'LEVEL 9: ICON', w: 70, h: 54, rooms: 22, key: 'yellow', doors: 7,
+    theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
+    enemies: { z: 3, i: 7, d: 4, c: 4, f: 3, B: 2, x: 2, P: 1, j: 2 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 18, dais: 2, ceils: 1, secret: 1, secretReward: '7',
+    items: { V: 1, k: 1, v: 1, h: 8, H: 5, p: 7, a: 1, A: 1, g: 1, l: 5, L: 5, s: 5, S: 5, r: 4, e: 4, E: 4 } },
 ];
 
 function carve(g, a, b, rng) {
@@ -73,13 +91,13 @@ function genLevel(cfg, seed) {
 
   // place non-overlapping rooms
   const rooms = [];
-  for (let tries = 0; tries < 400 && rooms.length < cfg.rooms; tries++) {
-    const rw = 4 + irnd(rng, 5), rh = 4 + irnd(rng, 4);
+  for (let tries = 0; tries < 1200 && rooms.length < cfg.rooms; tries++) {
+    const rw = 4 + irnd(rng, 6), rh = 4 + irnd(rng, 5);
     const rect = { x: 1 + irnd(rng, W - rw - 2), y: 1 + irnd(rng, H - rh - 2), w: rw, h: rh };
     if (rooms.some((o) => overlap(rect, o, 1))) continue;
     rooms.push(rect);
   }
-  if (rooms.length < Math.max(5, cfg.rooms - 2)) return null;
+  if (rooms.length < Math.max(6, cfg.rooms - 4)) return null;
 
   for (const r of rooms) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g[y][x] = '.';
 
@@ -130,6 +148,26 @@ function genLevel(cfg, seed) {
   if (!pinches.length) return null;
   const [dx, dy] = pinches[Math.floor(pinches.length / 2)];
   g[dy][dx] = KEY[cfg.key].door;
+
+  // extra (unlocked) doors at corridor pinch points — more doors as maps grow.
+  // Placed only at true 1-wide choke points, kept apart and off the key door.
+  if (cfg.doors) {
+    const chokes = [];
+    for (const corr of corridors) for (const [x, y] of corr) {
+      if (x <= 1 || y <= 1 || x >= W - 2 || y >= H - 2 || g[y][x] !== '.') continue;
+      const hz = isWall(x - 1, y) && isWall(x + 1, y) && !isWall(x, y - 1) && !isWall(x, y + 1);
+      const vt = isWall(x, y - 1) && isWall(x, y + 1) && !isWall(x - 1, y) && !isWall(x + 1, y);
+      if (hz || vt) chokes.push([x, y]);
+    }
+    for (let i = chokes.length - 1; i > 0; i--) { const j = irnd(rng, i + 1); [chokes[i], chokes[j]] = [chokes[j], chokes[i]]; }
+    const doorCells = [[dx, dy]];
+    for (const [x, y] of chokes) {
+      if (doorCells.length - 1 >= cfg.doors) break;
+      if (g[y][x] !== '.') continue;
+      if (doorCells.some(([ox, oy]) => Math.abs(ox - x) + Math.abs(oy - y) <= 2)) continue;
+      g[y][x] = 'D'; doorCells.push([x, y]);
+    }
+  }
 
   // ----- terrain: water ponds/streams + open-sky outdoor rooms -----
   // A parallel grid: '.' none, '~' water (walkable), '^' open sky, 'O' both.
@@ -197,8 +235,18 @@ function genLevel(cfg, seed) {
 
   const scatter = (ch, n) => { for (let i = 0; i < n; i++) place(ch); };
   for (const [ch, n] of Object.entries(cfg.enemies)) scatter(ch, n);
-  for (const w of cfg.weapons) place(w);
-  scatter('o', cfg.barrels);
+  for (const w of (cfg.weapons || [])) place(w);
+  // barrels: never in a 1-wide choke, so a stationary barrel can't wall off the
+  // only path through a corridor.
+  const isChoke = (x, y) => {
+    const wl = (xx, yy) => !g[yy] || g[yy][xx] === undefined || g[yy][xx] !== '.';
+    return (wl(x - 1, y) && wl(x + 1, y)) || (wl(x, y - 1) && wl(x, y + 1));
+  };
+  for (let placed = 0, i = floorCells.length - 1; i >= 0 && placed < cfg.barrels; i--) {
+    const [x, y] = floorCells[i];
+    if (occupied.has(`${x},${y}`) || isChoke(x, y)) continue;
+    occupied.add(`${x},${y}`); t[y][x] = 'o'; floorCells.splice(i, 1); placed++;
+  }
   scatter('!', cfg.lamps || 0);      // lit braziers (dynamic point lights)
   for (const [ch, n] of Object.entries(cfg.items)) scatter(ch, n);
 
@@ -302,9 +350,9 @@ function validate(lv) {
   return null;
 }
 
-// ----- build all 6 -----
+// ----- build the whole campaign (levels 1-9) -----
 const levels = [];
-let li = 3;
+let li = 1;
 for (const cfg of CONFIGS) {
   let made = null, err = '';
   for (let off = 0; off < 400; off++) {
@@ -320,7 +368,7 @@ for (const cfg of CONFIGS) {
 // ----- emit src/data/levels.gen.js -----
 const esc = (rows) => rows.map((r) => "    '" + r + "'").join(',\n');
 let src = `// AUTO-GENERATED by tools/gen-levels.mjs — do not edit by hand; re-run the tool.
-// 6 procedurally built, fully-validated levels (3..8).
+// 9 procedurally built, fully-validated campaign levels (1..9), scaling up.
 export const GEN_LEVELS = [\n`;
 for (const lv of levels) {
   src += `  {\n    name: '${lv.name}',\n    floor: '${lv.floor}', ceil: '${lv.ceil}', skyTint: '${lv.sky}',\n    startAngle: ${lv.startAngle},\n    walls: [\n${esc(lv.walls)},\n    ],\n    things: [\n${esc(lv.things)},\n    ],\n    terrain: [\n${esc(lv.terrain)},\n    ],\n    heights: [\n${esc(lv.heights)},\n    ],\n    ceils: [\n${esc(lv.ceils)},\n    ],\n  },\n`;
