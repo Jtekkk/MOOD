@@ -37,7 +37,7 @@ export const WALL_TEX = {
 
 // every non-door wall glyph (the 6 originals + the 12 new surfaces)
 export const SOLID = new Set(['#', 'B', 'M', 'S', 'A', '+',
-  'C', 'H', 'V', 'P', 'W', 'K', 'T', 'L', 'Z', 'X', 'Q', 'N']);
+  'C', 'H', 'V', 'P', 'W', 'K', 'T', 'L', 'Z', 'X', 'Q', 'N', 'F', 'J']);
 export const DOORS = new Set(['D', 'r', 'b', 'y', '%']);   // '%' = disguised secret door
 export const DOOR_LOCK = { 'r': 'red', 'b': 'blue', 'y': 'yellow' };
 

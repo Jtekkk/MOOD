@@ -11,6 +11,19 @@ const PLANE = 0.66;            // camera plane length → ~66° FOV
 const CEIL_H = 2.4;           // default ceiling height for height-mapped levels
 const CEIL_MAX = 3.9;         // tallest ceiling on a per-cell ceiling level (the '9' step)
 
+// 4x4 ordered-dither biases (~±3) to break up smooth-gradient banding (the sky)
+const DITHER = (() => {
+  const b = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const a = new Float32Array(16);
+  for (let i = 0; i < 16; i++) a[i] = (b[i] - 7.5) * 0.5;
+  return a;
+})();
+function ditherPacked(c, d) {
+  let r = (c & 0xff) + d, g = ((c >>> 8) & 0xff) + d, b = ((c >>> 16) & 0xff) + d;
+  r = r < 0 ? 0 : r > 255 ? 255 : r; g = g < 0 ? 0 : g > 255 ? 255 : g; b = b < 0 ? 0 : b > 255 ? 255 : b;
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
 export class Renderer {
   constructor(displayCanvas) {
     this.display = displayCanvas;
@@ -227,7 +240,7 @@ export class Renderer {
         }
         if (!isFloor && terr) {
           // open sky overhead — no fog, straight gradient
-          buf[rowOff + x] = sky[y];
+          buf[rowOff + x] = ditherPacked(sky[y], DITHER[(x & 3) + ((y & 3) << 2)]);
         } else if (isFloor && terr) {
           // water — sample the rippling water texture
           let tx = (fx + rox - Math.floor(fx + rox)) * ww | 0;
@@ -366,7 +379,7 @@ export class Renderer {
           const cx = Math.floor(fx), cy = Math.floor(fy);
           if (cx >= 0 && cy >= 0 && cx < W && cy < Hh) {
             if (isFloor) { if (fType[cy * W + cx]) water = true; }
-            else if (cType[cy * W + cx]) { buf[rowOff + x] = sky[y]; fx += stepX; fy += stepY; continue; }  // open sky
+            else if (cType[cy * W + cx]) { buf[rowOff + x] = ditherPacked(sky[y], DITHER[(x & 3) + ((y & 3) << 2)]); fx += stepX; fy += stepY; continue; }  // open sky
           }
         }
         let c;
@@ -771,5 +784,6 @@ const WALL_TEX_BY_CHAR = {
   '#': 'tech', 'B': 'brick', 'M': 'metal', 'S': 'stone', 'A': 'marble', '+': 'exit',
   'C': 'console', 'H': 'hazard', 'V': 'vine', 'P': 'pipe', 'W': 'wood', 'K': 'flesh',
   'T': 'circuit', 'L': 'lightpanel', 'Z': 'rust', 'X': 'gothic', 'Q': 'crystal', 'N': 'slime',
+  'F': 'hexplate', 'J': 'obsidian',
 };
 function wallTexName(ch) { return WALL_TEX_BY_CHAR[ch] || 'tech'; }

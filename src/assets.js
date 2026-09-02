@@ -70,6 +70,84 @@ function noiseOverlay(ctx, w, h, rng, amt, alpha = 0.12) {
   ctx.putImageData(img, 0, 0);
 }
 
+// Global finishing pass applied to every WALL texture: bakes a soft vertical
+// ambient-occlusion (darker where a wall meets floor & ceiling), a faint top
+// sheen (reads as light from above), and a whisper of grain — so every surface
+// gains depth uniformly. Not applied to floors/ceilings (they tile both ways).
+function finishWall(tex, seed = 1) {
+  const { w, h, pixels } = tex;
+  const out = new Uint32Array(pixels);
+  const rng = mulberry32((seed * 2654435761) >>> 0);
+  const topB = Math.max(6, h * 0.16), botB = Math.max(8, h * 0.20);
+  for (let y = 0; y < h; y++) {
+    const top = y < topB ? (1 - y / topB) : 0;
+    const bot = y > h - botB ? (y - (h - botB)) / botB : 0;
+    const ao = 1 - 0.22 * top - 0.34 * bot;          // contact shadow at floor/ceiling
+    const sheen = (y > h * 0.06 && y < h * 0.24) ? 1.07 : 1.0;
+    const k = ao * sheen;
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x, c = pixels[i];
+      const n = (rng() - 0.5) * 6;
+      let r = (c & 0xff) * k + n, g = ((c >>> 8) & 0xff) * k + n, b = ((c >>> 16) & 0xff) * k + n;
+      r = r < 0 ? 0 : r > 255 ? 255 : r; g = g < 0 ? 0 : g > 255 ? 255 : g; b = b < 0 ? 0 : b > 255 ? 255 : b;
+      out[i] = (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+    }
+  }
+  return { w, h, pixels: out };
+}
+
+// NEW surface: industrial hex/diamond tread plate with a cyan status seam.
+function hexPlate(seed) {
+  const { c, ctx } = makeCanvas(64, 64);
+  const rng = mulberry32(seed);
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, '#3c444c'); g.addColorStop(1, '#242a30');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+  // raised diamond tread
+  for (let ry = 0; ry < 8; ry++) for (let rx = 0; rx < 8; rx++) {
+    const cxp = rx * 8 + (ry % 2 ? 4 : 0) + 4, cyp = ry * 8 + 4;
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath(); ctx.moveTo(cxp, cyp - 3); ctx.lineTo(cxp + 3, cyp); ctx.lineTo(cxp, cyp + 3); ctx.lineTo(cxp - 3, cyp); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.moveTo(cxp, cyp + 1); ctx.lineTo(cxp + 3, cyp); ctx.lineTo(cxp, cyp + 3); ctx.closePath(); ctx.fill();
+  }
+  // heavy frame + a glowing cyan seam
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, 64, 3); ctx.fillRect(0, 61, 64, 3);
+  ctx.fillStyle = '#1a2a30'; ctx.fillRect(0, 30, 64, 4);
+  ctx.fillStyle = '#39d6e6'; ctx.fillRect(0, 31, 64, 2);
+  ctx.fillStyle = 'rgba(120,240,255,0.5)'; ctx.fillRect(0, 30, 64, 1);
+  noiseOverlay(ctx, 64, 64, rng, 14);
+  return texFrom(c, ctx);
+}
+
+// NEW surface: obsidian — dark volcanic glass fractured by glowing lava veins.
+function obsidianWall(seed) {
+  const { c, ctx } = makeCanvas(64, 64);
+  const rng = mulberry32(seed);
+  const g = ctx.createLinearGradient(0, 0, 40, 64);
+  g.addColorStop(0, '#221a22'); g.addColorStop(0.5, '#161016'); g.addColorStop(1, '#0e0a0e');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+  // glassy facets
+  for (let i = 0; i < 16; i++) {
+    const x = rng() * 64, y = rng() * 64, s = 6 + rng() * 16;
+    ctx.fillStyle = `rgba(${60 + rng() * 40 | 0},${40 + rng() * 30 | 0},${60 + rng() * 40 | 0},0.35)`;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s, y + s * 0.4); ctx.lineTo(x + s * 0.4, y + s); ctx.closePath(); ctx.fill();
+  }
+  // glowing lava veins
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    let x = rng() * 64, y = 0;
+    ctx.strokeStyle = 'rgba(255,120,30,0.85)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    for (let yy = 0; yy < 64; yy += 8) { x += (rng() - 0.5) * 14; ctx.lineTo(x, yy); }
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,220,120,0.7)'; ctx.lineWidth = 0.6; ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  noiseOverlay(ctx, 64, 64, rng, 16);
+  return texFrom(c, ctx);
+}
+
 function techWall(seed, base = '#5a6b7a', panel = '#384552', rivet = '#9aaab8') {
   const { c, ctx } = makeCanvas(64, 64);
   const rng = mulberry32(seed);
@@ -2289,10 +2367,19 @@ export function buildAssets() {
   TEX.gothic = gothicWall(40);
   TEX.crystal = crystalWall(41);
   TEX.slime = slimeWall(42);
+  TEX.hexplate = hexPlate(47);
+  TEX.obsidian = obsidianWall(48);
   TEX.grate = grateFloor(43);
   TEX.lava = lavaFloor(44);
   TEX.tile = tileFloor(45);
   TEX.water = waterFloor(46);
+
+  // finishing pass: bake soft vertical AO + a top sheen into every WALL texture
+  // (leave flats — floor/ceil/grate/lava/tile/water — alone; they tile both ways)
+  const WALL_KEYS = ['tech', 'tech2', 'brick', 'metal', 'stone', 'marble', 'door', 'doorRed',
+    'doorBlue', 'doorYellow', 'exit', 'console', 'hazard', 'vine', 'pipe', 'wood', 'flesh',
+    'circuit', 'lightpanel', 'rust', 'gothic', 'crystal', 'slime', 'hexplate', 'obsidian'];
+  WALL_KEYS.forEach((k, i) => { if (TEX[k]) TEX[k] = finishWall(TEX[k], 100 + i); });
 
   // enemies
   SPR.zombie_walk0 = zombie('walk0');

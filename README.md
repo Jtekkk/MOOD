@@ -124,7 +124,10 @@ find the matching keycard.
 
 - **Raycasting engine** rendering at a chunky 320×200 internal buffer, scaled up
   with crisp nearest-neighbour pixels. Textured walls, per-row floor/ceiling
-  casting, and a depth buffer so sprites clip correctly behind walls.
+  casting, and a depth buffer so sprites clip correctly behind walls. Every wall
+  texture gets a baked **ambient-occlusion + top-sheen** finishing pass (walls
+  read with real depth, darker where they meet the floor and ceiling), and the
+  open-sky gradient is **ordered-dithered** to kill banding.
 - **Height / elevation engine:** a per-column renderer (kept separate from the
   flat path) gives real **stairs, raised platforms, ledges, and catwalks** — the
   camera rides at your standing height, you climb one step at a time, tall ledges

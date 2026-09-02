@@ -35,7 +35,7 @@ const CONFIGS = [
     enemies: { z: 5, i: 3 }, barrels: 4, lamps: 10,
     items: { h: 4, H: 2, p: 4, a: 1, l: 4, L: 2, s: 3, S: 1 } },
   { name: 'LEVEL 2: OUTPOST', w: 52, h: 34, rooms: 12, key: 'blue', doors: 3,
-    theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
+    theme: { primary: 'M', accents: ['P', 'H', 'Z', 'C', 'F'] }, floor: 'grate', ceil: 'ceil', sky: '#23201a',
     enemies: { z: 5, i: 5, d: 1 }, water: { ponds: 1 }, weapons: ['2'], barrels: 5, lamps: 11,
     items: { h: 4, H: 2, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2 } },
   { name: 'LEVEL 3: THE ASCENT', w: 54, h: 38, rooms: 13, key: 'yellow', doors: 3,
@@ -43,11 +43,11 @@ const CONFIGS = [
     enemies: { z: 4, i: 5, d: 2, f: 1 }, outdoor: 1, water: { ponds: 1 }, weapons: ['3'], barrels: 4, lamps: 12, dais: 2, ceils: 1,
     items: { h: 5, H: 3, p: 4, a: 1, A: 1, l: 3, L: 3, s: 3, S: 2, r: 1, e: 2 } },
   { name: 'LEVEL 4: REFINERY', w: 58, h: 40, rooms: 15, key: 'red', doors: 4,
-    theme: { primary: 'A', accents: ['K', 'X', 'S', 'V'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
+    theme: { primary: 'A', accents: ['K', 'X', 'S', 'V', 'J'] }, floor: 'blood', ceil: 'ceil', sky: '#2a1414',
     enemies: { z: 5, i: 6, d: 2, c: 1 }, outdoor: 1, water: { ponds: 1, streams: 1 }, weapons: ['4'], barrels: 5, lamps: 13,
     items: { h: 5, H: 3, p: 5, a: 1, A: 1, l: 3, L: 3, s: 3, S: 3, r: 2, e: 2 } },
   { name: 'LEVEL 5: FOUNDRY', w: 60, h: 42, rooms: 16, key: 'blue', doors: 4, boss: 'n',
-    theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
+    theme: { primary: 'Z', accents: ['M', 'P', 'H', 'C', 'F'] }, floor: 'floor2', ceil: 'ceil', sky: '#1e1a18',
     enemies: { z: 4, i: 6, d: 3, c: 2, f: 1, m: 1 }, outdoor: 1, weapons: ['5'], barrels: 6, lamps: 14, secret: 1, secretReward: 'g',
     items: { h: 6, H: 3, p: 5, a: 1, A: 1, g: 1, l: 3, L: 3, s: 4, S: 3, r: 2, e: 3 } },
   { name: 'LEVEL 6: THE WOUND', w: 62, h: 46, rooms: 18, key: 'yellow', doors: 5,
@@ -55,15 +55,15 @@ const CONFIGS = [
     enemies: { z: 4, i: 6, d: 3, c: 2, f: 2, x: 1, w: 1, m: 1 }, outdoor: 1, water: { ponds: 1 }, weapons: ['6'], barrels: 6, lamps: 15, dais: 2, ceils: 1,
     items: { h: 6, H: 4, p: 6, a: 1, A: 1, l: 4, L: 4, s: 4, S: 3, r: 2, e: 3, E: 2 } },
   { name: 'LEVEL 7: RUSTWORKS', w: 64, h: 48, rooms: 19, key: 'red', doors: 5,
-    theme: { primary: '#', accents: ['C', 'M', 'P', 'L'] }, floor: 'floor', ceil: 'ceil', sky: '#1c2026',
+    theme: { primary: '#', accents: ['C', 'M', 'P', 'L', 'F'] }, floor: 'floor', ceil: 'ceil', sky: '#1c2026',
     enemies: { z: 4, i: 7, d: 3, c: 3, f: 2, B: 1, w: 1 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['5'], barrels: 7, lamps: 16, secret: 1, secretReward: 'V',
     items: { v: 1, h: 6, H: 4, p: 6, a: 1, A: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 3, E: 2 } },
   { name: 'LEVEL 8: CRYPTWORKS', w: 66, h: 50, rooms: 20, key: 'blue', doors: 6,
-    theme: { primary: 'S', accents: ['X', 'V', 'B', 'A'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
+    theme: { primary: 'S', accents: ['X', 'V', 'B', 'A', 'J'] }, floor: 'floor2', ceil: 'ceil', sky: '#1c1d24',
     enemies: { z: 3, i: 7, d: 4, c: 3, f: 2, B: 1, x: 1, P: 1, j: 1, w: 2, m: 2 }, outdoor: 1, weapons: ['6'], barrels: 6, lamps: 17, dais: 2, ceils: 1,
     items: { h: 7, H: 4, p: 6, a: 1, A: 1, g: 1, k: 1, l: 4, L: 4, s: 4, S: 4, r: 3, e: 4, E: 3 } },
   { name: 'LEVEL 9: ICON', w: 70, h: 54, rooms: 22, key: 'yellow', doors: 7,
-    theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
+    theme: { primary: 'T', accents: ['Q', 'C', 'L', 'A', 'K', 'J'] }, floor: 'tile', ceil: 'ceil', sky: '#241a2a',
     enemies: { z: 3, i: 7, d: 4, c: 4, f: 3, B: 2, x: 2, P: 1, j: 2, w: 3, m: 2 }, outdoor: 1, water: { ponds: 2, streams: 1 }, weapons: ['6', '5', '7'], barrels: 8, lamps: 18, dais: 2, ceils: 1, secret: 1, secretReward: '7',
     items: { V: 1, k: 1, v: 1, h: 8, H: 5, p: 7, a: 1, A: 1, g: 1, l: 5, L: 5, s: 5, S: 5, r: 4, e: 4, E: 4 } },
 ];
@@ -317,7 +317,7 @@ function genLevel(cfg, seed) {
 }
 
 // ----- in-tool validation (mirrors tools/validate-levels.mjs) --------------
-const SOLID = new Set(['#', 'B', 'M', 'S', 'A', '+', 'C', 'H', 'V', 'P', 'W', 'K', 'T', 'L', 'Z', 'X', 'Q', 'N']);
+const SOLID = new Set(['#', 'B', 'M', 'S', 'A', '+', 'C', 'H', 'V', 'P', 'W', 'K', 'T', 'L', 'Z', 'X', 'Q', 'N', 'F', 'J']);
 const DOORS = new Set(['D', 'r', 'b', 'y']);
 function validate(lv) {
   const W = lv.walls[0].length, H = lv.walls.length;
