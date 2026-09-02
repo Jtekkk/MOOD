@@ -1421,6 +1421,91 @@ function revMissile() {
   ctx.fillStyle = '#c8ccd0'; ctx.beginPath(); ctx.arc(15, 12, 1.4, 0, 7); ctx.fill();
   return texFrom(c, ctx);
 }
+// ----- enemy: mancubus (obese demon with two arm-mounted flame cannons) ------
+// A bloated tan brute; its arms end not in hands but in wide-mouthed cannons.
+// On the attack frame both muzzles bloom with fire as it unloads a spread.
+function mancubus(frame) {
+  const { c, ctx } = makeCanvas(72, 76);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 3 : 0;
+  // stumpy legs
+  ctx.fillStyle = '#8a5a34'; ctx.fillRect(24 - sw, 58, 10, 16); ctx.fillRect(38 + sw, 58, 10, 16);
+  ctx.fillStyle = '#3a2414'; ctx.fillRect(22 - sw, 71, 13, 5); ctx.fillRect(37 + sw, 71, 13, 5);
+  // huge sagging belly
+  const bg = ctx.createRadialGradient(32, 32, 6, 36, 44, 30); bg.addColorStop(0, '#d9a066'); bg.addColorStop(1, '#8a5a34');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(36, 40, 24, 22, 0, 0, 7); ctx.fill();
+  // belly folds
+  ctx.strokeStyle = 'rgba(60,36,20,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(36, 44, 18, 12, 0, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(36, 38, 20, 14, 0, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = '#c08a52'; ctx.fillRect(34, 30, 4, 24);   // sternum ridge
+  // arm cannons: broad tubes ending in a dark muzzle
+  for (const [mx, dir] of [[8, -1], [64, 1]]) {
+    ctx.fillStyle = '#6a4526'; ctx.fillRect(mx - 4, 30, 12, 10);          // shoulder joint
+    ctx.fillStyle = '#4a4e52'; ctx.fillRect(mx - 6 * (dir < 0 ? 1 : 0), 33, 18, 12); // cannon body
+    ctx.fillStyle = '#2a2e32'; ctx.fillRect(dir < 0 ? mx - 12 : mx + 6, 33, 6, 12);   // muzzle
+    ctx.fillStyle = '#15181a'; ctx.beginPath(); ctx.ellipse(dir < 0 ? mx - 12 : mx + 12, 39, 2.5, 5, 0, 0, 7); ctx.fill();
+    if (attack) {
+      const bx = dir < 0 ? mx - 14 : mx + 14;
+      const g = ctx.createRadialGradient(bx, 39, 1, bx, 39, 13);
+      g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#ffdf7a'); g.addColorStop(0.7, '#ff6a1a'); g.addColorStop(1, 'rgba(255,60,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, 39, 13, 0, 7); ctx.fill();
+    }
+  }
+  // small head sunk into the shoulders
+  ctx.fillStyle = '#c89058'; ctx.beginPath(); ctx.ellipse(36, 18, 13, 12, 0, 0, 7); ctx.fill();
+  // heavy brow + tiny angry eyes
+  ctx.fillStyle = '#7a4e2c'; ctx.fillRect(24, 13, 24, 4);
+  ctx.fillStyle = '#2a0a06'; ctx.fillRect(28, 16, 6, 4); ctx.fillRect(39, 16, 6, 4);
+  ctx.fillStyle = attack ? '#ffd27a' : '#ff8a2a'; ctx.fillRect(29, 17, 3, 2); ctx.fillRect(40, 17, 3, 2);
+  // wide fanged maw
+  ctx.fillStyle = '#2a0a06'; ctx.fillRect(28, 24, 16, 4);
+  ctx.fillStyle = '#e8d8b0'; for (let x = 29; x < 44; x += 3) ctx.fillRect(x, 24, 2, 4);
+  return texFrom(c, ctx);
+}
+function mancubusSide(frame) {
+  const { c, ctx } = makeCanvas(72, 76);
+  const attack = frame === 'attack';
+  const sw = frame === 'walk1' ? 4 : -4;
+  ctx.fillStyle = '#8a5a34'; ctx.fillRect(32 + sw, 58, 10, 16); ctx.fillRect(32 - sw, 58, 10, 16);
+  ctx.fillStyle = '#3a2414'; ctx.fillRect(30 + sw, 71, 13, 5); ctx.fillRect(30 - sw, 71, 13, 5);
+  const bg = ctx.createRadialGradient(34, 32, 6, 38, 44, 28); bg.addColorStop(0, '#d9a066'); bg.addColorStop(1, '#8a5a34');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(36, 40, 20, 22, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(60,36,20,0.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(38, 42, 12, 12, 0, -0.6, 1.2); ctx.stroke();
+  // one cannon aimed forward
+  ctx.fillStyle = '#4a4e52'; ctx.fillRect(46, 33, 20, 12); ctx.fillStyle = '#2a2e32'; ctx.fillRect(62, 33, 8, 12);
+  ctx.fillStyle = '#15181a'; ctx.beginPath(); ctx.ellipse(69, 39, 2.5, 5, 0, 0, 7); ctx.fill();
+  if (attack) {
+    const g = ctx.createRadialGradient(70, 39, 1, 70, 39, 12); g.addColorStop(0, '#fff'); g.addColorStop(0.4, '#ffdf7a'); g.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(70, 39, 12, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = '#c89058'; ctx.beginPath(); ctx.ellipse(34, 18, 12, 12, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#7a4e2c'; ctx.fillRect(26, 13, 20, 4);
+  ctx.fillStyle = '#2a0a06'; ctx.fillRect(38, 16, 6, 4); ctx.fillStyle = attack ? '#ffd27a' : '#ff8a2a'; ctx.fillRect(39, 17, 3, 2);
+  ctx.fillStyle = '#2a0a06'; ctx.fillRect(34, 24, 12, 4); ctx.fillStyle = '#e8d8b0'; for (let x = 35; x < 46; x += 3) ctx.fillRect(x, 24, 2, 4);
+  return texFrom(c, ctx);
+}
+function mancubusBack(frame) {
+  const { c, ctx } = makeCanvas(72, 76);
+  const sw = frame === 'walk1' ? 3 : 0;
+  ctx.fillStyle = '#8a5a34'; ctx.fillRect(24 - sw, 58, 10, 16); ctx.fillRect(38 + sw, 58, 10, 16);
+  ctx.fillStyle = '#3a2414'; ctx.fillRect(22 - sw, 71, 13, 5); ctx.fillRect(37 + sw, 71, 13, 5);
+  const bg = ctx.createRadialGradient(32, 32, 6, 36, 44, 30); bg.addColorStop(0, '#c48f56'); bg.addColorStop(1, '#7a4e2c');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(36, 40, 24, 22, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(50,30,16,0.45)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(36, 22); ctx.lineTo(36, 58); ctx.stroke();
+  ctx.fillStyle = 'rgba(50,30,16,0.25)'; ctx.fillRect(22, 36, 28, 2); ctx.fillRect(24, 44, 24, 2);
+  for (const mx of [8, 64]) { ctx.fillStyle = '#4a4e52'; ctx.fillRect(mx - 6, 33, 18, 12); ctx.fillStyle = '#6a4526'; ctx.fillRect(mx - 4, 30, 12, 8); }
+  ctx.fillStyle = '#c48f56'; ctx.beginPath(); ctx.ellipse(36, 18, 12, 11, 0, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+// The Mancubus fireball: a fat orange-yellow flaming glob.
+function mancuBall() {
+  const { c, ctx } = makeCanvas(24, 24);
+  const g = ctx.createRadialGradient(12, 12, 1, 12, 12, 12);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#ffe08a'); g.addColorStop(0.7, '#ff7a1a'); g.addColorStop(1, 'rgba(200,60,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(12, 12, 12, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
 function bfgBall() {
   const { c, ctx } = makeCanvas(48, 48);
   const g = ctx.createRadialGradient(24, 24, 2, 24, 24, 24);
@@ -2233,6 +2318,18 @@ export function buildAssets() {
   }
   SPR.revmissile = revMissile();
 
+  // mancubus — full directional set + fat fireball
+  SPR.mancubus_walk0 = mancubus('walk0'); SPR.mancubus_walk1 = mancubus('walk1');
+  SPR.mancubus_attack = mancubus('attack'); SPR.mancubus_pain = mancubus('walk0');
+  for (let i = 0; i < 4; i++) SPR['mancubus_die' + i] = humanoidDeath(72, 72, i, '#c08a52', '#6a4526', '#d9a066', true);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`mancubus_front_${f}`] = SPR[`mancubus_${f}`];
+    SPR[`mancubus_sideR_${f}`] = mancubusSide(f);
+    SPR[`mancubus_sideL_${f}`] = mirrorTex(SPR[`mancubus_sideR_${f}`]);
+    SPR[`mancubus_back_${f}`] = mancubusBack(f);
+  }
+  SPR.mancuball = mancuBall();
+
   // the Gumbird (final boss) — full directional set + thrown juggling ball
   SPR.gumbird_walk0 = gumbird('walk0'); SPR.gumbird_walk1 = gumbird('walk1');
   SPR.gumbird_attack = gumbird('attack'); SPR.gumbird_pain = gumbird('walk0');
@@ -2266,7 +2363,7 @@ export function buildAssets() {
   // crisp dark outline on monsters + world pickups so they pop against the fog
   for (const k of Object.keys(SPR)) {
     if (k.startsWith('fp_') || k.startsWith('face_') || k.startsWith('explosion') || k.startsWith('lostsoul') || k.startsWith('vileflame')) continue;
-    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile') continue;
+    if (k === 'fireball' || k === 'plasma' || k === 'rocket' || k === 'cell' || k === 'cellpack' || k === 'baronball' || k === 'bfgball' || k === 'jugball' || k === 'lamp' || k === 'tadpole' || k === 'revmissile' || k === 'mancuball') continue;
     SPR[k] = outlineTex(SPR[k]);
   }
 }

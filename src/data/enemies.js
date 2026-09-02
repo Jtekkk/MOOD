@@ -56,6 +56,13 @@ export const ENEMY_TYPES = {
     attack: 'projectile', proj: 'baronball', projSpeed: 8, range: 16, dmg: [12, 28], cooldown: 1.5,
     painChance: 0.12,
   },
+  mancubus: {
+    name: 'MANCUBUS', prefix: 'mancubus',
+    hp: 400, speed: 1.4, radius: 0.46, spriteH: 1.35, mass: 3.4,
+    attack: 'projectile', proj: 'mancuball', projSpeed: 6.5, salvo: 3, spread: 0.26,
+    range: 15, dmg: [8, 16], cooldown: 1.9, attackSound: 'mancubus',
+    painChance: 0.18, sightChance: 1,
+  },
   revenant: {
     name: 'REVENANT', prefix: 'revenant',
     hp: 300, speed: 3.4, radius: 0.34, spriteH: 1.5, mass: 1.6,
@@ -72,7 +79,7 @@ export const ENEMY_TYPES = {
 };
 
 // 'j' = the Arch-Vile ('A' and 'V' are already blue-armor / invulnerability things).
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant', m: 'mancubus' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

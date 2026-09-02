@@ -28,7 +28,7 @@ const GIB = [rgba(190, 40, 40), rgba(140, 20, 24), rgba(220, 120, 120), rgba(90,
 const PROJ_LIGHT = {
   fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
   baronball: [0.4, 1.0, 0.4], bfgball: [0.5, 1.0, 0.55], jugball: [1.0, 0.45, 0.75],
-  tadpole: [1.0, 1.0, 1.0], revmissile: [1.0, 0.55, 0.2],
+  tadpole: [1.0, 1.0, 1.0], revmissile: [1.0, 0.55, 0.2], mancuball: [1.0, 0.62, 0.18],
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
@@ -930,10 +930,16 @@ export class Game {
     } else if (e.def.attack === 'fire') {
       this._vileFire(e);                    // arch-vile erupts flame at its target
     } else {
-      this._spawnProjectile(e.x, e.y, ang, {
-        proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
-        homing: e.def.homing, turn: e.def.turn,
-      }, e);
+      // projectile — usually one, but a `salvo` fans several across `spread`
+      // radians (the Mancubus's two-cannon spread that punishes strafing).
+      const n = e.def.salvo || 1, sp = e.def.spread || 0;
+      for (let k = 0; k < n; k++) {
+        const a = n === 1 ? ang : ang + (k - (n - 1) / 2) * sp;
+        this._spawnProjectile(e.x, e.y, a, {
+          proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
+          homing: e.def.homing, turn: e.def.turn,
+        }, e);
+      }
     }
   }
 

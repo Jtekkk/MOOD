@@ -170,15 +170,19 @@ find the matching keycard.
   pods that fires **homing missiles**: they bend toward you at a capped turn
   rate, so you can't just stand still, but a hard strafe still outruns the
   curve. Fast on its feet (300 HP) and stalks the later levels (6-9).
+- **The Mancubus** — an obese 400-HP brute with two arm-mounted flame cannons
+  that unloads a **three-shot spread**. It's the Revenant's opposite: the fan
+  of fireballs punishes strafing, so you time your dodge through the gaps or
+  break its line of sight. Slow, so kite it — it plods the mid-late levels (5-9).
 - **Gibbing:** overkill hits (rockets, the BFG, point-blank shells) burst a
   monster into a spray of gore and snap it straight to its final gib frame,
   with a wet splat.
-- **Ten enemy types** with a real AI state machine (idle → chase → attack →
+- **Eleven enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
-  charger), the Revenant (homing missiles), and the Baron of Hell (600-HP
-  green-fireball boss). Ranged monsters strafe to dodge and kite you, and each
-  has a distinct death animation.
+  charger), the Revenant (homing missiles), the Mancubus (spread fireballs),
+  and the Baron of Hell (600-HP green-fireball boss). Ranged monsters strafe to
+  dodge and kite you, and each has a distinct death animation.
 - **The Gumbird** — a 1000-HP final boss guarding LEVEL 8's exit: part Gumby,
   part Big Bird, on roller skates, in a dunce cap and a polka-dot dress,
   juggling three balls and belting out "Row, Row, Row Your Boat" line by line
