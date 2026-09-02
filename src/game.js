@@ -977,15 +977,20 @@ export class Game {
     } else if (e.def.attack === 'fire') {
       this._vileFire(e);                    // arch-vile erupts flame at its target
     } else {
-      // projectile — usually one, but a `salvo` fans several across `spread`
-      // radians (the Mancubus's two-cannon spread that punishes strafing).
-      const n = (e.def.salvo || 1) + (e.enraged ? 1 : 0), sp = (e.def.spread || 0) * (e.enraged ? 1.2 : 1);
-      for (let k = 0; k < n; k++) {
-        const a = n === 1 ? ang : ang + (k - (n - 1) / 2) * sp;
-        this._spawnProjectile(e.x, e.y, a, {
-          proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0,
-          homing: e.def.homing, turn: e.def.turn,
-        }, e);
+      const opts = { proj: e.def.proj, projSpeed: e.def.projSpeed, dmg: e.def.dmg, splash: 0, homing: e.def.homing, turn: e.def.turn };
+      if (e.def.stream) {
+        // a rapid stream: several shots on the same line, spawned progressively
+        // further back so they arrive as a staggered train (the Arachnotron).
+        const n = e.def.stream + (e.enraged ? 2 : 0), dxu = Math.cos(ang), dyu = Math.sin(ang);
+        for (let k = 0; k < n; k++) this._spawnProjectile(e.x - dxu * k * 0.7, e.y - dyu * k * 0.7, ang, opts, e);
+      } else {
+        // usually one, but a `salvo` fans several across `spread` radians (the
+        // Mancubus's two-cannon spread that punishes strafing).
+        const n = (e.def.salvo || 1) + (e.enraged ? 1 : 0), sp = (e.def.spread || 0) * (e.enraged ? 1.2 : 1);
+        for (let k = 0; k < n; k++) {
+          const a = n === 1 ? ang : ang + (k - (n - 1) / 2) * sp;
+          this._spawnProjectile(e.x, e.y, a, opts, e);
+        }
       }
     }
   }

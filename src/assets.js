@@ -1681,6 +1681,70 @@ function dukeBlast() {
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(11, 11, 11, 0, 7); ctx.fill();
   return texFrom(c, ctx);
 }
+// ----- enemy: arachnotron (a fleshy brain-dome on four metal legs with an
+// underslung plasma cannon that spits a rapid stream of bolts) --------------
+function arachno(frame) {
+  const { c, ctx } = makeCanvas(64, 60);
+  const attack = frame === 'attack';
+  const ph = (frame === 'walk1' ? 3 : -3);
+  // splayed metal legs (3 per side), behind the body
+  ctx.strokeStyle = '#4a4e54'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const yy = 26 + i * 7, k = (i % 2 ? ph : -ph);
+    ctx.beginPath(); ctx.moveTo(24, yy); ctx.lineTo(9, yy + 5 + k); ctx.lineTo(3, 54); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40, yy); ctx.lineTo(55, yy + 5 - k); ctx.lineTo(61, 54); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  // underslung metal pod + plasma cannon
+  ctx.fillStyle = '#3a3e44'; ctx.fillRect(22, 40, 20, 12);
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(22, 40, 20, 2);
+  ctx.fillStyle = '#23272c'; ctx.fillRect(28, 50, 8, 8);            // barrel facing the viewer
+  if (attack) {
+    const g = ctx.createRadialGradient(32, 58, 1, 32, 58, 13);
+    g.addColorStop(0, '#eaf4ff'); g.addColorStop(0.45, '#6aa8ff'); g.addColorStop(0.8, '#2a5aff'); g.addColorStop(1, 'rgba(40,90,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(32, 58, 13, 0, 7); ctx.fill();
+  } else { ctx.fillStyle = '#3a6aff'; ctx.fillRect(30, 56, 4, 2); }
+  // fleshy brain-dome body
+  const bg = ctx.createRadialGradient(28, 20, 3, 32, 28, 24);
+  bg.addColorStop(0, '#f0d0d4'); bg.addColorStop(1, '#a87a80');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(32, 26, 20, 17, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(110,50,60,0.5)'; ctx.lineWidth = 1;                 // brain folds
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(32, 24, 5 + i * 4, 0.3, Math.PI - 0.3); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(32, 12); ctx.lineTo(32, 40); ctx.stroke();
+  // two glaring red eyes
+  ctx.fillStyle = '#1a0606'; ctx.fillRect(23, 30, 7, 5); ctx.fillRect(34, 30, 7, 5);
+  ctx.fillStyle = attack ? '#ffb26a' : '#e23a2a'; ctx.fillRect(24, 31, 4, 3); ctx.fillRect(35, 31, 4, 3);
+  return texFrom(c, ctx);
+}
+function arachnoSide(frame) {
+  const { c, ctx } = makeCanvas(64, 60);
+  const attack = frame === 'attack';
+  const ph = (frame === 'walk1' ? 3 : -3);
+  ctx.strokeStyle = '#4a4e54'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) { const x = 24 + i * 8, k = (i % 2 ? ph : -ph); ctx.beginPath(); ctx.moveTo(x, 30); ctx.lineTo(x - 3, 42 + k); ctx.lineTo(x - 6, 54); ctx.stroke(); }
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = '#3a3e44'; ctx.fillRect(20, 40, 22, 12);
+  ctx.fillStyle = '#23272c'; ctx.fillRect(42, 42, 10, 6);          // barrel points forward
+  if (attack) { const g = ctx.createRadialGradient(54, 45, 1, 54, 45, 12); g.addColorStop(0, '#eaf4ff'); g.addColorStop(0.5, '#6aa8ff'); g.addColorStop(1, 'rgba(40,90,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(54, 45, 12, 0, 7); ctx.fill(); }
+  const bg = ctx.createRadialGradient(26, 20, 3, 30, 28, 22); bg.addColorStop(0, '#f0d0d4'); bg.addColorStop(1, '#a87a80');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(30, 26, 18, 16, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(110,50,60,0.5)'; ctx.lineWidth = 1; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(30, 24, 5 + i * 4, -0.4, Math.PI); ctx.stroke(); }
+  ctx.fillStyle = '#1a0606'; ctx.fillRect(38, 30, 7, 5); ctx.fillStyle = attack ? '#ffb26a' : '#e23a2a'; ctx.fillRect(39, 31, 4, 3);
+  return texFrom(c, ctx);
+}
+function arachnoBack(frame) {
+  const { c, ctx } = makeCanvas(64, 60);
+  const ph = (frame === 'walk1' ? 3 : -3);
+  ctx.strokeStyle = '#42464c'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) { const yy = 26 + i * 7, k = (i % 2 ? ph : -ph); ctx.beginPath(); ctx.moveTo(24, yy); ctx.lineTo(9, yy + 5 + k); ctx.lineTo(3, 54); ctx.stroke(); ctx.beginPath(); ctx.moveTo(40, yy); ctx.lineTo(55, yy + 5 - k); ctx.lineTo(61, 54); ctx.stroke(); }
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = '#33373c'; ctx.fillRect(22, 42, 20, 10);
+  const bg = ctx.createRadialGradient(28, 20, 3, 32, 28, 24); bg.addColorStop(0, '#dcc0c4'); bg.addColorStop(1, '#8a6a70');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(32, 26, 20, 17, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(80,40,48,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(32, 10); ctx.lineTo(32, 42); ctx.stroke();
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(32, 26, 6 + i * 4, Math.PI + 0.3, 2 * Math.PI - 0.3); ctx.stroke(); }
+  return texFrom(c, ctx);
+}
 function bfgBall() {
   const { c, ctx } = makeCanvas(48, 48);
   const g = ctx.createRadialGradient(24, 24, 2, 24, 24, 24);
@@ -2513,6 +2577,17 @@ export function buildAssets() {
     SPR[`mancubus_back_${f}`] = mancubusBack(f);
   }
   SPR.mancuball = mancuBall();
+
+  // arachnotron — full directional set (fires the existing plasma bolt)
+  SPR.arachno_walk0 = arachno('walk0'); SPR.arachno_walk1 = arachno('walk1');
+  SPR.arachno_attack = arachno('attack'); SPR.arachno_pain = arachno('walk0');
+  for (let i = 0; i < 4; i++) SPR['arachno_die' + i] = humanoidDeath(64, 56, i, '#c89aa0', '#7a5a60', '#f0d0d4', true);
+  for (const f of ['walk0', 'walk1']) {
+    SPR[`arachno_front_${f}`] = SPR[`arachno_${f}`];
+    SPR[`arachno_sideR_${f}`] = arachnoSide(f);
+    SPR[`arachno_sideL_${f}`] = mirrorTex(SPR[`arachno_sideR_${f}`]);
+    SPR[`arachno_back_${f}`] = arachnoBack(f);
+  }
 
   // THE DUKETTE (LEVEL 5 boss) — full directional set + gold blast
   SPR.dukette_walk0 = dukette('walk0'); SPR.dukette_walk1 = dukette('walk1');

@@ -63,6 +63,13 @@ export const ENEMY_TYPES = {
     range: 15, dmg: [8, 16], cooldown: 1.9, attackSound: 'mancubus',
     painChance: 0.18, sightChance: 1,
   },
+  arachnotron: {
+    name: 'ARACHNOTRON', prefix: 'arachno',
+    hp: 500, speed: 2.6, radius: 0.46, spriteH: 1.15, mass: 2.6,
+    attack: 'projectile', proj: 'plasma', projSpeed: 8.5, stream: 3, windup: 0.2,
+    range: 16, dmg: [4, 8], cooldown: 0.9, attackSound: 'plasma',
+    painChance: 0.22, sightChance: 1,
+  },
   revenant: {
     name: 'REVENANT', prefix: 'revenant',
     hp: 300, speed: 3.4, radius: 0.34, spriteH: 1.5, mass: 1.6,
@@ -85,13 +92,14 @@ export const ENEMY_TYPES = {
   gumbird: {
     name: 'THE GUMBIRD', prefix: 'gumbird', boss: true,
     hp: 1000, speed: 2.4, radius: 0.5, spriteH: 1.8, mass: 3.8,
-    attack: 'projectile', proj: 'jugball', projSpeed: 7, range: 15, dmg: [10, 24], cooldown: 1.2,
+    attack: 'projectile', proj: 'jugball', projSpeed: 7, spread: 0.16, range: 15, dmg: [10, 24], cooldown: 1.2,
     painChance: 0.08, sightChance: 1,
+    enrage: true, rageLine: 'gently down the STREAM!',
   },
 };
 
 // 'j' = the Arch-Vile ('A' and 'V' are already blue-armor / invulnerability things).
-export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant', m: 'mancubus', n: 'dukette' };
+export const ENEMY_CHAR = { z: 'zombie', i: 'imp', d: 'demon', c: 'caco', f: 'lostsoul', B: 'baron', G: 'gumbird', x: 'spectre', P: 'painel', j: 'archvile', w: 'revenant', m: 'mancubus', n: 'dukette', q: 'arachnotron' };
 
 // Pick the sprite for an enemy's current animation state (front view only;
 // used as a fallback / for the AI's e.sprite).

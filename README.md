@@ -177,15 +177,23 @@ find the matching keycard.
   that unloads a **three-shot spread**. It's the Revenant's opposite: the fan
   of fireballs punishes strafing, so you time your dodge through the gaps or
   break its line of sight. Slow, so kite it — it plods the mid-late levels (5-9).
+- **The Arachnotron** — a 500-HP fleshy brain-dome skittering on four metal
+  legs, its underslung cannon spitting a **rapid stream of plasma bolts** that
+  arrive as a staggered train — a third distinct ranged threat (stream, vs. the
+  Mancubus's spread and the Revenant's homing). Levels 6-9.
 - **Gibbing:** overkill hits (rockets, the BFG, point-blank shells) burst a
   monster into a spray of gore and snap it straight to its final gib frame,
   with a wet splat.
-- **Eleven enemy types** with a real AI state machine (idle → chase → attack →
+- **Twelve enemy types** with a real AI state machine (idle → chase → attack →
   pain → death) — the Former Human (hitscan), Imp (fireballs), Demon (melee
   charger), Cacodemon (floating plasma lobber), Lost Soul (fast flaming-skull
   charger), the Revenant (homing missiles), the Mancubus (spread fireballs),
-  and the Baron of Hell (600-HP green-fireball boss). Ranged monsters strafe to
-  dodge and kite you, and each has a distinct death animation.
+  the Arachnotron (plasma stream), and the Baron of Hell (600-HP green-fireball
+  boss). Ranged monsters strafe to dodge and kite you, and each has a distinct
+  death animation.
+- **Boss phases:** both bosses show a named **health bar** once roused, and
+  flip into an **enraged** phase at half health — faster, higher fire rate, an
+  extra shot — with a shake and a taunt.
 - **The Dukette** — LEVEL 5's boss and the campaign's mid-game wall: an 800-HP
   slab of blond muscle in mirror shades, a little red dress and heels, barking
   parody one-liners while unloading fans of gold energy blasts. The exit stays
