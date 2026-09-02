@@ -352,6 +352,31 @@ export function drawDead(ctx, game) {
   }
 }
 
+// A boss health bar across the top — appears once a boss is roused, tracks its
+// HP, and turns hot/animated when the boss flips into its enraged phase.
+export function drawBossBar(ctx, game) {
+  if (game.state !== 'playing') return;
+  let boss = null;
+  for (const e of game.entities) {
+    if (e.kind === 'enemy' && e.def.boss && e.alive && e.state !== 'idle' && e.state !== 'dead' && e.state !== 'dying') { boss = e; break; }
+  }
+  if (!boss) return;
+  const frac = Math.max(0, Math.min(1, boss.hp / boss.def.hp));
+  const bw = 176, x = (RENDER_W - bw) / 2, y = 12, bh = 5;
+  const rage = !!boss.enraged;
+  const label = boss.def.name + (rage ? '  — ENRAGED' : '');
+  ctx.textAlign = 'center'; ctx.font = 'bold 7px monospace';
+  const lw = ctx.measureText(label).width + 8;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect((RENDER_W - lw) / 2, y - 9, lw, 9);   // label backdrop
+  ctx.fillStyle = rage ? (Math.sin(game.timer * 12) > 0 ? '#ff7a3a' : '#ffd0a0') : '#ffd0a0';
+  ctx.fillText(label, RENDER_W / 2, y - 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 1, y - 1, bw + 2, bh + 2);
+  ctx.fillStyle = '#3a0c0c'; ctx.fillRect(x, y, bw, bh);
+  ctx.fillStyle = rage ? '#ff6a2a' : '#e0342a'; ctx.fillRect(x, y, (bw * frac) | 0, bh);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, (bw * frac) | 0, 1);   // sheen
+  ctx.strokeStyle = 'rgba(220,220,220,0.4)'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, bw, bh);
+}
+
 const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export function drawIntermission(ctx, game) {

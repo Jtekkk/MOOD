@@ -740,6 +740,13 @@ export class Game {
     else if (source === 'player') e.target = 'player';
     if (wasIdle) { this.audio.play('monster_sight'); this._alertNearby(e.x, e.y, 5); }
 
+    // phase-two enrage: a boss crossing half health speeds up and hits harder
+    if (e.def.enrage && !e.enraged && e.hp > 0 && e.hp <= e.def.hp * 0.5) {
+      e.enraged = true; e._quipT = 0;
+      this.addShake(0.5); this.audio.play(e.def.attackSound || 'monster_attack');
+      this.message(e.def.rageLine ? `${e.def.name}: ${e.def.rageLine}` : `${e.def.name} IS ENRAGED!`);
+    }
+
     if (e.hp <= 0) {
       e.state = 'dying'; e.stateTime = 0; e.alive = false;
       // overkill (rockets / BFG / point-blank super shotgun) gibs the monster
@@ -891,7 +898,7 @@ export class Game {
         e.didAttack = true;
         if (see) this._enemyAttack(e);    // no line of sight at ignition → the cast fizzles
       }
-      if (e.attackTime >= wind + 0.3) { e.state = 'chase'; e.cooldownTimer = e.def.cooldown * (this.skill ? this.skill.atkCooldown : 1); }
+      if (e.attackTime >= wind + 0.3) { e.state = 'chase'; e.cooldownTimer = e.def.cooldown * (this.skill ? this.skill.atkCooldown : 1) * (e.enraged ? 0.55 : 1); }
       e.sprite = enemyFrame(e);
       return;
     }
@@ -908,7 +915,7 @@ export class Game {
     }
     const ang = Math.atan2(ty - e.y, tx - e.x);
     e.angle = ang;
-    const sp = e.def.speed * dt;
+    const sp = e.def.speed * (e.enraged ? 1.45 : 1) * dt;
     const ranged = e.def.attack !== 'melee';
     if (e.def.attack === 'melee' || d > e.def.range * 0.85) {
       // approach
@@ -972,7 +979,7 @@ export class Game {
     } else {
       // projectile — usually one, but a `salvo` fans several across `spread`
       // radians (the Mancubus's two-cannon spread that punishes strafing).
-      const n = e.def.salvo || 1, sp = e.def.spread || 0;
+      const n = (e.def.salvo || 1) + (e.enraged ? 1 : 0), sp = (e.def.spread || 0) * (e.enraged ? 1.2 : 1);
       for (let k = 0; k < n; k++) {
         const a = n === 1 ? ang : ang + (k - (n - 1) / 2) * sp;
         this._spawnProjectile(e.x, e.y, a, {

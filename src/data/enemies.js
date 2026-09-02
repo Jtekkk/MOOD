@@ -76,6 +76,8 @@ export const ENEMY_TYPES = {
     attack: 'projectile', proj: 'dukeblast', projSpeed: 8, salvo: 3, spread: 0.2,
     range: 18, dmg: [8, 18], cooldown: 1.25, attackSound: 'dukeblast',
     painChance: 0.06, sightChance: 1,
+    // at half health she flies into a faster, heavier phase-two rage
+    enrage: true, rageLine: "NOBODY WRECKS MY DRESS!",
     // parody one-liners (an original send-up of the wisecracking action hero)
     quips: ['COME GET SOME.', 'HAIL TO THE QUEEN, BABY.', 'BALLS OF STEEL. AND HEELS.',
       'GROOVY. LOVE THE DRESS?', "IT'S TIME TO ACCESSORIZE — WITH PAIN.", 'LOOKIN’ GOOD. FOR A CORPSE.'],

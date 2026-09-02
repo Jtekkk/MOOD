@@ -7,7 +7,7 @@ import { AudioEngine } from './audio.js';
 import { Game } from './game.js';
 import {
   blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette, drawAutomap,
-  drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings,
+  drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings, drawBossBar,
 } from './hud.js';
 import { drawCutscene } from './cutscene.js';
 
@@ -106,6 +106,7 @@ function render() {
   drawTints(ctx, game);
   if (game.showMap) drawAutomap(ctx, game);
   else if (game.state === 'playing') drawCrosshair(ctx);
+  drawBossBar(ctx, game);
   drawStatusBar(ctx, game);
   drawMessages(ctx, game);
   if (game.state === 'paused') drawPause(ctx);

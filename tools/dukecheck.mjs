@@ -56,10 +56,12 @@ try {
 
     // quip fires when it first sees the player (throttled thereafter)
     game.loadLevel(4);
-    const d2 = game.entities.find((e) => e.type === 'dukette');
-    d2.target = 'player'; d2._quipT = 0; game.messages = [];
+    const ddef = game.entities.find((e) => e.type === 'dukette').def;
+    const d2 = { def: ddef, target: 'player', _quipT: 0, x: 5, y: 5, alive: true, state: 'chase' };
+    game.timer = 100;                        // well past any stale _quipT
+    game.messages = [];
     game._bossQuip(d2, 1);
-    r.quips = game.messages.length > 0 && d2.def.quips.includes(game.messages[0].text);
+    r.quips = game.messages.some((m) => ddef.quips.includes(m.text));
 
     // the salvo: one attack fans 3 gold blasts, centred on the player
     game.loadLevel(0);
@@ -70,6 +72,16 @@ try {
     game._enemyAttack(d2);
     const projs = game.entities.filter((e) => e.kind === 'proj');
     r.salvo = projs.length === 3 && projs.every((p) => p.sprite === SPR.dukeblast);
+
+    // phase-two enrage: crossing half HP flips her enraged, and the salvo grows
+    r.notEnragedFull = d2.enraged !== true;
+    d2.hp = d2.def.hp; game.messages = [];
+    game._damageEnemy(d2, d2.def.hp * 0.55, 'player');   // drop below 50%
+    r.enragedAtHalf = d2.enraged === true && d2.hp > 0;
+    r.enrageAnnounced = game.messages.some((m) => /DRESS|ENRAGED/.test(m.text));
+    game.entities = game.entities.filter((e) => e.kind !== 'proj');
+    game._enemyAttack(d2);
+    r.enragedSalvo = game.entities.filter((e) => e.kind === 'proj').length === 4;
 
     // ---- sprite sheet ----
     const cv = document.createElement('canvas'); cv.width = 760; cv.height = 380;
@@ -105,6 +117,10 @@ try {
     'exit opens once the boss is dead': out.exitOpensWhenDead,
     'she barks a quip on sight': out.quips,
     'her attack fans a 3-shot gold salvo': out.salvo,
+    'she is not enraged at full health': out.notEnragedFull,
+    'she enrages at half health': out.enragedAtHalf,
+    'the enrage is announced': out.enrageAnnounced,
+    'enraged, the salvo grows to 4 shots': out.enragedSalvo,
   };
   for (const [k, v] of Object.entries(checks)) { console.log((v ? '  ✓ ' : '  ✗ ') + k); if (!v) errs.push('FAIL ' + k); }
   await page.waitForTimeout(120);
