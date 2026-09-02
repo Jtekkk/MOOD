@@ -240,6 +240,8 @@ export class Game {
     p.angle += inp.mouseDX * 0.0026 * (this.settings.mouseSens || 1);
     if (inp.down('ArrowLeft')) p.angle -= turnSpeed * dt;
     if (inp.down('ArrowRight')) p.angle += turnSpeed * dt;
+    // right analog stick rotates the view (rate-based, framerate-independent)
+    if (inp.padTurn) p.angle += inp.padTurn * 3.4 * (this.settings.mouseSens || 1) * dt;
     p.angle = normalizeAngle(p.angle);
 
     // --- movement (velocity with acceleration + friction → momentum) ---

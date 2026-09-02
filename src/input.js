@@ -12,6 +12,7 @@ export class Input {
     // gamepad state (synthesized into the same model as kbd/mouse)
     this.padDown = new Set();     // held movement codes from sticks/d-pad
     this.padFire = false;
+    this.padTurn = 0;             // right-stick X → yaw rate (-1..1), applied by the game
     this.padStartEdge = false;    // Start pressed this frame (pause toggle)
     this.hasGamepad = false;
     this._prevBtn = [];
@@ -73,6 +74,7 @@ export class Input {
     let gp = null;
     for (const p of pads) if (p && p.connected) { gp = p; break; }
     this.padDown.clear();
+    this.padTurn = 0;
     this.padStartEdge = false;
     if (!gp) { this.padFire = false; this._prevBtn = []; return; }
     this.hasGamepad = true;
@@ -81,7 +83,7 @@ export class Input {
     const dz = (v) => (Math.abs(v) < 0.22 ? 0 : v);
     const b = (i) => (btns[i] ? btns[i].pressed : false);
 
-    // --- movement: left stick + d-pad ---
+    // --- movement: LEFT stick + d-pad → forward/back + strafe ---
     const lx = dz(a(0)), ly = dz(a(1));
     if (ly < -0.3 || b(12)) this.padDown.add('KeyW');
     if (ly > 0.3 || b(13)) this.padDown.add('KeyS');
@@ -89,8 +91,9 @@ export class Input {
     if (lx < -0.3 || b(14)) this.padDown.add('KeyA');
     if (Math.hypot(lx, ly) > 0.92) this.padDown.add('ShiftLeft');   // push hard to run
 
-    // --- look: right stick X turns (sensitivity applied by the game) ---
-    this.mouseDX += dz(a(2)) * 24;
+    // --- look: RIGHT stick X → rotate/turn (dual-stick), NOT strafe. This is a
+    // yaw *rate* the game integrates per-frame, independent of mouse settings. ---
+    this.padTurn = dz(a(2));
 
     // --- fire: right trigger / A ---
     this.padFire = b(7) || b(0);
