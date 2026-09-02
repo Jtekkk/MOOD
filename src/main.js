@@ -9,6 +9,7 @@ import {
   blitWeapon, drawStatusBar, drawMessages, drawCrosshair, drawTints, drawVignette, drawAutomap,
   drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings,
 } from './hud.js';
+import { drawCutscene } from './cutscene.js';
 
 const canvas = document.getElementById('screen');
 const loading = document.getElementById('loading');
@@ -55,7 +56,7 @@ const touchUI = initTouch(input, game, {
 
 function startGame() {
   ensureAudio();
-  game.startNewGame();
+  game.startIntro();      // play the intro cutscene, then drop into LEVEL 1
   input.requestLock();
 }
 
@@ -90,6 +91,7 @@ function render() {
   const octx = renderer.octx;
   switch (game.state) {
     case 'title': drawTitle(octx, game.timer); renderer.presentOverlay(); return;
+    case 'intro': drawCutscene(octx, game.cutT); renderer.presentOverlay(); return;
     case 'settings': drawSettings(octx, game); renderer.presentOverlay(); return;
     case 'intermission': drawIntermission(octx, game); renderer.presentOverlay(); return;
     case 'victory': drawVictory(octx, game.timer); renderer.presentOverlay(); return;

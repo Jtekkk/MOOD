@@ -194,6 +194,14 @@ find the matching keycard.
   part Big Bird, on roller skates, in a dunce cap and a polka-dot dress,
   juggling three balls and belting out "Row, Row, Row Your Boat" line by line
   (with a synthesized melody) while pelting you with juggling balls.
+- **Intro cutscene:** starting a new game plays a scripted, skippable opener —
+  a UAC dropship streaks down and crashes into a facility on a hell-planet, two
+  imps drag your stunned marine into a cell, you grab a dropped pistol and gun
+  them down through the bars, then bust out straight into LEVEL 1. Rendered on
+  the same 320×200 canvas with timed audio + screen-shake cues.
+- **End-of-level stats screen:** a Doom-style intermission that counts up
+  KILLS / ITEMS / SECRETS with progress bars and percentages, then your TIME vs
+  a par target — the first ENTER snaps the tally complete, the next moves on.
 - **Gamepad support:** any standard-mapping controller is detected on connect —
   **left stick moves + strafes, the right stick rotates the view** (true
   dual-stick), triggers to fire, shoulders to swap weapons, and full menu/pause

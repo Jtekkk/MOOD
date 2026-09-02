@@ -5,6 +5,7 @@ import { LEVELS, parseLevel, SOLID, DOOR_LOCK } from './data/levels.js';
 import { ENEMY_TYPES, ENEMY_CHAR, enemyFrame } from './data/enemies.js';
 import { WEAPONS, AMMO_MAX } from './data/weapons.js';
 import { ITEMS } from './data/items.js';
+import { CUT_DURATION, CUT_CUES } from './cutscene.js';
 import { clamp, normalizeAngle, dist, rgba, TAU } from './math.js';
 
 const PLAYER_R = 0.22;
@@ -147,6 +148,29 @@ export class Game {
     this.state = 'playing';
   }
 
+  // Play the scripted intro cutscene, then drop into a fresh game.
+  startIntro() {
+    this.state = 'intro';
+    this.cutT = 0;
+    this._cutCue = 0;
+    this.shake = 0;
+    this.audio.stopMusic();
+  }
+
+  _updateIntro(dt) {
+    this.cutT += dt;
+    // fire time-stamped audio / shake cues as the clock passes them
+    while (this._cutCue < CUT_CUES.length && this.cutT >= CUT_CUES[this._cutCue].t) {
+      const cue = CUT_CUES[this._cutCue++];
+      if (cue.sound) this.audio.play(cue.sound);
+      if (cue.shake) this.addShake(cue.shake);
+    }
+    this.shake = Math.max(0, this.shake - dt * 2.2);
+    const skip = this.input.justPressed('Enter') || this.input.justPressed('Space') ||
+      this.input.justPressed('KeyE') || this.input.mouseJustPressed(0) || this.input.padFire;
+    if (this.cutT >= CUT_DURATION || (this.cutT > 0.4 && skip)) this.startNewGame();
+  }
+
   loadLevel(index) {
     const def = LEVELS[index];
     const map = parseLevel(def);
@@ -222,6 +246,7 @@ export class Game {
 
     switch (this.state) {
       case 'playing': this._updatePlaying(dt); break;
+      case 'intro': this._updateIntro(dt); break;
       case 'intermission': this._updateIntermission(dt); break;
       case 'dead': this._updateDead(dt); break;
       case 'settings': this._updateSettings(); break;
