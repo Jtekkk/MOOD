@@ -85,6 +85,7 @@ window.addEventListener('keydown', (e) => {
     if (cheatBuf.endsWith('stfl')) { game.cheatNextLevel(); cheatBuf = ''; }
     else if (cheatBuf.endsWith('sauce')) { game.cheatSausage(); cheatBuf = ''; }
     else if (cheatBuf.endsWith('iamgod')) { game.cheatGodMode(); cheatBuf = ''; }
+    else if (cheatBuf.endsWith('dikfa')) { game.cheatArsenal(); cheatBuf = ''; }
   }
 });
 

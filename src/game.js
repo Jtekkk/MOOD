@@ -1421,6 +1421,18 @@ export class Game {
     this.audio.play('weapon');
   }
 
+  // Cheat: all weapons, full ammo, all keys + armor. Triggered by "dikfa".
+  cheatArsenal() {
+    if (this.state !== 'playing') return;
+    const p = this.player;
+    for (let i = 0; i < WEAPONS.length; i++) p.owned[i] = true;
+    for (const a in p.ammo) p.ammo[a] = AMMO_MAX[a] || p.ammo[a];
+    p.keys = { red: true, blue: true, yellow: true };
+    p.armor = Math.max(p.armor, 200);
+    this.message('DIKFA — FULL ARSENAL, AMMO & KEYS');
+    this.audio.play('weapon');
+  }
+
   // Cheat: toggle GOD MODE (invulnerability). Triggered by typing "iamgod".
   cheatGodMode() {
     if (this.state !== 'playing') return;

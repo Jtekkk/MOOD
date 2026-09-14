@@ -365,6 +365,7 @@ export function drawSettings(ctx, game) {
 // Typed cheat codes (enter the letters during play). Shared by the pause menu.
 export const CHEATS = [
   ['IAMGOD', 'god mode (invincible)'],
+  ['DIKFA', 'all weapons, ammo & keys'],
   ['STFL', 'skip to next level'],
   ['SAUCE', 'secret sausage gun'],
 ];
