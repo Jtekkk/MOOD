@@ -42,6 +42,11 @@ export const WEAPONS = [
     kind: 'projectile', proj: 'bfgball', projSpeed: 8, projH: 0.95, splash: 4.5, dmg: [380, 540], flash: [0.5, 1.0, 0.5],
   },
   {
+    name: 'RAILGUN', key: 'Digit0', ammo: 'cells', useAmmo: 3,
+    fp: 'fp_rail', fpFire: 'fp_rail_fire', cooldown: 1.05, sound: 'railgun',
+    kind: 'beam', pierce: true, dmg: [80, 130], range: 44, flash: [0.6, 0.85, 1.0],
+  },
+  {
     // secret weapon — granted by the "sauce" cheat. A grilled sausage that
     // spits an endless stream of wiggling white tadpoles. No ammo.
     name: 'SAUSAGE', key: 'Digit9', ammo: null, useAmmo: 0, secret: true,

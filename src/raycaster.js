@@ -40,6 +40,7 @@ const EMISSIVE = {
   crystal: [0.5, 0.85, 1.0, 0.55, 2.2],       // pulsing crystal
   slime: [0.4, 1.0, 0.5, 0.5, 1.6],           // bubbling green ooze
   hazard: [1.0, 0.72, 0.15, 0.45, 4.0],       // flashing amber hazard stripe
+  exit: [0.35, 1.0, 0.45, 0.9, 3.0],          // the EXIT switch — a bright green beacon
 };
 
 export class Renderer {

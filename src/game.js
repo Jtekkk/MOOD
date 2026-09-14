@@ -25,6 +25,7 @@ const SPARKS = [rgba(255, 224, 130), rgba(255, 170, 50), rgba(220, 220, 230)];
 const DEBRIS = [rgba(255, 210, 90), rgba(255, 130, 30), rgba(120, 60, 30), rgba(60, 50, 45)];
 const WATER = [rgba(150, 220, 255), rgba(90, 170, 220), rgba(210, 240, 255), rgba(120, 195, 235)];
 const GIB = [rgba(190, 40, 40), rgba(140, 20, 24), rgba(220, 120, 120), rgba(90, 10, 12), rgba(200, 80, 70)];
+const RAIL = [rgba(200, 240, 255), rgba(255, 255, 255), rgba(150, 120, 255), rgba(90, 200, 255)];
 // glow colour [r,g,b] emitted by projectiles in flight (dynamic lighting)
 const PROJ_LIGHT = {
   fireball: [1.0, 0.5, 0.2], plasma: [0.45, 0.65, 1.0], rocket: [1.0, 0.6, 0.28],
@@ -154,7 +155,7 @@ export class Game {
       x: 1.5, y: 1.5, angle: 0, pitch: 0,
       vx: 0, vy: 0, kx: 0, ky: 0,    // momentum + knockback velocities
       health: 100, armor: 0,
-      owned: [true, true, false, false, false, false, false, false, false],
+      owned: [true, true, false, false, false, false, false, false, false, false],
       weapon: 1, pendingWeapon: 1, raiseT: 0,
       ammo: { bullets: 50, shells: 0, rockets: 0, cells: 0 },
       keys: { red: false, blue: false, yellow: false },
@@ -233,6 +234,13 @@ export class Game {
     this.itemsTaken = 0;
     this.player.secrets = 0;
     this.totalSecrets = map.totalSecrets || 0;
+    // a green beacon light at each exit switch so it's easy to spot on big maps
+    for (let i = 0; i < map.cellChar.length; i++) {
+      if (map.cellChar[i] === '+') {
+        const ex = (i % map.W) + 0.5, ey = ((i / map.W) | 0) + 0.5;
+        this.entities.push({ kind: 'lamp', x: ex, y: ey, radius: 0.1, alive: true, sprite: null, light: { r: 0.4, g: 1.0, b: 0.5, radius: 5.5, intensity: 1.7, flicker: 0.28, phase: 0 } });
+      }
+    }
     this.audio.playTrack(index);     // per-level background music
     this.message(def.name);
   }
@@ -750,7 +758,9 @@ export class Game {
 
     const dmgMul = p.quad > 0 ? 2 : 1;   // Quad Damage doubles every weapon
     if (dmgMul > 1) { p.weaponFlash = 0.12; this.addShake(Math.max(this.shake, 0.12)); }
-    if (w.kind === 'projectile') {
+    if (w.kind === 'beam') {
+      this._railBeam(p.x, p.y, p.angle, irnd(w.dmg[0], w.dmg[1]) * dmgMul, w.range);
+    } else if (w.kind === 'projectile') {
       this._spawnProjectile(p.x, p.y, p.angle + (w.spread ? rnd(-w.spread, w.spread) : 0), w, 'player', dmgMul);
     } else {
       const pellets = w.pellets || 1;
@@ -762,8 +772,38 @@ export class Game {
     }
     if (w.name !== 'FIST') this._alertNearby(p.x, p.y, 6);  // the noise draws monsters
     if (w.name === 'BFG 9000') this.addShake(0.5);
+    else if (w.name === 'RAILGUN') this.addShake(0.38);
     else if (w.name === 'SUPER SHOTGUN' || w.name === 'ROCKET LAUNCHER') this.addShake(0.28);
     else if (w.name === 'SHOTGUN' || w.name === 'CHAINGUN') this.addShake(0.1);
+  }
+
+  // The railgun's piercing beam: one ray that skewers every enemy/barrel in a
+  // line (each hit once) up to the first wall, drawing a bright tracer streak.
+  _railBeam(ox, oy, angle, dmg, range) {
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    const step = 0.06;
+    let x = ox, y = oy, end = range;
+    const hit = new Set();
+    for (let t = 0; t < range; t += step) {
+      x += dx * step; y += dy * step;
+      if (this._rayBlocked(Math.floor(x), Math.floor(y))) { end = t; break; }
+      for (const e of this.entities) {
+        if (hit.has(e)) continue;
+        if ((e.kind === 'enemy' && e.alive && e.state !== 'dead' && e.state !== 'dying') || (e.kind === 'barrel' && e.alive)) {
+          if ((x - e.x) ** 2 + (y - e.y) ** 2 < (e.radius + 0.12) ** 2) {
+            hit.add(e);
+            if (e.kind === 'enemy') { this._applyKnock(e, dx, dy, 6); this._damageEnemy(e, dmg, 'player'); }
+            else this._damageBarrel(e, dmg, 'player');
+          }
+        }
+      }
+    }
+    // bright tracer: dense fullbright motes down the beam + a spark at the wall
+    for (let t = 0.4; t < end; t += 0.45) {
+      this._spawnParticles(ox + dx * t, oy + dy * t, 0.5, 1, { speed: 0.25, up: 0.2, life: 0.3, colors: RAIL });
+    }
+    this._spawnParticles(ox + dx * end, oy + dy * end, 0.5, 8, { speed: 2.5, up: 2, life: 0.4, colors: RAIL });
+    this._alertNearby(ox, oy, 8);
   }
 
   // March a ray; damage the first thing hit before a wall. `source` is

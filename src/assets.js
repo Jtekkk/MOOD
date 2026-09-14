@@ -964,6 +964,7 @@ function weaponPickup(kind) {
   else if (kind === 'rocket') { ctx.fillRect(4, 9, 30, 6); ctx.fillStyle = '#a00'; ctx.fillRect(30, 9, 6, 6); }
   else if (kind === 'plasma') { ctx.fillRect(6, 8, 28, 9); ctx.fillStyle = '#4ac8ff'; ctx.fillRect(10, 10, 18, 2); ctx.fillRect(10, 14, 18, 2); }
   else if (kind === 'bfg') { ctx.fillStyle = '#2c3a30'; ctx.fillRect(4, 7, 32, 11); ctx.fillStyle = '#6cff5a'; ctx.fillRect(14, 10, 12, 5); }
+  else if (kind === 'rail') { ctx.fillStyle = '#33384a'; ctx.fillRect(4, 9, 32, 5); ctx.fillStyle = '#8ab0ff'; ctx.fillRect(8, 10, 24, 1); ctx.fillStyle = '#2a2e3a'; ctx.fillRect(6, 8, 5, 8); }
   return texFrom(c, ctx);
 }
 
@@ -1819,6 +1820,30 @@ function fpBfg(fire) {
     const f = ctx.createRadialGradient(cx, 24 + r, 1, cx, 24 + r, 28);
     f.addColorStop(0, '#fff'); f.addColorStop(0.4, '#9cff8c'); f.addColorStop(1, 'rgba(20,160,20,0)');
     ctx.fillStyle = f; ctx.beginPath(); ctx.arc(cx, 24 + r, 28, 0, 7); ctx.fill();
+  }
+  return texFrom(c, ctx);
+}
+
+// the RAILGUN (first person): a long dark rifle with a glowing coil down the
+// barrel that flares blue-white when it discharges.
+function fpRail(fire) {
+  const { c, ctx } = makeCanvas(200, 130);
+  const cx = 100, r = fire ? 5 : 0;
+  glove(ctx, cx - 30, 96 + r, 26, 34); glove(ctx, cx + 6, 98 + r, 24, 32);
+  // receiver + long barrel pointing away
+  metalGradH(ctx, cx - 14, 78 + r, 28, 24, '#3a4050', '#232838', '#12151f');
+  metalGradH(ctx, cx - 8, 8 + r, 16, 74, '#454b5e', '#2a3040', '#171b26');
+  // glowing energy coil rings up the barrel
+  const coil = fire ? '#eaffff' : '#5aa0ff';
+  for (let y = 20 + r; y < 80 + r; y += 10) { ctx.fillStyle = coil; ctx.fillRect(cx - 8, y, 16, 2); }
+  // muzzle aperture
+  const ap = ctx.createRadialGradient(cx, 10 + r, 1, cx, 10 + r, 12);
+  ap.addColorStop(0, '#fff'); ap.addColorStop(0.5, fire ? '#bfe6ff' : '#3a7add'); ap.addColorStop(1, 'rgba(30,60,160,0)');
+  ctx.fillStyle = ap; ctx.beginPath(); ctx.arc(cx, 12 + r, fire ? 16 : 9, 0, 7); ctx.fill();
+  if (fire) {
+    const f = ctx.createRadialGradient(cx, 6, 1, cx, 6, 34);
+    f.addColorStop(0, '#fff'); f.addColorStop(0.4, '#9cd0ff'); f.addColorStop(1, 'rgba(40,90,220,0)');
+    ctx.fillStyle = f; ctx.beginPath(); ctx.arc(cx, 6, 34, 0, 7); ctx.fill();
   }
   return texFrom(c, ctx);
 }
@@ -2710,6 +2735,8 @@ export function buildAssets() {
 
   SPR.pickup_bfg = weaponPickup('bfg');
   SPR.fp_bfg = fpBfg(false); SPR.fp_bfg_fire = fpBfg(true);
+  SPR.pickup_rail = weaponPickup('rail');
+  SPR.fp_rail = fpRail(false); SPR.fp_rail_fire = fpRail(true);
   SPR.tadpole = tadpole();
   SPR.fp_sausage = fpSausage(false); SPR.fp_sausage_fire = fpSausage(true);
   SPR.terminal = terminalTex();

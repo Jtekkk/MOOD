@@ -126,21 +126,35 @@ export function drawAutomap(ctx, game) {
   ctx.fillStyle = 'rgba(2,4,6,0.88)'; ctx.fillRect(0, 0, RENDER_W, BAR_Y);
 
   const cell = Math.ceil(s);
+  const DOORCOL = { r: '#e04040', b: '#4080f0', y: '#e0d040' };   // locked doors by key colour
+  let exitX = -1, exitY = -1;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const ch = map.cellChar[y * W + x];
     let col = null;
-    if (DOORS.has(ch)) col = '#caa030';
-    else if (ch === '+') col = '#5be05b';
+    if (ch === '+') { col = '#5be05b'; exitX = x; exitY = y; }
+    else if (DOORCOL[ch]) col = DOORCOL[ch];
+    else if (DOORS.has(ch)) col = '#caa030';
     else if (SOLID.has(ch)) col = '#6f6150';
     if (col) { ctx.fillStyle = col; ctx.fillRect(ox + x * s, oy + y * s, cell, cell); }
   }
-  // entities
+  // entities — keycards get a big colour-coded marker so they're easy to find
+  const KEYCOL = { R: '#ff4040', U: '#4090ff', Y: '#ffe040' };
   for (const e of game.entities) {
-    let col = null;
-    if (e.kind === 'item') col = '#d6d630';
+    let col = null, big = false;
+    if (e.kind === 'item' && KEYCOL[e.ch]) { col = KEYCOL[e.ch]; big = true; }
+    else if (e.kind === 'item') col = '#d6d630';
     else if (e.kind === 'enemy' && e.alive) col = (e.state === 'idle') ? '#a23' : '#f44';
     else if (e.kind === 'barrel' && e.alive) col = '#2a8a2a';
-    if (col) { ctx.fillStyle = col; ctx.fillRect(ox + e.x * s - 1, oy + e.y * s - 1, 2, 2); }
+    if (col) { ctx.fillStyle = col; const r = big ? 2 : 1; ctx.fillRect(ox + e.x * s - r, oy + e.y * s - r, r * 2, r * 2); }
+  }
+  // pulsing EXIT beacon so it can't be missed on a big map
+  if (exitX >= 0) {
+    const bx = ox + (exitX + 0.5) * s, by = oy + (exitY + 0.5) * s;
+    const pulse = 3 + 2 * Math.sin(game.timer * 6);
+    ctx.strokeStyle = '#7bff7b'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(bx, by, pulse, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#baffba'; ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('E', bx, by - 8);
   }
   // player arrow
   const px = ox + game.player.x * s, py = oy + game.player.y * s, a = game.player.angle;
@@ -222,7 +236,8 @@ export function drawStatusBar(ctx, game) {
     const col = 112 + ((i - 1) % 3) * 12;
     const row = BAR_Y + 6 + (((i - 1) / 3) | 0) * 11;
     ctx.fillStyle = (i === p.weapon) ? '#ffd040' : owned ? '#9aa' : '#445';
-    ctx.fillText(String(i + 1), col, row);
+    const label = (WEAPONS[i].key || '').replace('Digit', '') || String(i + 1);   // show the actual key
+    ctx.fillText(label, col, row);
   }
 
   // face mug + meme caption ("TODAY I'M FEELING...")

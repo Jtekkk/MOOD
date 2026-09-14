@@ -155,10 +155,14 @@ find the matching keycard.
 - **Wolfenstein-style sliding doors** computed as a mid-cell plane intersection
   during the DDA — they slide, block sight/bullets when closed, and re-open if
   something is standing in the doorway.
-- **Eight weapons:** fist, pistol, shotgun, super shotgun, chaingun, rocket
-  launcher, plasma rifle, and the BFG 9000 — hitscan with pellet spread, plus
-  splash-damage, rapid-energy, and a screen-shaking BFG blast, across four
-  ammo types.
+- **Nine weapons:** fist, pistol, shotgun, super shotgun, chaingun, rocket
+  launcher, plasma rifle, the BFG 9000, and the **Railgun** (key 0) — hitscan
+  with pellet spread, splash-damage, rapid-energy, a screen-shaking BFG blast,
+  and the railgun's **piercing beam that skewers every enemy in a line** with a
+  bright tracer, across four ammo types.
+- **Findable exits:** every level's exit switch is a **glowing green beacon**
+  (and a pulsing "E" on the automap, with keycards and locked doors colour-coded
+  there) so you can always find the way out on the bigger maps.
 - **The Spectre** — a near-invisible Demon that reads as a shimmering heat-haze
   (a moving dither over the demon silhouette), fast and melee, lurking in the
   later levels.
