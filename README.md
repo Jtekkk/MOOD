@@ -253,8 +253,12 @@ find the matching keycard.
 - **Pickups:** stimpacks, medikits, health/armor bonuses, MegaArmor, MegaSphere,
   ammo of every type, weapons, and three colored keycards.
 - **Powerups:** an **Invulnerability** sphere (shrugs off all damage, golden
-  screen sheen), a **Berserk** pack (fist hits ~10× and swaps you to it), and a
-  **Light-Amp Visor** that floods the gloom with light — each on a timer.
+  screen sheen), a **Berserk** pack (fist hits ~10× and swaps you to it), a
+  **Light-Amp Visor** that floods the gloom with light, a **Soulsphere**
+  (supercharge to 200 health), a **Radiation Suit** (walk the toxic sludge
+  unharmed), and **Quad Damage** (every weapon hits 2× — purple screen pulse and
+  a punchier flash) — each on a timer. Powerups **cast their own coloured light**
+  so they glow across the room.
 - **Explosive barrels** with chain-reaction splash damage.
 - **Classic status-bar HUD:** ammo, health, the ARMS panel, armor, keys, and
   per-type ammo counts — plus a live mug shot.

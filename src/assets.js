@@ -2424,6 +2424,50 @@ function visorGoggles() {
   return texFrom(c, ctx);
 }
 
+// Soulsphere — a floating blue spirit-globe with a faint face.
+function soulSphere() {
+  const { c, ctx } = makeCanvas(30, 30);
+  shadowEllipse(ctx, 15, 27, 9, 2);
+  const g = ctx.createRadialGradient(12, 11, 2, 15, 15, 15);
+  g.addColorStop(0, '#eaffff'); g.addColorStop(0.4, '#6ad0ff'); g.addColorStop(0.75, '#2a6ad0'); g.addColorStop(1, '#153a7a');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(15, 15, 13, 0, 7); ctx.fill();
+  // ghostly face
+  ctx.fillStyle = 'rgba(230,250,255,0.55)';
+  ctx.beginPath(); ctx.arc(11, 13, 2, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(19, 13, 2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(15, 19, 4, 2, 0, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(10, 9, 3, 0, 7); ctx.fill();
+  return texFrom(c, ctx);
+}
+// Radiation suit — a green hazmat suit with a round visor.
+function radSuit() {
+  const { c, ctx } = makeCanvas(26, 34);
+  shadowEllipse(ctx, 13, 32, 9, 2);
+  const g = ctx.createLinearGradient(0, 4, 0, 32);
+  g.addColorStop(0, '#7ad24a'); g.addColorStop(1, '#2e6a1e');
+  ctx.fillStyle = g; ctx.fillRect(6, 10, 14, 20);                  // body
+  ctx.fillStyle = '#6ac23a'; ctx.beginPath(); ctx.arc(13, 8, 6, 0, 7); ctx.fill();   // hood
+  ctx.fillStyle = '#0c1810'; ctx.beginPath(); ctx.arc(13, 8, 3.2, 0, 7); ctx.fill(); // visor
+  ctx.fillStyle = 'rgba(180,255,180,0.6)'; ctx.beginPath(); ctx.arc(12, 7, 1.2, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2e6a1e'; ctx.fillRect(3, 12, 4, 12); ctx.fillRect(19, 12, 4, 12); // arms
+  ctx.fillStyle = '#e8e030'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center'; ctx.fillText('☢', 13, 24);
+  return texFrom(c, ctx);
+}
+// Quad Damage — a jagged glowing purple crystal artifact.
+function quadArtifact() {
+  const { c, ctx } = makeCanvas(28, 30);
+  shadowEllipse(ctx, 14, 28, 8, 2);
+  const glow = ctx.createRadialGradient(14, 15, 2, 14, 15, 15);
+  glow.addColorStop(0, 'rgba(220,150,255,0.9)'); glow.addColorStop(0.6, 'rgba(150,50,230,0.4)'); glow.addColorStop(1, 'rgba(90,20,160,0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(14, 15, 15, 0, 7); ctx.fill();
+  const g = ctx.createLinearGradient(14, 3, 14, 27);
+  g.addColorStop(0, '#f0d0ff'); g.addColorStop(0.5, '#b04aff'); g.addColorStop(1, '#5a1a9a');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(14, 2); ctx.lineTo(22, 12); ctx.lineTo(18, 27); ctx.lineTo(10, 27); ctx.lineTo(6, 12); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,235,255,0.7)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(14, 2); ctx.lineTo(14, 27); ctx.moveTo(6, 12); ctx.lineTo(22, 12); ctx.stroke();
+  return texFrom(c, ctx);
+}
+
 // ----- a lit brazier (light source) ---------------------------------------
 function lamp() {
   const { c, ctx } = makeCanvas(40, 60);
@@ -2568,6 +2612,9 @@ export function buildAssets() {
   SPR.invuln = powerSphere('#7affa0', '#0e8a3a', 'rgba(210,255,220,0.85)');   // green globe
   SPR.berserk = powerSphere('#ff6a4a', '#8a1408', 'rgba(255,180,150,0.85)');  // red globe
   SPR.visor = visorGoggles();
+  SPR.soulsphere = soulSphere();
+  SPR.radsuit = radSuit();
+  SPR.quad = quadArtifact();
   SPR.pickup_shotgun = weaponPickup('shotgun');
   SPR.pickup_sshotgun = weaponPickup('sshotgun');
   SPR.pickup_chaingun = weaponPickup('chaingun');

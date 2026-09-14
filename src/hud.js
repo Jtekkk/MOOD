@@ -90,6 +90,20 @@ export function drawTints(ctx, game) {
     ctx.fillStyle = `rgba(255,225,120,${pulse * fade})`;
     ctx.fillRect(0, 0, RENDER_W, BAR_Y);
   }
+  if (p.immortal) {         // gold-sludge immortality: a steady golden gleam
+    ctx.fillStyle = `rgba(255,205,60,${0.08 + 0.05 * Math.sin(game.timer * 5)})`;
+    ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  }
+  if (p.quad > 0) {         // pulsing purple while Quad Damage is active
+    const fade = p.quad < 3 ? p.quad / 3 : 1;
+    ctx.fillStyle = `rgba(170,60,255,${(0.10 + 0.06 * Math.sin(game.timer * 10)) * fade})`;
+    ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  }
+  if (p.radsuit > 0) {      // green rad-suit haze
+    const fade = p.radsuit < 3 ? p.radsuit / 3 : 1;
+    ctx.fillStyle = `rgba(60,200,60,${0.08 * fade})`;
+    ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  }
   if (p.hurtT > 0) {        // directional damage marker: a red arc toward the hit
     const cx = RENDER_W / 2, cy = BAR_Y / 2, R = RENDER_W * 0.42;
     // screen angle: 0 = ahead (top). hurtDir is relative to facing (0 = front).

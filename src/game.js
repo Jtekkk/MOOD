@@ -36,6 +36,12 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
 const GRAVITY = 20;   // world units/s² — how hard the player falls off ledges
 
+// pickups that cast their own coloured light (better-lit powerups)
+const POWERUP_GLOW = {
+  b: [0.4, 0.7, 1.0], I: [0.75, 0.4, 1.0], u: [0.4, 1.0, 0.4], V: [0.5, 1.0, 0.6],
+  g: [1.0, 0.85, 0.4], k: [1.0, 0.4, 0.25], A: [0.4, 0.6, 1.0], v: [0.5, 1.0, 0.6],
+};
+
 // The six D.I. HARDWARE ACCESS TERMINAL subsystems (levels 2 & 6). Only #6 is
 // survivable — it drains the hazardous sludge pool on sublevel 9; the rest trip
 // a lethal plant failure.
@@ -155,7 +161,7 @@ export class Game {
       fireCD: 0, weaponFlash: 0, recoil: 0,
       bobPhase: 0, bobAmt: 0,
       damageFlash: 0, pickupFlash: 0, powerFlash: 0,
-      invuln: 0, immortal: false, berserk: false, visor: 0, z: 0, vz: 0, grounded: true, hurtT: 0, hurtDir: 0,
+      invuln: 0, immortal: false, berserk: false, visor: 0, quad: 0, radsuit: 0, z: 0, vz: 0, grounded: true, hurtT: 0, hurtDir: 0,
       kills: 0, totalKills: 0, secrets: 0,
       dead: false, deathTime: 0,
       faceTimer: 0, faceMood: 'happy', calmT: 0, idleMoveT: 0, killStreak: 0, lastKillStamp: -99,
@@ -262,7 +268,11 @@ export class Game {
         });
       } else if (ITEMS[ch]) {
         const def = ITEMS[ch];
-        this.entities.push({ kind: 'item', ch, def, x, y, spriteH: def.spriteH, vOffset: 0, alive: true, sprite: SPR[def.sprite], bob: Math.random() * 6 });
+        const glow = POWERUP_GLOW[ch];
+        this.entities.push({
+          kind: 'item', ch, def, x, y, spriteH: def.spriteH, vOffset: 0, alive: true, sprite: SPR[def.sprite], bob: Math.random() * 6,
+          light: glow ? { r: glow[0], g: glow[1], b: glow[2], radius: 3.2, intensity: 1.0, flicker: 0.08, phase: Math.random() * 6.28 } : null,
+        });
       }
     }
   }
@@ -402,8 +412,9 @@ export class Game {
     }
     this.entities = this.entities.filter((e) => !e._remove);
 
-    // --- toxic sludge pool (LEVEL 9, undrained): burns while you stand in it ---
-    if (this.sludgeRect) {
+    // --- toxic sludge pool (LEVEL 9, undrained): burns while you stand in it,
+    // unless you're wearing a rad-suit ---
+    if (this.sludgeRect && p.radsuit <= 0) {
       const r = this.sludgeRect;
       if (p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h) {
         this._sludgeDmgT += dt;
@@ -435,6 +446,8 @@ export class Game {
     if (p.hurtT > 0) p.hurtT = Math.max(0, p.hurtT - dt * 1.4);
     if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
     if (p.visor > 0) p.visor = Math.max(0, p.visor - dt);
+    if (p.quad > 0) { p.quad = Math.max(0, p.quad - dt); if (p.quad === 0) this.message('QUAD DAMAGE EXPIRED'); }
+    if (p.radsuit > 0) { p.radsuit = Math.max(0, p.radsuit - dt); if (p.radsuit === 0) this.message('RAD-SUIT DEPLETED'); }
     this._updateFace(dt);
 
     if (p.health <= 0 && !p.dead) this._killPlayer();
@@ -735,14 +748,16 @@ export class Game {
     p.faceMood = (p.health <= 35 ? 'angry' : 'excited'); p.faceTimer = 0.35; p.calmT = 0;
     this.audio.play(w.sound);
 
+    const dmgMul = p.quad > 0 ? 2 : 1;   // Quad Damage doubles every weapon
+    if (dmgMul > 1) { p.weaponFlash = 0.12; this.addShake(Math.max(this.shake, 0.12)); }
     if (w.kind === 'projectile') {
-      this._spawnProjectile(p.x, p.y, p.angle + (w.spread ? rnd(-w.spread, w.spread) : 0), w);
+      this._spawnProjectile(p.x, p.y, p.angle + (w.spread ? rnd(-w.spread, w.spread) : 0), w, 'player', dmgMul);
     } else {
       const pellets = w.pellets || 1;
       const berserkMul = (p.berserk && w.kind === 'melee') ? 10 : 1;   // berserk fist wrecks
       for (let i = 0; i < pellets; i++) {
         const a = p.angle + rnd(-w.spread, w.spread);
-        this._hitscan(p.x, p.y, a, irnd(w.dmg[0], w.dmg[1]) * berserkMul, w.range, 'player');
+        this._hitscan(p.x, p.y, a, irnd(w.dmg[0], w.dmg[1]) * berserkMul * dmgMul, w.range, 'player');
       }
     }
     if (w.name !== 'FIST') this._alertNearby(p.x, p.y, 6);  // the noise draws monsters
@@ -781,14 +796,14 @@ export class Game {
     }
   }
 
-  _spawnProjectile(x, y, angle, w, owner = 'player') {
+  _spawnProjectile(x, y, angle, w, owner = 'player', dmgMul = 1) {
     const dx = Math.cos(angle), dy = Math.sin(angle);
     const sprite = SPR[w.proj] || SPR.fireball;
     const glow = PROJ_LIGHT[w.proj];
     this.entities.push({
       kind: 'proj', x: x + dx * 0.4, y: y + dy * 0.4,
       vx: dx * w.projSpeed, vy: dy * w.projSpeed,
-      dmg: Array.isArray(w.dmg) ? irnd(w.dmg[0], w.dmg[1]) : w.dmg,
+      dmg: (Array.isArray(w.dmg) ? irnd(w.dmg[0], w.dmg[1]) : w.dmg) * dmgMul,
       splash: w.splash || 0, owner, sprite, spriteH: w.projH || 0.4, vOffset: 0.45,
       fullbright: true, alive: true, life: 6,
       // homing (Revenant missiles): curve toward the shooter's target at a
