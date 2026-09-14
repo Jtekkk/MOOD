@@ -6,6 +6,7 @@ import { ENEMY_TYPES, ENEMY_CHAR, enemyFrame } from './data/enemies.js';
 import { WEAPONS, AMMO_MAX } from './data/weapons.js';
 import { ITEMS } from './data/items.js';
 import { CUT_DURATION, CUT_CUES } from './cutscene.js';
+import { END_DURATION, END_CUES } from './ending.js';
 import { clamp, normalizeAngle, dist, rgba, TAU } from './math.js';
 
 const PLAYER_R = 0.22;
@@ -201,6 +202,25 @@ export class Game {
     if (this.cutT >= CUT_DURATION || (this.cutT > 0.4 && skip)) this.startNewGame();
   }
 
+  // The escape ending after the final boss — keeps the LEVEL 10 track playing.
+  _startEnding() {
+    this.state = 'ending';
+    this.endT = 0; this._endCue = 0; this.shake = 0;
+  }
+
+  _updateEnding(dt) {
+    this.endT += dt;
+    while (this._endCue < END_CUES.length && this.endT >= END_CUES[this._endCue].t) {
+      const cue = END_CUES[this._endCue++];
+      if (cue.sound) this.audio.play(cue.sound);
+      if (cue.shake) this.addShake(cue.shake);
+    }
+    this.shake = Math.max(0, this.shake - dt * 2.2);
+    const skip = this.input.justPressed('Enter') || this.input.justPressed('Space') ||
+      this.input.justPressed('KeyE') || this.input.mouseJustPressed(0) || this.input.padFire;
+    if (this.endT >= END_DURATION || (this.endT > 0.4 && skip)) { this.audio.stopMusic(); this.state = 'victory'; }
+  }
+
   loadLevel(index) {
     const def = LEVELS[index];
     const map = parseLevel(def);
@@ -326,6 +346,7 @@ export class Game {
     switch (this.state) {
       case 'playing': this._updatePlaying(dt); break;
       case 'intro': this._updateIntro(dt); break;
+      case 'ending': this._updateEnding(dt); break;
       case 'terminal': this._updateTerminal(dt); break;
       case 'intermission': this._updateIntermission(dt); break;
       case 'dead': this._updateDead(dt); break;
@@ -1499,8 +1520,7 @@ export class Game {
       this.loadLevel(this.levelIndex);   // switches to the next level's track
       this.state = 'playing';
     } else {
-      this.audio.stopMusic();
-      this.state = 'victory';
+      this._startEnding();   // finished the campaign → the escape cutscene, then victory
     }
   }
 

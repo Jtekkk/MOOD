@@ -10,6 +10,7 @@ import {
   drawTitle, drawPause, drawDead, drawIntermission, drawVictory, drawSettings, drawBossBar, drawTerminal,
 } from './hud.js';
 import { drawCutscene } from './cutscene.js';
+import { drawEnding } from './ending.js';
 
 const canvas = document.getElementById('screen');
 const loading = document.getElementById('loading');
@@ -37,7 +38,10 @@ audio.setTracks([
   'assets/music/gangsta_chiptune.mp3',  // L4
   'assets/music/waltz_kazoon_panic.mp3',// L5
   'assets/music/glitch_grid_1.mp3',     // L6
-  'assets/music/glitch_grid_2.mp3',     // L7  (L8 wraps to track1)
+  'assets/music/level7.mp3',            // L7
+  'assets/music/level8.mp3',            // L8 — NO WAY OF KNOWING
+  'assets/music/level9.mp3',            // L9
+  'assets/music/alien.mp3',             // L10 — the Gumbird arena + escape ending
 ]);
 const game = new Game(renderer, input, audio);
 if (loading) loading.style.display = 'none';
@@ -94,6 +98,7 @@ function render() {
   switch (game.state) {
     case 'title': drawTitle(octx, game.timer); renderer.presentOverlay(); return;
     case 'intro': drawCutscene(octx, game.cutT); renderer.presentOverlay(); return;
+    case 'ending': drawEnding(octx, game.endT); renderer.presentOverlay(); return;
     case 'terminal': drawTerminal(octx, game); renderer.presentOverlay(); return;
     case 'settings': drawSettings(octx, game); renderer.presentOverlay(); return;
     case 'intermission': drawIntermission(octx, game); renderer.presentOverlay(); return;

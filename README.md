@@ -91,8 +91,8 @@ manager, upload everything inside `dist-web/` (drag the `index.html`, `styles.cs
 too (e.g. `yourdomain.com/mood/`) because every path is relative.
 
 Notes:
-- It's ~28 MB, almost all of it the seven background-music MP3s in
-  `assets/music/`. Delete tracks you don't want (and the matching entries in
+- The bulk of it is the background-music MP3s in `assets/music/` (~60 MB across
+  the ten tracks). Delete tracks you don't want (and the matching entries in
   `setTracks([...])` in `src/main.js`) to shrink it.
 - Phones get the on-screen touch controls automatically; desktop gets
   keyboard/mouse + gamepad. Serve over **HTTPS** so pointer-lock mouselook works.
@@ -215,6 +215,12 @@ find the matching keycard.
   imps drag your stunned marine into a cell, you grab a dropped pistol and gun
   them down through the bars, then bust out straight into LEVEL 1. Rendered on
   the same 320×200 canvas with timed audio + screen-shake cues.
+- **Escape ending:** clearing the final level plays a matching skippable
+  closer — your marine strides across the landing pad, boards a parked lander,
+  the engines flare and lift off (shake + ignition flash), and the last beat is
+  the cockpit interior: the red hell-planet shrinking behind you while the
+  marine kicks back and smokes a cigarette (glowing ember, curling smoke). Then
+  the victory screen. Same timed audio/shake cue system as the intro.
 - **D.I. access terminals:** wall-mounted consoles on **LEVEL 2** and **LEVEL
   6** — walk up and USE to bring up a black-and-green login screen (admin /
   admin), then a plant-subsystem menu. Five of the six options trip a lethal
@@ -291,9 +297,10 @@ find the matching keycard.
   verified fully traversable with the real movement code (`tools/physicscheck.mjs`).
 - **Procedurally synthesized sound effects** (WebAudio) for every weapon,
   monster, door, and pickup — generated at runtime, no SFX files.
-- **Per-level background music** — seven looping MP3 tracks in `assets/music/`,
-  one per level (later levels wrap around); the `M` mute key silences music
-  and SFX together.
+- **Per-level background music** — ten looping MP3 tracks in `assets/music/`,
+  one per level (extra levels wrap around); LEVELS 7–9 have their own tracks and
+  the LEVEL 10 arena track (`alien.mp3`) carries through the escape ending. The
+  `M` mute key silences music and SFX together.
 - **Reactive audio:** the mix reads the fight — awake monsters near you and
   recent hits swell the music from 60% to full and fade in a low **tension
   drone**, which eases back to calm once the room is clear.
