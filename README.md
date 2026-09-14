@@ -163,6 +163,9 @@ find the matching keycard.
 - **Findable exits:** every level's exit switch is a **glowing green beacon**
   (and a pulsing "E" on the automap, with keycards and locked doors colour-coded
   there) so you can always find the way out on the bigger maps.
+- **Cheat codes** (type the letters while playing; also listed on the PAUSE
+  screen): **IAMGOD** toggles god mode (invincibility), **STFL** skips to the
+  next level, **SAUCE** grants the secret sausage gun.
 - **The Spectre** — a near-invisible Demon that reads as a shimmering heat-haze
   (a moving dither over the demon silhouette), fast and melee, lurking in the
   later levels.

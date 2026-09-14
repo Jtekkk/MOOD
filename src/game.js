@@ -1421,6 +1421,15 @@ export class Game {
     this.audio.play('weapon');
   }
 
+  // Cheat: toggle GOD MODE (invulnerability). Triggered by typing "iamgod".
+  cheatGodMode() {
+    if (this.state !== 'playing') return;
+    this.player.immortal = !this.player.immortal;
+    if (this.player.immortal) { this.player.health = Math.max(this.player.health, 100); this.player.powerFlash = 1; }
+    this.message(this.player.immortal ? 'GOD MODE ON' : 'GOD MODE OFF');
+    this.audio.play('health');
+  }
+
   _exitLevel() {
     this.audio.play('levelend');
     const total = this.player.totalKills, totItems = this.totalItems || 0;

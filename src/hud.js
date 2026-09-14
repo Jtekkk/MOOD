@@ -327,7 +327,8 @@ export function drawTitle(ctx, t) {
   ctx.font = '7px monospace'; ctx.fillStyle = '#998';
   ctx.fillText('WASD move   MOUSE look   CLICK fire   1-8 weapons', RENDER_W / 2, 150);
   ctx.fillText('E/SPACE use  SHIFT run  TAB map  O options  M mute', RENDER_W / 2, 162);
-  ctx.fillText('Reach the EXIT switch. Kill everything that moves.', RENDER_W / 2, 178);
+  ctx.fillText('Reach the EXIT switch. Kill everything that moves.', RENDER_W / 2, 176);
+  ctx.fillStyle = '#786'; ctx.fillText('cheat codes are listed on the PAUSE screen (Esc)', RENDER_W / 2, 190);
 }
 
 export function drawSettings(ctx, game) {
@@ -361,13 +362,33 @@ export function drawSettings(ctx, game) {
   ctx.fillText('UP/DOWN select    LEFT/RIGHT change    ESC back', RENDER_W / 2, RENDER_H - 18);
 }
 
+// Typed cheat codes (enter the letters during play). Shared by the pause menu.
+export const CHEATS = [
+  ['IAMGOD', 'god mode (invincible)'],
+  ['STFL', 'skip to next level'],
+  ['SAUCE', 'secret sausage gun'],
+];
+
 export function drawPause(ctx) {
-  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, RENDER_W, BAR_Y);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, RENDER_W, BAR_Y);
   ctx.textAlign = 'center'; ctx.font = 'bold 22px monospace';
-  ctx.fillStyle = '#ffd040'; ctx.fillText('PAUSED', RENDER_W / 2, 66);
+  ctx.fillStyle = '#ffd040'; ctx.fillText('PAUSED', RENDER_W / 2, 40);
   ctx.font = '8px monospace'; ctx.fillStyle = '#ccc';
-  ctx.fillText('click to resume', RENDER_W / 2, 90);
-  ctx.fillStyle = '#9aa'; ctx.fillText('press O for options', RENDER_W / 2, 104);
+  ctx.fillText('click to resume     press O for options', RENDER_W / 2, 58);
+
+  // cheat codes panel
+  const px = RENDER_W / 2 - 96, pw = 192, py = 72, ph = 20 + CHEATS.length * 12;
+  ctx.fillStyle = 'rgba(20,16,8,0.7)'; ctx.fillRect(px, py, pw, ph);
+  ctx.strokeStyle = 'rgba(200,160,60,0.4)'; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+  ctx.textAlign = 'center'; ctx.font = 'bold 8px monospace'; ctx.fillStyle = '#ffd040';
+  ctx.fillText('CHEAT CODES  (type while playing)', RENDER_W / 2, py + 12);
+  ctx.font = '8px monospace';
+  let y = py + 26;
+  for (const [code, desc] of CHEATS) {
+    ctx.textAlign = 'left'; ctx.fillStyle = '#8affa0'; ctx.fillText(code, px + 10, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#bcc'; ctx.fillText(desc, px + pw - 10, y);
+    y += 12;
+  }
 }
 
 export function drawDead(ctx, game) {

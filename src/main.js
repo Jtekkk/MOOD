@@ -84,6 +84,7 @@ window.addEventListener('keydown', (e) => {
     cheatBuf = (cheatBuf + e.key.toLowerCase()).slice(-8);
     if (cheatBuf.endsWith('stfl')) { game.cheatNextLevel(); cheatBuf = ''; }
     else if (cheatBuf.endsWith('sauce')) { game.cheatSausage(); cheatBuf = ''; }
+    else if (cheatBuf.endsWith('iamgod')) { game.cheatGodMode(); cheatBuf = ''; }
   }
 });
 
