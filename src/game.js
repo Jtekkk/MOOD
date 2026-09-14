@@ -206,6 +206,9 @@ export class Game {
       return SOLID.has(ch);
     };
     this.map = map;
+    // persistent blood-decal grid (sub-cell resolution), painted during floor cast
+    map.decalRes = 4; map.decalW = map.W * 4;
+    map.decals = new Float32Array(map.decalW * map.H * 4);
     this.entities = [];
     this.particles = [];
     this.shake = 0;
@@ -463,7 +466,9 @@ export class Game {
     const p = this.player;
     if (!this.map.hasHeights) { p.z = 0; p.vz = 0; p.grounded = true; return; }
     const g = this._groundZ(p.x, p.y);
-    if (p.z <= g + 1e-3) { p.z = g; p.vz = 0; p.grounded = true; return; }   // on/at ground (or climbing up)
+    // resting on the ground with no upward pop → stay put; otherwise integrate
+    // (a positive vz from a rocket-jump lifts off even while at ground level)
+    if (p.z <= g + 1e-3 && p.vz <= 0) { p.z = g; p.vz = 0; p.grounded = true; return; }
     p.vz -= GRAVITY * dt;
     p.z += p.vz * dt;
     if (p.z <= g) {
@@ -869,6 +874,9 @@ export class Game {
     if (dp < radius + PLAYER_R) {
       const f = 1 - dp / (radius + PLAYER_R);
       this._applyKnock(this.player, this.player.x - x, this.player.y - y, 7 * f);
+      // rocket-jump: the blast also pops you upward, so a well-timed rocket at
+      // your feet launches you onto a ledge (only meaningful on height levels).
+      if (this.map.hasHeights) { this.player.vz += 6.5 * f; this.player.grounded = false; }
       this._damagePlayer(Math.round(dmg * f), x, y);
     }
   }
@@ -876,6 +884,22 @@ export class Game {
   _spawnEffect(x, y, sh) {
     this.entities.push({ kind: 'effect', x, y, spriteH: sh + 0.4, vOffset: 0.4, time: 0, dur: 0.34, fullbright: true, sprite: SPR.explosion0, alive: true });
   }
+  // Splatter a persistent blood decal into the floor grid at (x,y).
+  _stampBlood(x, y, radius, amount) {
+    const map = this.map, dec = map.decals; if (!dec) return;
+    const DR = map.decalRes, DW = map.decalW, DH = map.H * DR;
+    const cx = x * DR, cy = y * DR, r = radius * DR, r2 = r * r;
+    const x0 = Math.max(0, (cx - r) | 0), x1 = Math.min(DW - 1, Math.ceil(cx + r));
+    const y0 = Math.max(0, (cy - r) | 0), y1 = Math.min(DH - 1, Math.ceil(cy + r));
+    for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
+      const dx = gx + 0.5 - cx, dy = gy + 0.5 - cy, d2 = dx * dx + dy * dy;
+      if (d2 > r2) continue;
+      const f = amount * (1 - Math.sqrt(d2) / r) * (0.55 + Math.random() * 0.45);   // falloff + splatter noise
+      const i = gy * DW + gx;
+      if (f > dec[i]) dec[i] = Math.min(1, f);
+    }
+  }
+
   _spawnPuff(x, y) {
     this.entities.push({ kind: 'effect', x, y, spriteH: 0.3, vOffset: 0.5, time: 0, dur: 0.16, fullbright: true, sprite: SPR.explosion0, alive: true, small: true });
     this._spawnParticles(x, y, 0.55, 5, { speed: 2.2, up: 1.6, life: 0.32, colors: SPARKS });
@@ -920,6 +944,7 @@ export class Game {
       const gib = !e.def.boss && (dmg > 100 || -e.hp >= e.def.hp * 0.75);
       const zc = (e.vOffset || 0) + 0.5;
       this._spawnParticles(e.x, e.y, zc, gib ? 30 : 14, { speed: gib ? 5 : 3.5, up: gib ? 4.6 : 3, life: gib ? 0.95 : 0.7, colors: BLOOD });
+      if (!e.def.float) this._stampBlood(e.x, e.y, gib ? (0.7 + e.radius) : (0.4 + e.radius), gib ? 0.95 : 0.6);   // floating demons leave no floor pool
       if (gib) {
         this._spawnParticles(e.x, e.y, zc, 12, { speed: 4.6, up: 5.6, life: 1.25, colors: GIB });
         this.audio.play('gib');
@@ -964,10 +989,12 @@ export class Game {
     const panic = dmg > 20 || p.health <= 20;
     p.faceMood = panic ? 'bees' : 'stressed'; p.faceTimer = panic ? 0.8 : 0.45; p.calmT = 0;
     this.audio.play(dmg > 18 ? 'oof' : 'pain');
+    if (dmg >= 6) this._stampBlood(p.x, p.y, 0.3, 0.3);   // you leave a little blood too
   }
 
   _killPlayer() {
     const p = this.player;
+    this._stampBlood(p.x, p.y, 0.8, 0.9);   // a death pool where you fall
     p.dead = true; p.health = 0; p.deathTime = 0;
     p.faceMood = 'dead';
     this.audio.play('death');

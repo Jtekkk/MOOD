@@ -24,6 +24,14 @@ function ditherPacked(c, d) {
   return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
 }
 
+// Blend a floor pixel toward dark blood-red by amount `a` (0..1) — used to paint
+// persistent gore decals into the floor during the cast.
+function bloodBlend(c, a) {
+  let r = (c & 0xff), g = (c >>> 8) & 0xff, b = (c >>> 16) & 0xff;
+  r += (72 - r) * a; g += (8 - g) * a; b += (6 - b) * a;
+  return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+}
+
 // Self-illuminated wall surfaces: [r, g, b, amount, pulseFreq]. These add their
 // own coloured light (so they read as glowing and feed the bloom) — steady when
 // freq is 0, otherwise pulsing/flickering at that rate.
@@ -225,6 +233,7 @@ export class Renderer {
     const sky = this._sky;
     const t = this._time;
     const nLights = this._ln, lc = this._lc;
+    const dec = map.decals, DR = map.decalRes || 0, DW = map.decalW || 0, DH = Hh * DR;
     // animated ripple offsets for water (whole-texel shimmer)
     const rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
 
@@ -263,7 +272,11 @@ export class Renderer {
           let tx = (fx - Math.floor(fx)) * tw | 0;
           let ty = (fy - Math.floor(fy)) * tw | 0;
           if (tx < 0) tx += tw; if (ty < 0) ty += tw;
-          const c = tex[(ty * tw + tx) | 0];
+          let c = tex[(ty * tw + tx) | 0];
+          if (dec && isFloor) {   // paint persistent blood decals onto the floor
+            const gx = (fx * DR) | 0, gy = (fy * DR) | 0;
+            if (gx >= 0 && gy >= 0 && gx < DW && gy < DH) { const da = dec[gy * DW + gx]; if (da > 0.02) c = bloodBlend(c, da > 1 ? 1 : da); }
+          }
           if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
           else buf[rowOff + x] = shadeFog(c, light, fog, ft);
         }
@@ -378,6 +391,7 @@ export class Renderer {
     const sky = this._sky;
     const skipCeil = map.hasCeils;   // per-cell ceilings are painted in the column pass instead
     const t = this._time, rox = Math.sin(t * 1.7) * 3, roy = Math.cos(t * 1.3) * 3;
+    const dec = map.decals, DR = map.decalRes || 0, DW = map.decalW || 0, DH = Hh * DR;
     for (let y = 0; y < RENDER_H; y++) {
       const isFloor = y > horizon;
       if (!isFloor && skipCeil) continue;
@@ -406,6 +420,10 @@ export class Renderer {
         } else {
           let tx = (fx - Math.floor(fx)) * tw | 0, ty = (fy - Math.floor(fy)) * tw | 0;
           if (tx < 0) tx += tw; if (ty < 0) ty += tw; c = tex[(ty * tw + tx) | 0];
+        }
+        if (dec && isFloor && !water) {   // persistent blood decals on the base floor
+          const gx = (fx * DR) | 0, gy = (fy * DR) | 0;
+          if (gx >= 0 && gy >= 0 && gx < DW && gy < DH) { const da = dec[gy * DW + gx]; if (da > 0.02) c = bloodBlend(c, da > 1 ? 1 : da); }
         }
         if (nLights) { this._lightAt(fx, fy, lc); buf[rowOff + x] = shadeLit(c, light, fog, ft, lc[0], lc[1], lc[2]); }
         else buf[rowOff + x] = shadeFog(c, light, fog, ft);

@@ -67,6 +67,30 @@ try {
       game._movePlayer((b.x - a.x) * 0.6, (b.y - a.y) * 0.6);
       r.climbSnaps = Math.abs(p.z - b.h) < 1e-3;   // snapped up onto the step
     } else r.climbSnaps = true;
+
+    // rocket-jump: a blast at your feet pops you up, then you fall back down
+    p.x = fx + 0.5; p.y = fy + 0.5; p.z = 0; p.vz = 0; p.grounded = true; p.health = 100; p.armor = 0;
+    game._explode(p.x, p.y, 2.5, 30, 'player');
+    r.rocketGivesLift = p.vz > 0;                 // upward impulse applied
+    game.update(0.016);
+    r.rocketAirborne = p.z > 0.001 && !p.grounded;
+    for (let i = 0; i < 100; i++) game.update(0.05);
+    r.rocketLands = Math.abs(p.z - game._groundZ(p.x, p.y)) < 1e-3 && p.grounded;
+
+    // blood decals: the grid exists and stamping raises its total
+    game.loadLevel(0);
+    r.decalGrid = game.map.decals && game.map.decals.length === game.map.decalW * game.map.H * 4;
+    let sum0 = 0; for (const v of game.map.decals) sum0 += v;
+    game._stampBlood(game.player.x + 1, game.player.y, 0.6, 0.8);
+    let sum1 = 0; for (const v of game.map.decals) sum1 += v;
+    r.decalStamps = sum1 > sum0;
+    // killing an enemy leaves blood on the floor
+    game.startNewGame();
+    const en = game.entities.find((e) => e.kind === 'enemy' && !e.def.float);
+    let d0 = 0; for (const v of game.map.decals) d0 += v;
+    if (en) game._damageEnemy(en, 9999, 'player');
+    let d1 = 0; for (const v of game.map.decals) d1 += v;
+    r.deathBleeds = d1 > d0;
     return r;
   });
 
@@ -82,6 +106,12 @@ try {
     'a hard landing shakes / kicks dust': out.landShake,
     'found a climbable step': out.foundStep,
     'climbing a step snaps up instantly': out.climbSnaps,
+    'a rocket at your feet gives upward lift': out.rocketGivesLift,
+    'you become airborne (rocket-jump)': out.rocketAirborne,
+    'you land back down after the jump': out.rocketLands,
+    'blood decal grid is allocated': out.decalGrid,
+    'stamping blood raises the decal total': out.decalStamps,
+    'killing an enemy bleeds on the floor': out.deathBleeds,
   };
   for (const [k, v] of Object.entries(checks)) { console.log((v ? '  ✓ ' : '  ✗ ') + k); if (!v) errs.push('FAIL ' + k); }
 } catch (e) { errs.push('HARNESS ' + e.message + '\n' + e.stack); }

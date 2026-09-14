@@ -228,10 +228,14 @@ find the matching keycard.
 - **Physics & feel:** momentum-based movement (acceleration, friction, and
   velocity bleed-off when you hit a wall) and **knockback** — bullets nudge,
   fireballs shove, rockets and barrels launch both monsters and the player.
-- **Gravity:** on the elevation levels you don't teleport between heights —
-  climbing a step snaps up, but **walking off a ledge drops you under real
-  gravity** and you land with a thud (screen-shake + a dust puff, an "oof" on a
-  big fall).
+- **Gravity & rocket-jumps:** on the elevation levels you don't teleport
+  between heights — climbing a step snaps up, but **walking off a ledge drops
+  you under real gravity** and you land with a thud (screen-shake + a dust puff,
+  an "oof" on a big fall). A rocket or barrel blast at your feet **pops you
+  upward** — time it right and you can launch onto a ledge.
+- **Persistent blood decals:** kills, gibs, and the wounds you take **stain the
+  floor** — perspective-correct gore pools painted into a sub-cell decal grid
+  during the floor cast, so they blend through the texture and last the level.
 - **Emissive surfaces:** light panels, crystal, ooze, and hazard walls
   **self-illuminate** — steady or pulsing/flickering — casting their own colour
   into the scene and feeding the bloom.
