@@ -1,6 +1,6 @@
 // ending.js — the escape cutscene that plays after the final boss falls:
-//   1) the marine crosses the hell-planet landing pad to a waiting dropship,
-//   2) the engines ignite and it lifts off in a wash of flame,
+//   1) the marine crosses the hell-planet landing pad and boards a waiting dropship,
+//   2) the engines ignite and it lifts off in a wash of flame and dust,
 //   3) flying away, he lights a cigarette and watches the red planet shrink.
 // Drawn on the 320x200 overlay, time-driven and skippable. The LEVEL 10 track
 // (alien.mp3) keeps playing under it. Then the victory screen.
@@ -18,6 +18,7 @@ export const END_CUES = [
 
 const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
 const lerp = (a, b, t) => a + (b - a) * t;
+const ease = (t) => t * t * (3 - 2 * t);   // smoothstep
 const rnd = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 function caption(ctx, text, alpha) {
@@ -41,9 +42,14 @@ function embers(ctx, t) {
     ctx.fillRect(x | 0, y | 0, 1, 1 + (rnd(i + 5) > 0.7 ? 1 : 0));
   }
 }
-// a chunky lander: pod body, cockpit glow, fins, legs
-function ship(ctx, cx, cy, s, flame) {
+// a chunky lander: pod body, cockpit glow, fins, legs (+ optional idle vent steam)
+function ship(ctx, cx, cy, s, flame, idle) {
   ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+  if (idle > 0) {   // faint vent glow while parked
+    const vg = ctx.createRadialGradient(0, 20, 0, 0, 20, 16);
+    vg.addColorStop(0, `rgba(120,180,255,${0.22 * idle})`); vg.addColorStop(1, 'rgba(60,120,220,0)');
+    ctx.fillStyle = vg; ctx.beginPath(); ctx.ellipse(0, 22, 14, 7, 0, 0, 7); ctx.fill();
+  }
   if (flame > 0) {   // exhaust plume below
     const fg = ctx.createLinearGradient(0, 16, 0, 16 + 40 * flame);
     fg.addColorStop(0, 'rgba(255,255,220,0.95)'); fg.addColorStop(0.4, 'rgba(255,180,50,0.85)'); fg.addColorStop(1, 'rgba(220,60,20,0)');
@@ -59,8 +65,20 @@ function ship(ctx, cx, cy, s, flame) {
   ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, -4, 7, 5, 0, 0, 7); ctx.fill();              // cockpit glow
   ctx.restore();
 }
+// the little marine figure — walking (with swinging legs) or standing
+function marine(ctx, mx, my, t, scale, alpha) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = clamp01(alpha);
+  const sw = Math.sin(t * 8) * 3 * scale;
+  ctx.fillStyle = '#3f5a3a'; ctx.fillRect(mx - 4 * scale, my - 14 * scale, 8 * scale, 14 * scale);   // torso
+  ctx.fillStyle = '#d8b088'; ctx.beginPath(); ctx.arc(mx, my - 17 * scale, 3 * scale, 0, 7); ctx.fill();  // head
+  ctx.strokeStyle = '#243018'; ctx.lineWidth = 2 * scale; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx - sw, my + 8 * scale); ctx.moveTo(mx, my); ctx.lineTo(mx + sw, my + 8 * scale); ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.restore();
+}
 
-// ---- scene 1: crossing the landing pad -------------------------------------
+// ---- scene 1: crossing the landing pad, then boarding -----------------------
 function scenePad(ctx, t) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#1a0608'); g.addColorStop(0.55, '#5e1410'); g.addColorStop(0.82, '#c0431a'); g.addColorStop(1, '#f0902a');
@@ -70,21 +88,19 @@ function scenePad(ctx, t) {
   ctx.fillStyle = '#160606'; ctx.beginPath(); ctx.moveTo(0, H);
   for (let x = 0; x <= W; x += 20) ctx.lineTo(x, 120 - rnd(x * 0.11) * 22); ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#0c0a0c'; ctx.fillRect(18, 78, 70, 46); ctx.fillRect(34, 62, 30, 18); ctx.fillRect(80, 52, 8, 24);
-  // landing pad (right) + the parked ship
+  // landing pad (right) + boarding ramp + the parked, idling ship
   ctx.fillStyle = '#241c1a'; ctx.fillRect(150, 138, W - 150, H - 138);
   ctx.strokeStyle = 'rgba(255,180,80,0.5)'; ctx.lineWidth = 1;
   for (let x = 160; x < W; x += 20) { ctx.beginPath(); ctx.moveTo(x, 140); ctx.lineTo(x + 8, 140); ctx.stroke(); }
-  ship(ctx, 250, 118, 1.5, 0);
-  // the marine strides across the pad toward the ship
-  const march = clamp01(t / 4.2);
-  const mx = lerp(30, 224, march), my = 132 + Math.sin(t * 8) * 1.5;
-  if (t < 4.4) {
-    ctx.fillStyle = '#3f5a3a'; ctx.fillRect(mx - 4, my - 14, 8, 14);            // torso
-    ctx.fillStyle = '#d8b088'; ctx.beginPath(); ctx.arc(mx, my - 17, 3, 0, 7); ctx.fill();  // head
-    ctx.strokeStyle = '#243018'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    const sw = Math.sin(t * 8) * 3;
-    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx - sw, my + 8); ctx.moveTo(mx, my); ctx.lineTo(mx + sw, my + 8); ctx.stroke();
-    ctx.lineCap = 'butt';
+  ctx.fillStyle = '#2e2622'; ctx.beginPath(); ctx.moveTo(226, 150); ctx.lineTo(250, 128); ctx.lineTo(252, 132); ctx.lineTo(230, 152); ctx.closePath(); ctx.fill();  // ramp
+  ship(ctx, 250, 118, 1.5, 0, 0.6 + 0.4 * Math.sin(t * 4));
+  // the marine strides across the pad, then climbs the ramp and boards
+  if (t < 3.4) {                               // walking across
+    const mx = lerp(30, 224, ease(clamp01(t / 3.4)));
+    marine(ctx, mx, 132 + Math.sin(t * 8) * 1.5, t, 1, 1);
+  } else if (t < 4.4) {                         // climbing the ramp into the ship
+    const p = (t - 3.4) / 1.0;
+    marine(ctx, lerp(224, 248, p), lerp(132, 118, ease(p)), t, lerp(1, 0.7, p), 1 - clamp01((p - 0.6) / 0.4));
   }
   vignette(ctx);
   caption(ctx, 'The Gumbird is dead. Hell goes quiet — for now.', clamp01(t - 0.4));
@@ -98,12 +114,19 @@ function sceneLiftoff(ctx, t) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   embers(ctx, t);
   ctx.fillStyle = '#241c1a'; ctx.fillRect(150, 150, W - 150, H - 150);          // pad
-  // billowing dust as it lifts
+  // billowing dust as it lifts (two rolling clouds)
   const rise = clamp01(s / 3.2);
-  ctx.fillStyle = `rgba(60,40,30,${0.5 * (1 - rise)})`;
-  ctx.beginPath(); ctx.ellipse(250, 156, 40 + s * 10, 14, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = `rgba(70,46,34,${0.55 * (1 - rise)})`;
+  ctx.beginPath(); ctx.ellipse(250, 156, 44 + s * 14, 16, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = `rgba(90,60,42,${0.4 * (1 - rise)})`;
+  ctx.beginPath(); ctx.ellipse(230, 150, 30 + s * 10, 12, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(272, 150, 26 + s * 10, 11, 0, 0, 7); ctx.fill();
   const shy = lerp(118, -30, rise * rise), flame = 0.5 + 0.5 * Math.sin(t * 30);
-  ship(ctx, 250, shy, lerp(1.5, 1.0, rise), 0.6 + 0.4 * flame);
+  ship(ctx, 250, shy, lerp(1.5, 1.0, rise), 0.6 + 0.4 * flame, 0);
+  if (s < 0.7) {                               // ignition shockwave ring
+    const r = ease(s / 0.7); ctx.strokeStyle = `rgba(255,230,180,${(1 - r) * 0.8})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(250, 138, 8 + r * 70, 4 + r * 22, 0, 0, 7); ctx.stroke();
+  }
   if (s < 0.4) { ctx.fillStyle = `rgba(255,240,200,${(0.4 - s) / 0.4})`; ctx.fillRect(0, 0, W, H); }  // ignition flash
   vignette(ctx);
   caption(ctx, 'Time to go home.', clamp01(s - 0.2));
@@ -111,11 +134,14 @@ function sceneLiftoff(ctx, t) {
 
 // ---- scene 3: flying away, lighting a cigarette -----------------------------
 function sceneCockpit(ctx, t) {
-  const s = t - 8.5;   // 0..5
+  const s = t - 8.5;   // 0..8
   // space + the shrinking hell-planet through the windshield
   ctx.fillStyle = '#05060c'; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 70; i++) { const x = (rnd(i) * W) | 0, y = (rnd(i + 50) * (H - 40)) | 0; ctx.fillStyle = `rgba(255,255,255,${0.3 + rnd(i) * 0.6})`; ctx.fillRect(x, y, 1, 1); }
-  const pr = lerp(26, 5, clamp01(s / 4.5));   // planet shrinks as we pull away
+  const pr = lerp(26, 5, ease(clamp01(s / 4.5)));   // planet shrinks as we pull away
+  const halo = ctx.createRadialGradient(236, 46, pr * 0.7, 236, 46, pr * 2.1);  // thin atmosphere glow
+  halo.addColorStop(0, 'rgba(255,120,60,0.28)'); halo.addColorStop(1, 'rgba(255,80,40,0)');
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(236, 46, pr * 2.1, 0, 7); ctx.fill();
   const pg = ctx.createRadialGradient(232 - s * 2, 44, 2, 236, 46, pr);
   pg.addColorStop(0, '#ff7a3a'); pg.addColorStop(0.6, '#a8281a'); pg.addColorStop(1, '#3a0a08');
   ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(236, 46, pr, 0, 7); ctx.fill();
@@ -130,10 +156,13 @@ function sceneCockpit(ctx, t) {
   const wheel = ctx.createLinearGradient(0, H - 20, 0, H); wheel.addColorStop(0, '#2a2e36'); wheel.addColorStop(1, '#14171c');
   ctx.fillStyle = wheel; ctx.fillRect(W / 2 - 40, H - 18, 80, 18);             // yoke
 
-  // the marine in profile (right side), raising a cigarette to his mouth
+  // the marine in profile (right side), cigarette at his mouth
   const hx = W / 2 + 34, hy = H - 78;
   ctx.fillStyle = '#3f5a3a'; ctx.fillRect(hx - 4, hy + 8, 22, 30);            // shoulder/torso
   ctx.fillStyle = '#d8b088'; ctx.beginPath(); ctx.arc(hx, hy, 9, 0, 7); ctx.fill();     // head (facing left, toward the view)
+  const rim = ctx.createRadialGradient(hx - 6, hy + 4, 1, hx - 6, hy + 4, 12);  // warm dashboard rim-light on the face
+  rim.addColorStop(0, 'rgba(255,180,90,0.35)'); rim.addColorStop(1, 'rgba(255,140,60,0)');
+  ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(hx, hy, 9, 0, 7); ctx.fill();
   ctx.fillStyle = '#243018'; ctx.beginPath(); ctx.arc(hx + 2, hy - 4, 9, -0.6, 0.9); ctx.fill();  // hair/helmet back
   // the cigarette at his mouth + glowing ember + curling smoke
   const cigX = hx - 9, cigY = hy + 2;
@@ -148,20 +177,33 @@ function sceneCockpit(ctx, t) {
   ctx.strokeStyle = 'rgba(210,210,220,0.35)'; ctx.lineWidth = 1.5; ctx.beginPath();
   for (let k = 0; k < 26; k++) { const yy = cigY - k * 2.2, xx = cigX - 6 + Math.sin(t * 2 + k * 0.5) * (2 + k * 0.25); k === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy); }
   ctx.stroke();
+  // a slow exhaled puff drifting up-left, once he's settled in
+  const ph = (s - 3.2) % 4.0;
+  if (ph > 0 && ph < 2.4) {
+    const pp = ph / 2.4;
+    ctx.fillStyle = `rgba(200,200,210,${0.28 * (1 - pp)})`;
+    ctx.beginPath(); ctx.arc(cigX - 8 - pp * 16, cigY - 2 - pp * 20, 3 + pp * 7, 0, 7); ctx.fill();
+  }
 
   vignette(ctx);
   const cap = s < 2.6 ? 'You climb in and light one up.' : 'Rebuilding will be more fun than saving it.';
   caption(ctx, cap, s < 0.5 ? clamp01(s * 2) : 1);
 }
 
+// brief dip through black at a scene cut, so hard boundaries read as a fade
+function dipAt(t, cut) { const d = Math.abs(t - cut); return d < 0.32 ? 1 - d / 0.32 : 0; }
+
 export function drawEnding(ctx, t) {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   if (t < 4.5) scenePad(ctx, t);
   else if (t < 8.5) sceneLiftoff(ctx, t);
   else sceneCockpit(ctx, t);
-  if (t < 0.8) { ctx.fillStyle = `rgba(0,0,0,${1 - t / 0.8})`; ctx.fillRect(0, 0, W, H); }         // fade in
+  const dip = Math.max(dipAt(t, 4.5), dipAt(t, 8.5));                                                // crossfade the cuts
+  if (dip > 0) { ctx.fillStyle = `rgba(0,0,0,${ease(dip) * 0.85})`; ctx.fillRect(0, 0, W, H); }
+  if (t < 0.8) { ctx.fillStyle = `rgba(0,0,0,${1 - t / 0.8})`; ctx.fillRect(0, 0, W, H); }           // fade in
   if (t > END_DURATION - 1.2) { ctx.fillStyle = `rgba(0,0,0,${clamp01((t - (END_DURATION - 1.2)) / 1.2)})`; ctx.fillRect(0, 0, W, H); }  // fade out
+  // skip hint — top-right, clear of the caption band
   ctx.textAlign = 'right'; ctx.font = '7px monospace';
   ctx.fillStyle = (Math.sin(t * 5) > 0) ? 'rgba(255,220,150,0.7)' : 'rgba(150,140,120,0.5)';
-  ctx.fillText('ENTER / FIRE to skip', W - 6, H - 4);
+  ctx.fillText('ENTER / FIRE to skip', W - 6, 12);
 }
