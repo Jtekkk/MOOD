@@ -228,6 +228,13 @@ find the matching keycard.
 - **Physics & feel:** momentum-based movement (acceleration, friction, and
   velocity bleed-off when you hit a wall) and **knockback** — bullets nudge,
   fireballs shove, rockets and barrels launch both monsters and the player.
+- **Gravity:** on the elevation levels you don't teleport between heights —
+  climbing a step snaps up, but **walking off a ledge drops you under real
+  gravity** and you land with a thud (screen-shake + a dust puff, an "oof" on a
+  big fall).
+- **Emissive surfaces:** light panels, crystal, ooze, and hazard walls
+  **self-illuminate** — steady or pulsing/flickering — casting their own colour
+  into the scene and feeding the bloom.
 - **Emergent behaviors:** **infighting** (a monster caught in another's
   crossfire turns on it — `target` retargeting), **alerting** (gunfire and a
   monster spotting you rouse nearby sleepers), and monsters that **shove

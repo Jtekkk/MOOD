@@ -34,6 +34,7 @@ const PROJ_LIGHT = {
 };
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => (a + Math.floor(Math.random() * (b - a + 1)));
+const GRAVITY = 20;   // world units/s² — how hard the player falls off ledges
 
 // The six D.I. HARDWARE ACCESS TERMINAL subsystems (levels 2 & 6). Only #6 is
 // survivable — it drains the hazardous sludge pool on sublevel 9; the rest trip
@@ -154,7 +155,7 @@ export class Game {
       fireCD: 0, weaponFlash: 0, recoil: 0,
       bobPhase: 0, bobAmt: 0,
       damageFlash: 0, pickupFlash: 0, powerFlash: 0,
-      invuln: 0, immortal: false, berserk: false, visor: 0, z: 0, hurtT: 0, hurtDir: 0,
+      invuln: 0, immortal: false, berserk: false, visor: 0, z: 0, vz: 0, grounded: true, hurtT: 0, hurtDir: 0,
       kills: 0, totalKills: 0, secrets: 0,
       dead: false, deathTime: 0,
       faceTimer: 0, faceMood: 'happy', calmT: 0, idleMoveT: 0, killStreak: 0, lastKillStamp: -99,
@@ -212,6 +213,7 @@ export class Game {
     this.player.y = map.start.y;
     this.player.angle = map.startAngle;
     this.player.z = map.hasHeights ? map.blockH[Math.floor(map.start.y) * map.W + Math.floor(map.start.x)] : 0;
+    this.player.vz = 0; this.player.grounded = true;
     this.player.keys = { red: false, blue: false, yellow: false };
     this.player.kills = 0;
     this._spawnThings(map);
@@ -352,6 +354,7 @@ export class Game {
     if (Math.abs(mvx) > 1e-4 && Math.abs(p.x - ox) < Math.abs(mvx) * 0.5) { p.vx *= 0.2; p.kx *= 0.4; }
     if (Math.abs(mvy) > 1e-4 && Math.abs(p.y - oy) < Math.abs(mvy) * 0.5) { p.vy *= 0.2; p.ky *= 0.4; }
     p.kx *= kd; p.ky *= kd;
+    this._applyGravity(dt);   // fall off ledges under gravity; climb snaps up
     const movingFast = Math.hypot(p.vx, p.vy) > 0.4;
     if (movingFast) {
       p.bobPhase += dt * 10 * run;
@@ -440,11 +443,39 @@ export class Game {
     const z = p.z || 0;
     if (!this._blocked(p.x + mvx, p.y, PLAYER_R, true) && !this._ledgeBlocks(p.x + mvx, p.y, z)) p.x += mvx;
     if (!this._blocked(p.x, p.y + mvy, PLAYER_R, true) && !this._ledgeBlocks(p.x, p.y + mvy, z)) p.y += mvy;
-    // stand on whatever block is under us now (snap; steps are small)
-    if (this.map.hasHeights) {
-      const cx = Math.floor(p.x), cy = Math.floor(p.y);
-      p.z = (cx >= 0 && cy >= 0 && cx < this.map.W && cy < this.map.H) ? this.map.blockH[cy * this.map.W + cx] : 0;
-    }
+    // climbing a step snaps up immediately; walking off a ledge is left to
+    // _applyGravity so you fall rather than teleport down.
+    if (this.map.hasHeights) { const g = this._groundZ(p.x, p.y); if (g > p.z) { p.z = g; p.vz = 0; p.grounded = true; } }
+  }
+
+  // Height of the block the player is standing over (0 on flat levels).
+  _groundZ(x, y) {
+    if (!this.map.hasHeights) return 0;
+    const cx = Math.floor(x), cy = Math.floor(y);
+    if (cx < 0 || cy < 0 || cx >= this.map.W || cy >= this.map.H) return 0;
+    return this.map.blockH[cy * this.map.W + cx];
+  }
+
+  // Real falling: climbing a step snaps up instantly (steps are small and
+  // gated by _ledgeBlocks), but walking off a ledge drops you under gravity and
+  // you land with a thud — a little screen-shake + dust, an "oof" on a big drop.
+  _applyGravity(dt) {
+    const p = this.player;
+    if (!this.map.hasHeights) { p.z = 0; p.vz = 0; p.grounded = true; return; }
+    const g = this._groundZ(p.x, p.y);
+    if (p.z <= g + 1e-3) { p.z = g; p.vz = 0; p.grounded = true; return; }   // on/at ground (or climbing up)
+    p.vz -= GRAVITY * dt;
+    p.z += p.vz * dt;
+    if (p.z <= g) {
+      const impact = -p.vz;
+      p.z = g; p.vz = 0;
+      if (!p.grounded && impact > 2.2) {
+        this.addShake(Math.min(0.55, impact * 0.07));
+        this._spawnPuff(p.x, p.y);
+        if (impact > 4.2) this.audio.play('oof');
+      }
+      p.grounded = true;
+    } else { p.grounded = false; }
   }
 
   // Can the player STAND where their centre would land? Decided by the single

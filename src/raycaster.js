@@ -24,6 +24,16 @@ function ditherPacked(c, d) {
   return (0xff000000 | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
 }
 
+// Self-illuminated wall surfaces: [r, g, b, amount, pulseFreq]. These add their
+// own coloured light (so they read as glowing and feed the bloom) — steady when
+// freq is 0, otherwise pulsing/flickering at that rate.
+const EMISSIVE = {
+  lightpanel: [0.55, 0.85, 1.0, 0.55, 0],     // cool light panels — steady
+  crystal: [0.5, 0.85, 1.0, 0.55, 2.2],       // pulsing crystal
+  slime: [0.4, 1.0, 0.5, 0.5, 1.6],           // bubbling green ooze
+  hazard: [1.0, 0.72, 0.15, 0.45, 4.0],       // flashing amber hazard stripe
+};
+
 export class Renderer {
   constructor(displayCanvas) {
     this.display = displayCanvas;
@@ -279,7 +289,7 @@ export class Renderer {
       if (rayDirY < 0) { stepY = -1; sideY = (p.y - mapY) * deltaY; }
       else { stepY = 1; sideY = (mapY + 1 - p.y) * deltaY; }
 
-      let hit = 0, side = 0, perpDist = 0, tex = null, texXf = 0;
+      let hit = 0, side = 0, perpDist = 0, tex = null, texXf = 0, texName = '';
       for (let guard = 0; guard < 200 && !hit; guard++) {
         if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; }
         else { sideY += deltaY; mapY += stepY; side = 1; }
@@ -312,7 +322,8 @@ export class Renderer {
         if (cell !== '.' && cell !== ' ' && cell !== '@') {
           hit = 1;
           perpDist = (side === 0) ? (sideX - deltaX) : (sideY - deltaY);
-          tex = TEX[wallTexName(cell)] || TEX.tech;
+          texName = wallTexName(cell);
+          tex = TEX[texName] || TEX.tech;
           const wx = (side === 0) ? (p.y + perpDist * rayDirY) : (p.x + perpDist * rayDirX);
           texXf = wx - Math.floor(wx);
           if ((side === 0 && rayDirX > 0) || (side === 1 && rayDirY < 0)) texXf = 1 - texXf;
@@ -339,6 +350,12 @@ export class Renderer {
       if (this._ln) {
         this._lightAt(p.x + perpDist * rayDirX, p.y + perpDist * rayDirY, this._lc);
         lr = this._lc[0]; lg = this._lc[1]; lb = this._lc[2];
+      }
+      // self-illumination: emissive walls add a (possibly pulsing) colour glow
+      const em = EMISSIVE[texName];
+      if (em) {
+        const pulse = em[4] ? (0.55 + 0.45 * Math.sin(this._time * em[4] + mapX * 0.9 + mapY * 0.6)) : 1;
+        lr += em[0] * em[3] * pulse; lg += em[1] * em[3] * pulse; lb += em[2] * em[3] * pulse;
       }
       const lit = (lr + lg + lb) > 0.0001;
       for (let y = y0; y <= y1; y++) {
